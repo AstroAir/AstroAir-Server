@@ -1,0 +1,10 @@
+{
+   "ColorCamera" : "No",
+   "CoolCamera" : "No",
+   "ID" : 0,
+   "MaxHeight" : 960,
+   "MaxWidth" : 1280,
+   "Name" : "ZWO ASI120MM Mini",
+   "PixelSize" : 3.75,
+   "ST4Port" : "Yes"
+}

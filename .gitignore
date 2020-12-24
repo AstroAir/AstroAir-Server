@@ -1,0 +1,8 @@
+*.o
+*.a
+main
+test
+test.cpp
+comdline.txt
+debug.txt
+astroair-server
