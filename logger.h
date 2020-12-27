@@ -54,6 +54,8 @@ namespace AstroAir
 	void IDLog_CMDL(std::string message);
 	/*功能性函数*/
 	const char *timestamp();		//获取时间戳
+	/*获取CPU核心个数*/
+	void GetCPUCores();
 }
 
 #endif

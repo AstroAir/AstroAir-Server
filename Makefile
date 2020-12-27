@@ -43,7 +43,7 @@ libasi:air-asi/asi_ccd.cpp air-asi/asi_ccd.h
 #构建WebSocketpp库
 wsserver:wsserver.cpp wsserver.h
 	@echo $(GREEN)"Building C++ WebSocket Server LIB ... \033[0m"
-	@$(CC) $(OUTPUT) main.cpp wsserver.cpp air-asi/asi_ccd.cpp logger.cpp $(WEBSOCKETPP) $(JSON) $(ASILIB)
+	@$(CC) $(OUTPUT) wsserver.cpp air-asi/asi_ccd.cpp logger.cpp $(WEBSOCKETPP) $(JSON) $(ASILIB)
 	@echo $(BLUE)"Finished Building C++ WebSocket Server LIB ... \033[0m"
 #本地化构建
 install:

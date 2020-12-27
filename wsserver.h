@@ -37,6 +37,8 @@ Description:Main framework of astroair server
 #ifndef _WSSERVER_H_
 #define _WSSERVER_H_
 
+#define DebugMode true		//Debug模式是否开启
+
 #include <websocketpp/config/asio_no_tls.hpp>
 #include <websocketpp/server.hpp>
 #include <json/json.h>
@@ -44,6 +46,8 @@ Description:Main framework of astroair server
 #include <set>
 #include <dirent.h>
 #include <vector>
+#include <atomic>
+#include <fstream>
 
 typedef websocketpp::server<websocketpp::config::asio> airserver;
 using websocketpp::lib::placeholders::_1;
@@ -89,6 +93,8 @@ namespace AstroAir
 			typedef std::set<websocketpp::connection_hdl, std::owner_less<websocketpp::connection_hdl>> con_list;
 			con_list m_connections;
 			airserver m_server;
+			
+			std::atomic_bool isConnected;
 	};
 }
 

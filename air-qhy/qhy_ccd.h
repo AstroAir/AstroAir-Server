@@ -39,7 +39,9 @@ namespace AstroAir
 	class QHYCCD
 	{
 		public:
-		
+			explicit QHYCCD();
+			~QHYCCD();
+			virtual bool Connect(std::string Device_name);
 		private:
 		
 	};

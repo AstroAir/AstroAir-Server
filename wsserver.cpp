@@ -35,8 +35,6 @@ Using:Websocketpp<https://github.com/zaphoyd/websocketpp>
  
 **************************************************/
 
-#include <fstream>
-
 #include "wsserver.h"
 #include "logger.h"
 #include "air-asi/asi_ccd.h"
@@ -50,6 +48,7 @@ namespace AstroAir
      */
     WSSERVER::WSSERVER()
     {
+        /*初始化WebSocket服务器*/
         /*加载设置*/
         m_server.set_access_channels(websocketpp::log::alevel::all);
         m_server.clear_access_channels(websocketpp::log::alevel::frame_payload);
@@ -61,6 +60,8 @@ namespace AstroAir
         m_server.set_close_handler(bind(&WSSERVER::on_close, this , ::_1));
         /*设置事件*/
         m_server.set_message_handler(bind(&WSSERVER::on_message, this ,::_1,::_2));
+        /*重置参数*/
+        isConnected = false;
     }
     
     /*
@@ -71,7 +72,10 @@ namespace AstroAir
      */
     WSSERVER::~WSSERVER()
     {
-        stop();
+        if(isConnected ==true)
+        {
+            stop();
+        }
     }
 
     /*
@@ -84,6 +88,7 @@ namespace AstroAir
     {
         IDLog("Successfully established connection with client\n");
         m_connections.insert(hdl);
+        isConnected = true;
     }
     
     /*
@@ -96,6 +101,7 @@ namespace AstroAir
     {
         IDLog("Disconnect from client\n");
         m_connections.erase(hdl);
+        isConnected = false;
     }
     
     /*
@@ -111,8 +117,11 @@ namespace AstroAir
         std::string message = msg->get_payload();
         /*将接收到的信息打印至终端*/
         IDLog("Get information from client: %s\n",message.c_str());
-        /*将接收到的信息写入文件*/
-        IDLog_CMDL(message.c_str());
+        if(DebugMode == true)
+        {
+            /*将接收到的信息写入文件*/
+            IDLog_CMDL(message.c_str());
+        }
         /*处理信息*/
         readJson(message);
     }
@@ -167,8 +176,8 @@ namespace AstroAir
                 break;
             /*连接设备*/
             case "RemoteSetupConnect"_hash:{
-                std::thread t1(&WSSERVER::SetupConnect,this,root["method"]["params"]["TimeoutConnect"].asInt());
-                t1.join();
+                std::thread t1(&WSSERVER::SetupConnect,this,root["params"]["TimeoutConnect"].asInt());
+                t1.detach();
                 break;
             }
             /*轮询，保持连接*/
@@ -286,6 +295,7 @@ namespace AstroAir
      * 描述：获取本地文件名称并上传至客户端
      * describe: Gets the specified suffix file name in the folder
 	 * 描述：获取文件夹中指定后缀文件名称
+     * calls: send()
 	 * note:The suffix of get file should be .air or .json
      */
     void WSSERVER::GetAstroAirProfiles()
@@ -327,6 +337,11 @@ namespace AstroAir
      * @param timeout:连接相机最长时间
      * describe: All connection profiles in the device
      * 描述：连接配置文件中的所有设备
+     * calls: Connect(std::string Device_name)
+     * calls: IDLog(const char *fmt, ...)
+     * calls: IDLog_DEBUG(const char *fmt, ...)
+     * calls: UnknownCamera()
+     * calls: UnknownMount()
      * note: If it times out, an error message is returned
      */
     void WSSERVER::SetupConnect(int timeout)
@@ -351,6 +366,7 @@ namespace AstroAir
         /*将读取出的json数组转化为string*/
         std::unique_ptr<Json::CharReader>const json_read(reader.newCharReader());
         json_read->parse(jsonStr.c_str(), jsonStr.c_str() + jsonStr.length(), &root,&errs);
+        /*连接指定品牌的指定型号相机*/
         camera = root["camera"]["brand"].asString();
         camera_name = root["camera"]["name"].asString();
         if(!camera.empty() && !camera_name.empty())
@@ -374,6 +390,7 @@ namespace AstroAir
                     UnknownCamera();
             }
         }
+        /*连接指定品牌的指定型号赤道仪*/
         mount = root["mount"]["brand"].asString();
         mount_name = root["mount"]["name"].asString();
         if(!mount.empty() && !mount_name.empty())
@@ -403,12 +420,16 @@ namespace AstroAir
      * name: UnknownMsg()
      * describe: Processing unknown information from clients
      * 描述：处理来自客户端的未知信息
+     * calls: IDLog(const char *fmt, ...)
+     * calls: IDLog_DEBUG(const char *fmt, ...)
+     * calls: send()
 	 * note:If this function is executed, an error will appear on the web page
      */
     void WSSERVER::UnknownMsg()
     {
         IDLog("An unknown message was received from the client.\n");
         IDLog_DEBUG("An unknown message was received from the client.\n");
+        /*整合信息并发送至客户端*/
         Json::Value Root,error;
         Root["result"] = Json::Value(1);
 		Root["code"] = Json::Value();
@@ -423,12 +444,16 @@ namespace AstroAir
      * name: UnknownCamera()
      * describe: Processing connection camera error
      * 描述：如果发现未知相机，则执行此函数
+     * calls: IDLog(const char *fmt, ...)
+     * calls: IDLog_DEBUG(const char *fmt, ...)
+     * calls: send()
 	 * note: This function is executed if an unknown camera is found
      */
     void WSSERVER::UnknownCamera()
     {
         IDLog("An unknown camera was chosen.\n");
         IDLog_DEBUG("An unknown camera was chosen.\n");
+        /*整合信息并发送至客户端*/
         Json::Value Root,error;
         Root["result"] = Json::Value(1);
 		Root["code"] = Json::Value();
@@ -443,6 +468,9 @@ namespace AstroAir
      * name: UnknownMount()
      * describe: Processing connection mount error
      * 描述：如果发现未知赤道仪，则执行此函数
+     * calls: IDLog(const char *fmt, ...)
+     * calls: IDLog_DEBUG(const char *fmt, ...)
+     * calls: send()
 	 * note: This function is executed if an unknown mount is found
      */
     void WSSERVER::UnknownMount()
@@ -463,6 +491,7 @@ namespace AstroAir
      * name: Polling()
      * describe: The client remains connected to the server
      * 描述：客户端与服务器保持连接
+     * calls: send()
 	 * note:This function is most commonly used
      */
     void WSSERVER::Polling()

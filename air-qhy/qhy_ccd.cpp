@@ -32,5 +32,8 @@ Description:QHY camera driver
 
 namespace AstroAir
 {
+	QHYCCD::QHYCCD()
+	{
 	
+	}
 }

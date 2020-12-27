@@ -35,6 +35,7 @@ Description:Log system of astroair server
 #include <time.h>
 #include <string>
 #include <fstream>
+#include <thread>
 
 #include "logger.h"
 
@@ -117,6 +118,15 @@ namespace AstroAir
 		return (ts);
 	}	
 	
-	
-
+	/*
+	 * name: GetCPUCores()
+	 * @return n:CPU核心个数
+	 * describe: Get cpu cores number
+	 * 描述：获取CPU核心个数
+	 */
+	int GetCPUCores()
+	{
+		auto n = thread::hardware_concurrency();
+		return n;
+	}
 }
