@@ -20,19 +20,18 @@
  
 /************************************************* 
  
-Copyright: 2020 Max Qian. All rights reserved
+Copyright: 2020-2021 Max Qian. All rights reserved
  
 Author:Max Qian
 
 E-mail:astro_air@126.com
  
-Date:2020-12-20
+Date:2021-1-2
  
 Description:Log system of astroair server
  
 **************************************************/
 
-#include <time.h>
 #include <string>
 #include <fstream>
 #include <thread>
@@ -126,7 +125,59 @@ namespace AstroAir
 	 */
 	int GetCPUCores()
 	{
-		auto n = thread::hardware_concurrency();
+		auto n = std::thread::hardware_concurrency();
 		return n;
+	}
+	
+	/*
+	 * name: setSystemTime(TIME *_time)
+	 * @return ts:需要设置的时间
+	 * describe: Set system local time
+	 * 描述：设置系统本地时间
+	 * note: The time is in the UTF-8 time zone
+	 */
+	bool setSystemTime(TIME *_time)
+	{
+		struct tm *p = new struct tm();
+		struct timeval tv;
+		struct timezone tz;
+		gettimeofday (&tv , &tz);//获取时区保存tz中
+		p->tm_year = _time->year - 1900;
+		p->tm_mon = _time->month - 1;
+		p->tm_mday = _time->day;
+		p->tm_hour = _time->hour;
+		p->tm_min = _time->minute;
+		p->tm_sec = _time->second;
+		time_t utc_t = mktime(p);
+		delete(p);
+		tv.tv_sec = utc_t;
+		tv.tv_usec = 0;
+		if (settimeofday(&tv, &tz) < 0)
+		{
+			return false;
+		}
+		return true;
+	}
+
+	/*
+	 * name: getSystemLocalTime()
+	 * @return t:本地系统时间
+	 * describe: Get local system time
+	 * 描述：获取本地系统时间
+	 */
+	TIME* getSystemLocalTime()
+	{
+		TIME *t = new TIME();
+		time_t timep;
+		struct tm *p;
+		time(&timep);
+		p = localtime(&timep); //取得当地时间
+		t->year = 1900 + p->tm_year;
+		t->month = 1 + p->tm_mon;
+		t->day = p->tm_mday;
+		t->hour = p->tm_hour;
+		t->minute = p->tm_min;
+		t->second = p->tm_sec;
+		return t;
 	}
 }

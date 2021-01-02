@@ -35,15 +35,16 @@ Description:ZWO camera driver
 #ifndef _ASICCD_H_
 #define _ASICCD_H_
 
-#include "../libasi/ASICamera2.h"
+#include "libasi/ASICamera2.h"
 
 #include <condition_variable>
 #include <mutex>
 #include <thread>
+#include <atomic>
 
 #define MAXDEVICENUM 5
 
-namespace AstroAir
+namespace AstroAir::ASICAMERA
 {
 	class ASICCD
 	{
@@ -109,7 +110,7 @@ namespace AstroAir
 			bool isGuideCamera = false;
 			
 			/*相机使用参数*/
-			bool isConnected = false;
+			std::atomic_bool isConnected;
 			bool InExposure = false;
 			bool InVideo = false;
 			bool InCooling = false;

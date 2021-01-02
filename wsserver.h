@@ -20,7 +20,7 @@
  
 /************************************************* 
  
-Copyright: 2020 Max Qian. All rights reserved
+Copyright: 2020-2021 Max Qian. All rights reserved
  
 Author:Max Qian
 
@@ -55,7 +55,7 @@ using websocketpp::lib::placeholders::_2;
 using websocketpp::lib::bind;
 typedef airserver::message_ptr message_ptr;
 
-namespace AstroAir
+namespace AstroAir::WebSokcet
 {
 	class WSSERVER
 	{
@@ -67,6 +67,7 @@ namespace AstroAir
 			void on_close(websocketpp::connection_hdl hdl);
 			void on_message(websocketpp::connection_hdl hdl,message_ptr msg);
 			void send(std::string payload);
+			void send_binary(void const * payload, size_t len);
 			void stop();
 			virtual bool is_running();
 			/*运行服务器*/
@@ -77,24 +78,31 @@ namespace AstroAir
 			void SetDashBoardMode();
 			void GetAstroAirProfiles();
 			void SetupConnect(int timeout);
+			/*处理正确返回信息*/
+			void SetupConnectSuccess();
 			/*处理错误信息函数*/
+			void SetupConnectError(std::string message);
 			void UnknownMsg();
-			void UnknownCamera();
-			void UnknownMount();
+			void UnknownDevice(int id,std::string message);
 			void Polling();
 		private:
 			Json::Value root;
 			Json::String errs;
 			Json::CharReaderBuilder reader;
-			std::string method;
-			std::string json_messenge;
-			std::string camera,mount,focus,guide;
-			std::string camera_name,mount_name,focus_name,guide_name;
+			std::string method,json_messenge;
+			std::string Camera,Mount,Focus,Filter,Guide;
+			std::string Camera_name,Mount_name,Focus_name,Filter_name,Guide_name;
 			typedef std::set<websocketpp::connection_hdl, std::owner_less<websocketpp::connection_hdl>> con_list;
 			con_list m_connections;
 			airserver m_server;
 			
+			/*服务器连接状态参数*/
 			std::atomic_bool isConnected;
+			std::atomic_bool isCameraConnected;
+			std::atomic_bool isMountConnected;
+			std::atomic_bool isFocusConnected;
+			std::atomic_bool isFilterConnected;
+			std::atomic_bool isGuideConnected;
 	};
 }
 

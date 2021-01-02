@@ -20,13 +20,13 @@
  
  /************************************************* 
  
-Copyright: 2020 Max Qian. All rights reserved
+Copyright: 2020-2021 Max Qian. All rights reserved
  
 Author:Max Qian
 
 E-mail:astro_air@126.com
  
-Date:2020-12-25
+Date:2021-1-2
  
 Description:Log system of astroair server
  
@@ -38,10 +38,22 @@ Description:Log system of astroair server
 #define _LOGGER_H_
 
 #include <cstdarg>
+#include <time.h>
+#include <sys/time.h>
 
 typedef std::uint64_t hash_t;  
 constexpr hash_t prime = 0x100000001B3ull;  
 constexpr hash_t basis = 0xCBF29CE484222325ull;  
+
+
+typedef struct {
+	int year;
+	int month;
+	int day;
+	int hour;
+	int minute;
+	int second;
+} TIME;
 
 namespace AstroAir
 {
@@ -55,7 +67,11 @@ namespace AstroAir
 	/*功能性函数*/
 	const char *timestamp();		//获取时间戳
 	/*获取CPU核心个数*/
-	void GetCPUCores();
+	int GetCPUCores();
+	/*设置本地系统时间*/
+	bool setSystemTime(TIME *_time);
+	/*获取本地系统时间*/
+	TIME* getSystemLocalTime();
 }
 
 #endif

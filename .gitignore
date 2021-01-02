@@ -1,9 +1,6 @@
 *.o
 *.a
+*.air
+*.txt
 main
-test
-test.cpp
-comdline.txt
-config.air
-debug.txt
-astroair-server
+server

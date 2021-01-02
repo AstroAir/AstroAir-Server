@@ -20,26 +20,32 @@
  
 /************************************************* 
  
-Copyright: 2020 Max Qian. All rights reserved
+Copyright: 2020-2021 Max Qian. All rights reserved
  
 Author:Max Qian
 
 E-mail:astro_air@126.com
  
-Date:2020-12-25
+Date:2021-1-2
  
 Description:Main framework of astroair server
 
 Using:Websocketpp<https://github.com/zaphoyd/websocketpp>
-      JsonCpp<https://github.com/open-source-parsers/jsoncpp>
- 
+      
+Using:JsonCpp<https://github.com/open-source-parsers/jsoncpp>
+
 **************************************************/
 
 #include "wsserver.h"
 #include "logger.h"
 #include "air-asi/asi_ccd.h"
+//#include "air-qhy/qhy_ccd.h"
 
-namespace AstroAir
+/*定义ASI相机*/
+AstroAir::ASICAMERA::ASICCD ASI,*ASICamera = &ASI;
+//AstroAir::QHYCAMERA::QHYCCD QHY,*QHYCamera = &QHY;
+
+namespace AstroAir::WebSokcet
 {
     /*
      * name: WSSERVER()
@@ -61,7 +67,12 @@ namespace AstroAir
         /*设置事件*/
         m_server.set_message_handler(bind(&WSSERVER::on_message, this ,::_1,::_2));
         /*重置参数*/
-        isConnected = false;
+        isConnected = false;            //客户端连接状态
+        isCameraConnected = false;      //相机连接状态
+        isMountConnected = false;       //赤道仪连接状态
+        isFocusConnected = false;       //电动调焦座连接状态
+        isFilterConnected = false;      //滤镜轮连接状态
+        isGuideConnected = false;       //导星软件连接状态
     }
     
     /*
@@ -207,8 +218,36 @@ namespace AstroAir
             }
             catch (websocketpp::exception const &e)
             {
-                IDLog("Unable to send message, please check connection\nThe reason is");
+                IDLog("Unable to send message, please check connection\n");
                 IDLog_DEBUG("%s\n",e.what());
+            }
+            catch (...)
+            {
+                std::cerr << "other exception" << std::endl;
+            }
+        }
+    }
+    
+    /*
+     * name: send_binary(void const * payload, size_t len)
+     * @param image:需要发送的二进制信息
+     * @param len:需发送文件的大小
+     * describe: Send binary information to client
+     * 描述：向客户端发送二进制信息
+     * note: This function can send the image to the client and display it again
+     */
+    void WSSERVER::send_binary(void const * image, size_t len)
+    {
+        for (auto it : m_connections)
+        {
+            try
+            {
+                m_server.send(it, image, len, websocketpp::frame::opcode::binary);
+            }
+            catch (websocketpp::exception const &e)
+            {
+                IDLog("Unable to send binary message, please check connection\n");
+                std::cerr << e.what() << std::endl;
             }
             catch (...)
             {
@@ -226,7 +265,7 @@ namespace AstroAir
     {
         for (auto it : m_connections)
             m_server.close(it, websocketpp::close::status::normal, "Switched off by user.");
-        IDLog("Stop the server...\n");
+        IDLog("Stop the server..\n");
         m_connections.clear();
         m_server.stop();
         IDLog("Good bye\n");
@@ -253,7 +292,7 @@ namespace AstroAir
     {
         try
         {
-            IDLog("Start the server...\n");
+            IDLog("Start the server..\n");
             m_server.listen(port);
             m_server.start_accept();
             m_server.run();
@@ -366,56 +405,281 @@ namespace AstroAir
         /*将读取出的json数组转化为string*/
         std::unique_ptr<Json::CharReader>const json_read(reader.newCharReader());
         json_read->parse(jsonStr.c_str(), jsonStr.c_str() + jsonStr.length(), &root,&errs);
+        bool connect_ok = false;
         /*连接指定品牌的指定型号相机*/
-        camera = root["camera"]["brand"].asString();
-        camera_name = root["camera"]["name"].asString();
-        if(!camera.empty() && !camera_name.empty())
+        bool camera_ok = false;
+        bool Has_Camera = false;
+        Camera = root["camera"]["brand"].asString();
+        Camera_name = root["camera"]["name"].asString();
+        if(!Camera.empty() && !Camera_name.empty())
         {
-            const char* a = camera.c_str();
-            switch(hash_(a))
+            Has_Camera = true;
+            for(int i=1;i<=3;i++)
             {
-                case "ZWOASI"_hash:{
-                    ASICCD CCD,*ccd = &CCD;
-                    ccd->Connect(camera_name);
+                const char* a = Camera.c_str();
+                switch(hash_(a))
+                {
+                    case "ZWOASI"_hash:
+                        camera_ok = ASICamera->Connect(Camera_name);
+                        break;
+                    /*
+                    case "QHYCCD"_hash:
+                        camera_ok = QHYCamera->Connect(Camera_name);
+                        break;
+                    case "INDI"_hash:
+                        camera_ok = INDICamera->Connect(Camera_name);
+                        break;
+                    */
+                    default:
+                        UnknownDevice(301,"Unknown camera");
+                }
+                if(camera_ok == true)
+                {
+                    isCameraConnected = true;
                     break;
                 }
-                /*
-                case "QHYCCD"_hash:{
-                    QHYCCD CCD,*ccd = &CCD;
-                    ccd->Connect(camera_name);
+                if(i == 3&& camera_ok == false)
+                {
+                    SetupConnectError("Unable to connect camera");
                     break;
                 }
-                */
-                default:
-                    UnknownCamera();
+                sleep(10);
             }
+        }
+        /*判断相机是否连接成功*/
+        if(Has_Camera == true)
+        {
+            if(camera_ok == true)
+                connect_ok == true;
+            else
+                connect_ok == false;
         }
         /*连接指定品牌的指定型号赤道仪*/
-        mount = root["mount"]["brand"].asString();
-        mount_name = root["mount"]["name"].asString();
-        if(!mount.empty() && !mount_name.empty())
+        bool mount_ok = false;
+        bool Has_Mount = false;
+        Mount = root["mount"]["brand"].asString();
+        Mount_name = root["mount"]["name"].asString();
+        if(!Mount.empty() && !Mount_name.empty())
         {
-            const char* a = mount.c_str();
-            switch(hash_(a))
+            Has_Mount = true;
+            for(int i=1;i<=3;i++)
             {
-                /*
-                case "iOptron"_hash:{
-                    iOptron Mount,*mount = &Mount;
-                    mount->Connect(mount_name);
+                const char* a = Mount.c_str();
+                switch(hash_(a))
+                {
+                    /*
+                    case "iOptron"_hash:
+                        monut_ok = iOptronMount->Connect(Mount_name);
+                        break;
+                    case "SkyWatcher"_hash:
+                        mount_ok = SkyWatcherMount->Connect(Mount_name);
+                        break;
+                    case "INDIMount"_hash:
+                        mount_ok = INDIMount->Connect(Mount_name);
+                        break;
+                    */
+                    default:
+                        UnknownDevice(302,"Unknown mount");
+                }
+                if(mount_ok == true)
+                {
+                    isMountConnected = true;
                     break;
                 }
-                case "SkyWatcher"_hash:{
-                    SkyWatcher Mount,*mount = &Mount;
-                    mount->Connect(mount_name);
+                if(i == 3&& mount_ok == false)
+                {
+                    SetupConnectError("Unable to connect mount");
                     break;
                 }
-                */
-                default:
-                    UnknownMount();
+                sleep(10);
             }
         }
+        /*判断赤道仪是否连接成功*/
+        if(Has_Mount == true)
+        {
+            if(mount_ok == true)
+                connect_ok == true;
+            else
+                connect_ok == false;
+        }
+        /*连接指定品牌的指定型号电动调焦座*/
+        bool focus_ok = false;
+        bool Has_Focus = false;
+        Focus = root["focus"]["brand"].asString();
+        Focus_name = root["focus"]["name"].asString();
+        if(!Focus.empty() && !Focus_name.empty())
+        {
+            Has_Focus = true;
+            for(int i = 0;i<=3;i++)
+            {
+                const char* a = Focus.c_str();
+                switch(hash_(a))
+                {
+                    /*
+                    case "ASIEAF"_hash:
+                        focus_ok = EAFFocus->Connect(Focus_name);
+                        break;
+                    case "Grus"_hash:
+                        focus_ok = GRUSFocus->Connect(Focus_name);
+                        break;
+                    case "INDIFocus"_hash:
+                        focus_ok = INDIFocus->Connect(Focus_name);
+                        break;
+                    */
+                    default:
+                        UnknownDevice(303,"Unknown focus");
+                }
+                if(focus_ok == true)
+                {
+                    isFocusConnected = true;
+                    break;
+                }
+                if(i == 3&& focus_ok == false)
+                {
+                    SetupConnectError("Unable to connect focus");
+                    break;
+                }
+                sleep(10);
+            }
+        }
+        /*判断电动调焦座是否连接成功*/
+        if(Has_Focus == true)
+        {
+            if(focus_ok == true)
+                connect_ok == true;
+            else
+                connect_ok == false;
+        }
+        /*连接指定品牌的指定型号滤镜轮*/
+        bool filter_ok = false;
+        bool Has_Filter = false;
+        Filter = root["filter"]["brand"].asString();
+        Filter_name = root["filter"]["name"].asString();
+        if(!Filter.empty() && !Filter_name.empty())
+        {
+            Has_Filter = true;
+            for(int i = 1;i<=3;i++)
+            {
+                const char* a = Filter.c_str();
+                switch(hash_(a))
+                {
+                    /*
+                    case "ASIEFW"_hash:
+                        filter_ok = ASIFilter->Connect(Filter_name);
+                        break;
+                    case "QHYCFW"_hash:
+                        filter_ok = QHYFilter->Connect(Filter_name);
+                        break;
+                        case "INDIFilter"_hash:
+                        filter_ok = INDIFilter->Connect(Filter_name);
+                        break; 
+                    */
+                    default:
+                        UnknownDevice(304,"Unknown filter");
+                }
+                if(filter_ok == true)
+                {
+                    isFilterConnected = true;
+                    break;
+                }
+                if(i == 3&& filter_ok == false)
+                {
+                    SetupConnectError("Unable to connect filter");
+                    break;
+                }
+                sleep(10);
+            }
+        }
+        /*判断滤镜轮是否连接成功*/
+        if(Has_Filter == true)
+        {
+            if(filter_ok == true)
+                connect_ok == true;
+            else
+                connect_ok == false;
+        }
+        /*连接指定品牌的指定型号导星软件*/
+        bool guide_ok = false;
+        bool Has_Guide = false;
+        Guide = root["Guide"]["brand"].asString();
+        Guide_name = root["Guide"]["name"].asString();
+        if(!Guide.empty() && !Guide_name.empty())
+        {
+            Has_Guide = true;
+            for(int i = 1;i<=3;i++)
+            {
+                const char* a = Guide.c_str();
+                switch(hash_(a))
+                {
+                    /*
+                    case "PHD2"_hash:{
+                        guide_ok = PHD2->Connect(Guide_name);
+                        break;
+                    }
+                    case "LinGuider"_hash:{
+                        guide_ok = LinGuider->Connect(Guide_name);
+                        break;
+                    }
+                    */
+                    default:
+                        UnknownDevice(305,"Unknown guide server");
+                }
+                if(guide_ok == true)
+                {
+                    isGuideConnected = true;
+                    break;
+                }
+                if(i == 3&& guide_ok == false)
+                {
+                    SetupConnectError("Unable to connect giude software");
+                    break;
+                }
+                sleep(10);
+            }
+        }
+        /*判断导星软件是否连接成功*/
+        if(Has_Guide == true)
+        {
+            if(guide_ok == true)
+                connect_ok == true;
+            else
+                connect_ok == false;
+        }
+        /*判断设备是否完全连接成功*/
+        if(connect_ok == true)
+            SetupConnectSuccess();
+        return;
     }
-
+    
+    void WSSERVER::SetupConnectSuccess()
+    {
+        
+    }
+    
+    /*
+     * name: SetupConnectError(std::string message)
+     * @prama message:需要返回至客户端的错误信息
+     * describe: Error handling connection to device
+     * 描述：处理连接设备时的错误
+     * calls: IDLog(const char *fmt, ...)
+     * calls: IDLog_DEBUG(const char *fmt, ...)
+     * calls: send()
+     */
+    void WSSERVER::SetupConnectError(std::string message)
+    {
+        IDLog("Unable to connect device\n");
+        IDLog_DEBUG("Unable to connect device\n");
+        /*整合信息并发送至客户端*/
+        Json::Value Root,error;
+        Root["result"] = Json::Value(1);
+		Root["code"] = Json::Value();
+        Root["id"] = Json::Value(201);
+        error["message"] = Json::Value(message);
+        Root["error"] = error;
+        json_messenge = Root.toStyledString();
+        send(json_messenge);
+    }
+    
     /*
      * name: UnknownMsg()
      * describe: Processing unknown information from clients
@@ -427,8 +691,8 @@ namespace AstroAir
      */
     void WSSERVER::UnknownMsg()
     {
-        IDLog("An unknown message was received from the client.\n");
-        IDLog_DEBUG("An unknown message was received from the client.\n");
+        IDLog("An unknown message was received from the client\n");
+        IDLog_DEBUG("An unknown message was received from the client\n");
         /*整合信息并发送至客户端*/
         Json::Value Root,error;
         Root["result"] = Json::Value(1);
@@ -441,47 +705,22 @@ namespace AstroAir
     }
     
     /*
-     * name: UnknownCamera()
-     * describe: Processing connection camera error
-     * 描述：如果发现未知相机，则执行此函数
+     * name: UnknownDevice(int id,std::string message);
+     * describe: Process the unknown device information and return to the client
+     * 描述：处理未知设备信息，并返回至客户端
      * calls: IDLog(const char *fmt, ...)
-     * calls: IDLog_DEBUG(const char *fmt, ...)
      * calls: send()
-	 * note: This function is executed if an unknown camera is found
+	 * note:Execute this function if an unknown device is found
      */
-    void WSSERVER::UnknownCamera()
+    void WSSERVER::UnknownDevice(int id,std::string message)
     {
-        IDLog("An unknown camera was chosen.\n");
-        IDLog_DEBUG("An unknown camera was chosen.\n");
+        IDLog("An unknown device was found,please check the connection\n");
         /*整合信息并发送至客户端*/
         Json::Value Root,error;
         Root["result"] = Json::Value(1);
 		Root["code"] = Json::Value();
-        Root["id"] = Json::Value(301);
-        error["message"] = Json::Value("Unknown camera");
-        Root["error"] = error;
-        json_messenge = Root.toStyledString();
-        send(json_messenge);
-    }
-    
-    /*
-     * name: UnknownMount()
-     * describe: Processing connection mount error
-     * 描述：如果发现未知赤道仪，则执行此函数
-     * calls: IDLog(const char *fmt, ...)
-     * calls: IDLog_DEBUG(const char *fmt, ...)
-     * calls: send()
-	 * note: This function is executed if an unknown mount is found
-     */
-    void WSSERVER::UnknownMount()
-    {
-        IDLog("An unknown mount was chosen.\n");
-        IDLog_DEBUG("An unknown mount was chosen.\n");
-        Json::Value Root,error;
-        Root["result"] = Json::Value(1);
-		Root["code"] = Json::Value();
-        Root["id"] = Json::Value(302);
-        error["message"] = Json::Value("Unknown mount");
+        Root["id"] = Json::Value(id);
+        error["message"] = Json::Value(message);
         Root["error"] = error;
         json_messenge = Root.toStyledString();
         send(json_messenge);

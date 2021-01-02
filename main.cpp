@@ -20,13 +20,13 @@
 
 /************************************************* 
  
-Copyright: 2020 Max Qian. All rights reserved
+Copyright: 2020-2021 Max Qian. All rights reserved
  
 Author:Max Qian
 
 E-mail:astro_air@126.com
  
-Date:2020-12-20
+Date:2021-1-2
  
 Description:Main program of astroair server
  
@@ -38,6 +38,8 @@ Description:Main program of astroair server
 #include <thread>
 
 #include "wsserver.h"
+
+using namespace AstroAir;
 
 #define AIRPORT 5950
 
@@ -67,7 +69,7 @@ void usage()
  */
 void start_server()
 {
-    AstroAir::WSSERVER ws;
+    AstroAir::WebSokcet::WSSERVER ws;
     ws.run(port);
 }
 
@@ -78,7 +80,7 @@ void start_server()
  */
 void stop_server()
 {
-    AstroAir::WSSERVER ws;
+    AstroAir::WebSokcet::WSSERVER ws;
     ws.stop();
 }
 
