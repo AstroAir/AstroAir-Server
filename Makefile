@@ -28,22 +28,18 @@ PLATFORM = armv7
 WEBSOCKETPP = -D_WEBSOCKETPP_CPP11_STL_ -DASIO_STANDALONE -lpthread
 JSON = -ljsoncpp
 ASILIB = -Iair-asi/ -Llibasi/armv7/ -Ilibasi/ -lASICamera2 -lusb-1.0
+NOVA = -lnova
 
-all: libasi wsserver astroair-server
+all: wsserver astroair-server
 #构建主服务器
 astroair-server:wsserver main.cpp
 	@echo $(GREEN)"Building C++ WebSocket Server ... \033[0m"
 	@$(CC) $(OUT) server main.o wsserver.o asi_ccd.o logger.o $(WEBSOCKETPP) $(JSON) $(ASILIB)
 	@echo $(BLUE)"Finished Building C++ WebSocket Server ... \033[0m"
-#构建ASI相机库
-libasi:air-asi/asi_ccd.cpp air-asi/asi_ccd.h
-	@echo $(GREEN)"Building C++ ASI CAMERA LIB ... \033[0m"
-	@$(CC) $(OUTPUT) air-asi/asi_ccd.cpp logger.cpp $(ASILIB)
-	@echo $(BLUE)"Finished Building C++ ASI CAMERA LIB ... \033[0m"
 #构建WebSocketpp库
 wsserver:wsserver.cpp wsserver.h
 	@echo $(GREEN)"Building C++ WebSocket Server LIB ... \033[0m"
-	@$(CC) $(OUTPUT) main.cpp wsserver.cpp air-asi/asi_ccd.cpp logger.cpp $(WEBSOCKETPP) $(JSON) $(ASILIB)
+	@$(CC) $(OUTPUT) main.cpp libastro.cpp wsserver.cpp air-asi/asi_ccd.cpp logger.cpp $(WEBSOCKETPP) $(JSON) $(ASILIB) $(NOVA)
 	@echo $(BLUE)"Finished Building C++ WebSocket Server LIB ... \033[0m"
 #本地化构建
 install:
@@ -52,5 +48,5 @@ install:
 #清理编译文件
 clean:
 	@echo $(RED)"Deleting All Building Files ... \033[0m"
-	@rm astroair-server *.o server *.txt
+	@rm server *.o server *.txt
 	@echo $(RED)"Finished Deleting All Building Files ... \033[0m"

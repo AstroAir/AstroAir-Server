@@ -18,13 +18,13 @@
 
 /************************************************* 
  
-Copyright: 2020 Max Qian. All rights reserved
+Copyright: 2020-2021 Max Qian. All rights reserved
  
 Author:Max Qian
 
 E-mail:astro_air@126.com
  
-Date:2020-12-11
+Date:2021-1-4
  
 Description:ZWO camera driver
  
@@ -35,6 +35,7 @@ Description:ZWO camera driver
 #ifndef _ASICCD_H_
 #define _ASICCD_H_
 
+#include "../wsserver.h"
 #include "libasi/ASICamera2.h"
 
 #include <condition_variable>
@@ -44,9 +45,9 @@ Description:ZWO camera driver
 
 #define MAXDEVICENUM 5
 
-namespace AstroAir::ASICAMERA
+namespace AstroAir
 {
-	class ASICCD
+	class ASICCD: public WSSERVER
 	{
 		public:
 			/*构造函数，重置参数*/
@@ -54,17 +55,19 @@ namespace AstroAir::ASICAMERA
 			/*析构函数*/
 			~ASICCD();
 			/*连接相机*/
-			virtual bool Connect(std::string Device_name);
+			virtual bool Connect(std::string Device_name) override;
 			/*断开连接*/
-			virtual bool Disconnect();
+			virtual bool Disconnect() override;
 			/*更新相机配置信息*/
 			virtual bool UpdateCameraConfig();
 			/*设置相机制冷温度*/
 			virtual bool SetTemperature(double temperature);
 			/*开始曝光*/
-			virtual bool StartExposure(float duration);
+			virtual bool StartExposure(float exp,int bin,bool is_roi,int roi_type,int roi_x,int roi_y,bool is_save,std::string fitsname,int gain,int offset) override;
 			/*停止曝光*/
-			virtual bool AbortExposure();
+			virtual bool AbortExposure() override;
+			/*设置相机参数*/
+			virtual bool SetCameraConfig();
 		protected:
 			/*设置相机画幅大小*/
 			virtual bool UpdateCCDFrame(int x, int y, int w, int h);
@@ -111,9 +114,9 @@ namespace AstroAir::ASICAMERA
 			
 			/*相机使用参数*/
 			std::atomic_bool isConnected;
-			bool InExposure = false;
-			bool InVideo = false;
-			bool InCooling = false;
+			std::atomic_bool InExposure;
+			std::atomic_bool InVideo;
+			std::atomic_bool InCooling;
 			
 			/*ASI相机参数*/
 			ASI_CAMERA_INFO ASICameraInfo;

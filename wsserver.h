@@ -26,7 +26,7 @@ Author:Max Qian
 
 E-mail:astro_air@126.com
  
-Date:2020-12-25
+Date:2021-1-4
  
 Description:Main framework of astroair server
  
@@ -37,11 +37,21 @@ Description:Main framework of astroair server
 #ifndef _WSSERVER_H_
 #define _WSSERVER_H_
 
-#define DebugMode true		//Debug模式是否开启
+#include "config.h"
 
+#ifdef HAS_WEBSOCKET
 #include <websocketpp/config/asio_no_tls.hpp>
 #include <websocketpp/server.hpp>
+#endif
+
+#ifdef HAS_JSONCPP
 #include <json/json.h>
+#endif
+
+#ifdef HAS_NOVA
+#include "libastro.h"
+#endif
+
 #include <string>
 #include <set>
 #include <dirent.h>
@@ -49,13 +59,15 @@ Description:Main framework of astroair server
 #include <atomic>
 #include <fstream>
 
+#ifdef HAS_WEBSOCKET
 typedef websocketpp::server<websocketpp::config::asio> airserver;
 using websocketpp::lib::placeholders::_1;
 using websocketpp::lib::placeholders::_2;
 using websocketpp::lib::bind;
 typedef airserver::message_ptr message_ptr;
+#endif
 
-namespace AstroAir::WebSokcet
+namespace AstroAir
 {
 	class WSSERVER
 	{
@@ -72,6 +84,12 @@ namespace AstroAir::WebSokcet
 			virtual bool is_running();
 			/*运行服务器*/
 			void run(int port);
+		public:
+			virtual bool Connect(std::string Device_name);
+			virtual bool Disconnect();
+			virtual bool StartExposure(float exp,int bin,bool is_roi,int roi_type,int roi_x,int roi_y,bool is_save,std::string fitsname,int gain,int offset);
+			virtual bool AbortExposure();
+		protected:
 			/*转化Json信息*/
 			void readJson(std::string message);	
 			/*WebSocket服务器功能性函数*/
@@ -82,6 +100,7 @@ namespace AstroAir::WebSokcet
 			void SetupConnectSuccess();
 			/*处理错误信息函数*/
 			void SetupConnectError(std::string message);
+			void StartExposureError();
 			void UnknownMsg();
 			void UnknownDevice(int id,std::string message);
 			void Polling();
@@ -95,6 +114,13 @@ namespace AstroAir::WebSokcet
 			typedef std::set<websocketpp::connection_hdl, std::owner_less<websocketpp::connection_hdl>> con_list;
 			con_list m_connections;
 			airserver m_server;
+			
+			/*定义服务器设备参数*/
+			WSSERVER *CCD;
+			WSSERVER *MOUNT;
+			WSSERVER *FOCUS;
+			WSSERVER *FILTER;
+			WSSERVER *GUIDE;
 			
 			/*服务器连接状态参数*/
 			std::atomic_bool isConnected;

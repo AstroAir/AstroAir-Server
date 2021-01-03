@@ -26,7 +26,7 @@ Author:Max Qian
 
 E-mail:astro_air@126.com
  
-Date:2021-1-2
+Date:2021-1-4
  
 Description:Main framework of astroair server
 
@@ -38,15 +38,25 @@ Using:JsonCpp<https://github.com/open-source-parsers/jsoncpp>
 
 #include "wsserver.h"
 #include "logger.h"
+#ifdef HAS_ASI
 #include "air-asi/asi_ccd.h"
-//#include "air-qhy/qhy_ccd.h"
-
-/*定义ASI相机*/
-AstroAir::ASICAMERA::ASICCD ASI,*ASICamera = &ASI;
-//AstroAir::QHYCAMERA::QHYCCD QHY,*QHYCamera = &QHY;
-
-namespace AstroAir::WebSokcet
+#endif
+#ifdef HAS_QHY
+#include "air-qhy/qhy_ccd.h"
+#endif
+#ifdef HAS_INDI
+#include "air-indi/indi_ccd.h"
+#endif
+namespace AstroAir
 {
+    /*定义ASI相机*/
+    #ifdef HAS_ASI
+        ASICCD ASICamera;
+    #endif
+    /*定义QHY相机*/
+    #ifdef HAS_QHY
+        QHYCCD QHYCamera;
+    #endif
     /*
      * name: WSSERVER()
      * describe: Constructor for initializing server parameters
@@ -189,6 +199,12 @@ namespace AstroAir::WebSokcet
             case "RemoteSetupConnect"_hash:{
                 std::thread t1(&WSSERVER::SetupConnect,this,root["params"]["TimeoutConnect"].asInt());
                 t1.detach();
+                break;
+            }
+            /*相机开始拍摄*/
+            case "RemoteCameraShot"_hash:{
+                std::thread CamThread(&WSSERVER::StartExposure,this,root["params"]["Expo"].asInt(),root["params"]["Bin"].asInt(),root["params"]["IsROI"].asBool(),root["params"]["ROITYPE"].asInt(),root["params"]["ROIX"].asInt(),root["params"]["ROIY"].asInt(),root["params"]["IsSaveFile"].asBool(),root["params"]["FitFileName"].asString(),root["params"]["Gain"].asInt(),root["params"]["Offset"].asInt());
+                CamThread.detach();
                 break;
             }
             /*轮询，保持连接*/
@@ -419,17 +435,26 @@ namespace AstroAir::WebSokcet
                 const char* a = Camera.c_str();
                 switch(hash_(a))
                 {
-                    case "ZWOASI"_hash:
-                        camera_ok = ASICamera->Connect(Camera_name);
+                    #ifdef HAS_ASI
+                    case "ZWOASI"_hash:{
+                        CCD = &ASICamera;
+                        camera_ok = CCD->Connect(Camera_name);
                         break;
-                    /*
-                    case "QHYCCD"_hash:
-                        camera_ok = QHYCamera->Connect(Camera_name);
+                    }
+                    #endif
+                    #ifdef HAS_QHY
+                    case "QHYCCD"_hash:{
+                        CCD = &QHYCamera;
+                        camera_ok = CCD->Connect(Camera_name);
                         break;
+                    }
+                    #endif
+                    #ifdef HAS_INDI
                     case "INDI"_hash:
-                        camera_ok = INDICamera->Connect(Camera_name);
+                        CCD = &INDICamera;
+                        camera_ok = CCD->Connect(Camera_name);
                         break;
-                    */
+                    #endif
                     default:
                         UnknownDevice(301,"Unknown camera");
                 }
@@ -467,17 +492,27 @@ namespace AstroAir::WebSokcet
                 const char* a = Mount.c_str();
                 switch(hash_(a))
                 {
-                    /*
-                    case "iOptron"_hash:
-                        monut_ok = iOptronMount->Connect(Mount_name);
+                    #ifdef HAS_IOPTRON
+                    case "iOptron"_hash:{
+                        MOUNT = &iOptronMount;
+                        monut_ok = MOUNT->Connect(Mount_name);
                         break;
-                    case "SkyWatcher"_hash:
-                        mount_ok = SkyWatcherMount->Connect(Mount_name);
+                    }
+                    #endif
+                    #ifdef HAS_SKYWATCHER
+                    case "SkyWatcher"_hash:{
+                        MOUNT = &SkyWatcherMount;
+                        mount_ok = MOUNT->Connect(Mount_name);
                         break;
-                    case "INDIMount"_hash:
-                        mount_ok = INDIMount->Connect(Mount_name);
+                    }
+                    #endif
+                    #ifdef HAS_INDI
+                    case "INDIMount"_hash:{
+                        MOUNT = &INDIMount
+                        mount_ok = MOUNT->Connect(Mount_name);
                         break;
-                    */
+                    }
+                    #endif
                     default:
                         UnknownDevice(302,"Unknown mount");
                 }
@@ -515,17 +550,27 @@ namespace AstroAir::WebSokcet
                 const char* a = Focus.c_str();
                 switch(hash_(a))
                 {
-                    /*
-                    case "ASIEAF"_hash:
-                        focus_ok = EAFFocus->Connect(Focus_name);
+                    #ifdef HAS_ASIEAF
+                    case "ASIEAF"_hash:{
+                        FOCUS = &EAFFocus;
+                        focus_ok = FOCUS->Connect(Focus_name);
                         break;
-                    case "Grus"_hash:
-                        focus_ok = GRUSFocus->Connect(Focus_name);
+                    }
+                    #endif
+                    #ifdef HAS_GRUS
+                    case "Grus"_hash:{
+                        FOCUS = &GRUSFocus;
+                        focus_ok = FOCUS->Connect(Focus_name);
                         break;
-                    case "INDIFocus"_hash:
-                        focus_ok = INDIFocus->Connect(Focus_name);
+                    }
+                    #endif
+                    #ifdef HAS_INDI
+                    case "INDIFocus"_hash:{
+                        FOCUS = &INDIFocus;
+                        focus_ok = FOCUS->Connect(Focus_name);
                         break;
-                    */
+                    }
+                    #endif
                     default:
                         UnknownDevice(303,"Unknown focus");
                 }
@@ -563,17 +608,27 @@ namespace AstroAir::WebSokcet
                 const char* a = Filter.c_str();
                 switch(hash_(a))
                 {
-                    /*
-                    case "ASIEFW"_hash:
-                        filter_ok = ASIFilter->Connect(Filter_name);
+                    #ifdef HAS_ASIEFW
+                    case "ASIEFW"_hash:{
+                        FILTER = &ASIFilter;
+                        filter_ok = FILTER->Connect(Filter_name);
                         break;
-                    case "QHYCFW"_hash:
-                        filter_ok = QHYFilter->Connect(Filter_name);
+                    }
+                    #endif
+                    #ifdef HAS_QHYCFW
+                    case "QHYCFW"_hash:{
+                        FILTER = &QHYFilter
+                        filter_ok = FILTER->Connect(Filter_name);
                         break;
-                        case "INDIFilter"_hash:
-                        filter_ok = INDIFilter->Connect(Filter_name);
+                    }
+                    #endif
+                    #ifdef HAS_INDI
+                    case "INDIFilter"_hash:{
+                        FILTER = &INDIFilter;
+                        filter_ok = FILTER->Connect(Filter_name);
                         break; 
-                    */
+                    }
+                    #endif
                     default:
                         UnknownDevice(304,"Unknown filter");
                 }
@@ -611,16 +666,20 @@ namespace AstroAir::WebSokcet
                 const char* a = Guide.c_str();
                 switch(hash_(a))
                 {
-                    /*
+                    #ifdef HAS_PHD2
                     case "PHD2"_hash:{
-                        guide_ok = PHD2->Connect(Guide_name);
+                        GUIDE = &PHD2;
+                        guide_ok = GUIDE->Connect(Guide_name);
                         break;
                     }
+                    #endif
+                    #ifdef HAS_LINGUIDER
                     case "LinGuider"_hash:{
-                        guide_ok = LinGuider->Connect(Guide_name);
+                        GUIDE = &LinGuider
+                        guide_ok = GUIDE->Connect(Guide_name);
                         break;
                     }
-                    */
+                    #endif
                     default:
                         UnknownDevice(305,"Unknown guide server");
                 }
@@ -651,6 +710,76 @@ namespace AstroAir::WebSokcet
         return;
     }
     
+    /*
+     * name: Connect(std::string Device_name)
+     * @param Device_name:连接相机名称
+     * describe: Connect the camera
+     * 描述： 连接相机
+     * calls: IDLog(const char *fmt, ...)
+     * calls: IDLog_DEBUG(const char *fmt, ...)
+	 * note:This function should not be executed normally
+     */
+    bool WSSERVER::Connect(std::string Device_name)
+    {
+        IDLog("Try to establish a connection with %s,Should never get here.\n",Device_name);
+        IDLog_DEBUG("Try to establish a connection with %s,Should never get here.\n",Device_name);
+        return true;
+    }
+    
+    /*
+     * name: Disconnect()
+     * describe: Disconnect from camera
+     * 描述：与相机断开连接
+     * calls: IDLog(const char *fmt, ...)
+     * calls: IDLog_DEBUG(const char *fmt, ...)
+     * note: This function should not be executed normally
+     */
+    bool WSSERVER::Disconnect()
+    {
+        IDLog("Try to disconnect from %s,Should never get here.\n",Camera_name);
+        IDLog_DEBUG("Try to disconnect from %s,Should never get here.\n",Camera_name);
+        return true;
+    }
+    
+    /*
+     * name: StartExposure(float exp,int bin,bool is_roi,int roi_type,int roi_x,int roi_y,bool is_save,std::string fitsname,int gain,int offset)
+     * @param exp:相机曝光时间
+     * @param bin:像素合并
+     * @param is_roi:是否开启ROI模式
+     * @param roi_x:ROIx轴起点
+     * @param roi_y:ROIy轴起点
+     * @param is_save:是否保存图像
+     * @param fitsname:保存图像名称
+     * @param gain:相机增益
+     * @param offset:相机偏置
+     * describe: Start exposure
+     * 描述：开始曝光
+     * calls: IDLog(const char *fmt, ...)
+     * calls: IDLog_DEBUG(const char *fmt, ...)
+	 * note:This function should not be executed normally
+     */
+    bool WSSERVER::StartExposure(float exp,int bin,bool is_roi,int roi_type,int roi_x,int roi_y,bool is_save,std::string fitsname,int gain,int offset)
+    {
+        IDLog("Try to start exposure,Should never get here.\n");
+        IDLog_DEBUG("Try to start exposure,Should never get here.\n");
+        return true;
+    }
+    
+    /*
+     * name: AbortExposure()
+     * describe: Abort exposure
+     * 描述：停止曝光
+     * calls: IDLog(const char *fmt, ...)
+     * calls: IDLog_DEBUG(const char *fmt, ...)
+     * note: This function should not be executed normally
+     */
+    bool WSSERVER::AbortExposure()
+    {
+        IDLog("Try to stop exposure,Should never get here.\n");
+        IDLog_DEBUG("Try to stop exposure,Should never get here.\n");
+        return true;
+    }
+    
     void WSSERVER::SetupConnectSuccess()
     {
         
@@ -678,6 +807,11 @@ namespace AstroAir::WebSokcet
         Root["error"] = error;
         json_messenge = Root.toStyledString();
         send(json_messenge);
+    }
+    
+    void WSSERVER::StartExposureError()
+    {
+        
     }
     
     /*

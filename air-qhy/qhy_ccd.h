@@ -17,13 +17,13 @@
 
 /************************************************* 
 
-Copyright: 2020 Max Qian. All rights reserved
+Copyright: 2020-2021 Max Qian. All rights reserved
 
 Author:Max Qian
 
 E-mail:astro_air@126.com
 
-Date:2020-12-11
+Date:2021-1-3
 
 Description:QHY camera driver
 
@@ -34,16 +34,46 @@ Description:QHY camera driver
 #ifndef _QHYCCD_H_
 #define _QHYCCD_H_
 
-namespace AstroAir
+#include <qhyccd.h>
+#include <atomic>
+
+#define MAXDEVICENUM 5
+
+namespace AstroAir::QHYCAMERA
 {
 	class QHYCCD
 	{
 		public:
+			/*构造函数，重置参数*/
 			explicit QHYCCD();
+			/*析构函数*/
 			~QHYCCD();
+			/*连接相机*/
 			virtual bool Connect(std::string Device_name);
+			/*断开连接*/
+			virtual bool Disconnect();
+			/*更新相机配置信息*/
+			virtual bool UpdateCameraConfig();
 		private:
-		
+			int CamNumber = 0;
+			char CamName*[MAXDEVICENUM];
+			int CamId;
+			int iCamId[100] = {0};
+			
+			/*相机配置参数*/
+			int iMaxWidth = 0;		//最大高度
+			int iMaxHeight = 0;		//最大宽度
+			bool isCoolCamera = false;
+			bool isColorCamera = false;
+			bool isGuideCamera = false;
+			
+			qhyccd_handle *pCamHandle;
+			
+			/*相机使用参数*/
+			std::atomic_bool isConnected;
+			std::atomic_bool InExposure;
+			std::atomic_bool InVideo;
+			std::atomic_bool InCooling;
 	};
 }
 

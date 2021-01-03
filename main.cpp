@@ -69,7 +69,7 @@ void usage()
  */
 void start_server()
 {
-    AstroAir::WebSokcet::WSSERVER ws;
+    WSSERVER ws;
     ws.run(port);
 }
 
@@ -80,7 +80,7 @@ void start_server()
  */
 void stop_server()
 {
-    AstroAir::WebSokcet::WSSERVER ws;
+    WSSERVER ws;
     ws.stop();
 }
 

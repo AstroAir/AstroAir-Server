@@ -18,7 +18,7 @@
  
 /************************************************* 
 
-Copyright: 2020 Max Qian. All rights reserved
+Copyright: 2020-2021 Max Qian. All rights reserved
 
 Author:Max Qian
 
@@ -33,7 +33,7 @@ Description:ZWO camera driver
 #include "asi_ccd.h"
 #include "../logger.h"
 
-namespace AstroAir::ASICAMERA
+namespace AstroAir
 {
     /*
      * name: ASICCD()
@@ -47,6 +47,7 @@ namespace AstroAir::ASICAMERA
 	isConnected = false;
 	InVideo = false;
 	InExposure = false;
+	InCooling = false;
     }
     
     /*
@@ -102,7 +103,7 @@ namespace AstroAir::ASICAMERA
 		{
 		    if(ASICameraInfo.Name == Device_name)
 		    {
-			IDLog("Find the specified camera.\n");
+			IDLog("Find %s.\n",ASICameraInfo.Name);
 			CamId = ASICameraInfo.CameraID;
 			CamName[CamId] = ASICameraInfo.Name;
 			/*打开相机*/
@@ -280,8 +281,9 @@ namespace AstroAir::ASICAMERA
 	return true;
     }
     
-    bool ASICCD::StartExposure(float duration)
+    bool ASICCD::StartExposure(float exp,int bin,bool is_roi,int roi_type,int roi_x,int roi_y,bool is_save,std::string fitsname,int gain,int offset)
     {
+	
 	return true;
     }
     
@@ -311,6 +313,11 @@ namespace AstroAir::ASICAMERA
     }
     
     bool ASICCD::UpdateCCDFrame(int x, int y, int w, int h)
+    {
+	return true;
+    }
+    
+    bool ASICCD::SetCameraConfig()
     {
 	return true;
     }

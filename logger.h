@@ -26,7 +26,7 @@ Author:Max Qian
 
 E-mail:astro_air@126.com
  
-Date:2021-1-2
+Date:2021-1-4
  
 Description:Log system of astroair server
  
@@ -41,10 +41,13 @@ Description:Log system of astroair server
 #include <time.h>
 #include <sys/time.h>
 
+#ifdef WINDOWS
+#include <windows.h>
+#endif
+
 typedef std::uint64_t hash_t;  
 constexpr hash_t prime = 0x100000001B3ull;  
 constexpr hash_t basis = 0xCBF29CE484222325ull;  
-
 
 typedef struct {
 	int year;
