@@ -107,7 +107,7 @@ namespace AstroAir
 			void StartExposureSuccess();
 			/*处理错误信息函数*/
 			void SetupConnectError(std::string message);
-			void StartExposureError();
+			void StartExposureError(std::string message);
 			void UnknownMsg();
 			void UnknownDevice(int id,std::string message);
 			void Polling();

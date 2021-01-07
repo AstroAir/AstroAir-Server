@@ -757,6 +757,7 @@ namespace AstroAir
 	 * calls: StartExposure(float exp,int bin,bool is_roi,int roi_type,int roi_x,int roi_y,bool is_save,std::string fitsname,int gain,int offset)
      * calls: IDLog(const char *fmt, ...)
      * calls: IDLog_DEBUG(const char *fmt, ...)
+	 * calls :StartExposureError(std::string message）
 	 * note:This function should not be executed normally
      */
     bool WSSERVER::StartExposure(float exp,int bin,bool is_roi,int roi_type,int roi_x,int roi_y,bool is_save,std::string fitsname,int gain,int offset)
@@ -764,10 +765,15 @@ namespace AstroAir
 		bool camera_ok = false;
 		if (camera_ok = CCD->StartExposure(exp, bin, is_roi, roi_type, roi_x, roi_y, is_save, fitsname, gain, offset) != true)
 		{
-			StartExposureError();
+			/*返回曝光错误的原因*/
+			StartExposureError(camera_ok);
+			IDLog("Unable to stop the exposure of the camera. Please check the connection of the camera. If you have any problems, please contact the developer\n")
+			IDLog_DEBUG("Unable to stop the exposure of the camera. Please check the connection of the camera. If you have any problems, please contact the developer\n")
+			/*如果函数执行不成功返回false*/
 			return false;
 		}
-		StartEcpo
+		/*将拍摄成功的消息返回至客户端*/
+		StartExposureSuccess();
         return true;
     }
     
@@ -820,9 +826,28 @@ namespace AstroAir
 
 	}
 
-    void WSSERVER::StartExposureError()
+	/*
+	 * name: SetupExposureError(std::string message)
+	 * @prama message:需要返回至客户端的错误信息
+	 * describe: Error handling connection to device
+	 * 描述：处理开始曝光时的错误
+	 * calls: IDLog(const char *fmt, ...)
+	 * calls: IDLog_DEBUG(const char *fmt, ...)
+	 * calls: send()
+	 */
+    void WSSERVER::StartExposureError(std::string message）
     {
-        
+		IDLog("Unable to start exposure\n");
+		IDLog_DEBUG("Unable to start exposure\n");
+		/*整合信息并发送至客户端*/
+		Json::Value Root,error;
+		Root["result"] = Json::Value(1);
+		Root["code"] = Json::Value();
+		Root["id"] = Json::Value(201);
+		error["message"] = Json::Value(message);
+		Root["error"] = error;
+		json_messenge = Root.toStyledString();
+		send(json_messenge);
     }
     
     /*
