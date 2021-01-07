@@ -1,5 +1,5 @@
 /*
- * wsserver.cpp 
+ * wsserver.cpp <Hangzhou@astroair.cn>
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -57,6 +57,12 @@ namespace AstroAir
     #ifdef HAS_QHY
         QHYCCD QHYCamera;
     #endif
+	/*定义INDI相机*/
+	#ifdef HAS_INDI
+		INDICCD INDICamera;
+	#endif
+#ifdef HAS_WEBSOCKET
+
     /*
      * name: WSSERVER()
      * describe: Constructor for initializing server parameters
@@ -93,6 +99,7 @@ namespace AstroAir
      */
     WSSERVER::~WSSERVER()
     {
+		/*如果服务器正在工作，则在停止程序之前停止服务器*/
         if(isConnected ==true)
         {
             stop();
@@ -276,6 +283,7 @@ namespace AstroAir
      * name: stop()
      * describe: Stop the websocket server
      * 描述：停止WebSocket服务器
+	 * calls: IDLog(const char *fmt, ...)
      */
     void WSSERVER::stop()
     {
@@ -303,6 +311,7 @@ namespace AstroAir
      * @param port:服务器端口
      * describe: This is used to start the websocket server
      * 描述：启动WebSocket服务器
+	 * calls: IDLog(const char *fmt, ...)
      */
     void WSSERVER::run(int port)
     {
@@ -317,21 +326,19 @@ namespace AstroAir
         {   
             IDLog("Unable to start the server\nThe reason is:");
             IDLog_DEBUG("%s\n",e.what());
-            //std::cerr << e.what() << std::endl;
-            
         }
         catch (...)
         {
             std::cerr << "other exception" << std::endl;
         }
     }
-    
+#endif
+
     /*
      * name: SetDashBoardMode()
      * describe: This is used to initialize the connection and send the version number.
      * 描述：初始化连接，并发送版本号
      * calls: send(std::string message)
-     * calls: IDLog(const char *fmt, ...)
      */
     void WSSERVER::SetDashBoardMode()
 	{
@@ -437,6 +444,7 @@ namespace AstroAir
                 {
                     #ifdef HAS_ASI
                     case "ZWOASI"_hash:{
+						/*初始化ASI相机，并赋值CCD*/
                         CCD = &ASICamera;
                         camera_ok = CCD->Connect(Camera_name);
                         break;
@@ -444,19 +452,22 @@ namespace AstroAir
                     #endif
                     #ifdef HAS_QHY
                     case "QHYCCD"_hash:{
+						/*初始化QHY相机，并赋值CCD*/
                         CCD = &QHYCamera;
                         camera_ok = CCD->Connect(Camera_name);
                         break;
                     }
                     #endif
                     #ifdef HAS_INDI
-                    case "INDI"_hash:
+                    case "INDI"_hash:{
+						/*初始化INDI相机，并赋值CCD*/
                         CCD = &INDICamera;
                         camera_ok = CCD->Connect(Camera_name);
                         break;
+					}
                     #endif
                     default:
-                        UnknownDevice(301,"Unknown camera");
+                        UnknownDevice(301,"Unknown camera");		//未知相机返回错误信息
                 }
                 if(camera_ok == true)
                 {
@@ -465,6 +476,7 @@ namespace AstroAir
                 }
                 if(i == 3&& camera_ok == false)
                 {
+					/*相机未连接成功，返回错误信息*/
                     SetupConnectError("Unable to connect camera");
                     break;
                 }
@@ -474,14 +486,15 @@ namespace AstroAir
         /*判断相机是否连接成功*/
         if(Has_Camera == true)
         {
+			/*Max：这一段的使用逻辑尚需优化，关于如何判断是否所有设备都连接成功*/
             if(camera_ok == true)
                 connect_ok == true;
             else
                 connect_ok == false;
         }
         /*连接指定品牌的指定型号赤道仪*/
-        bool mount_ok = false;
-        bool Has_Mount = false;
+        bool mount_ok = false;		//赤道仪连接状态
+        bool Has_Mount = false;		//是否拥有赤道仪
         Mount = root["mount"]["brand"].asString();
         Mount_name = root["mount"]["name"].asString();
         if(!Mount.empty() && !Mount_name.empty())
@@ -492,6 +505,7 @@ namespace AstroAir
                 const char* a = Mount.c_str();
                 switch(hash_(a))
                 {
+					/*初始化iOptron赤道仪，并赋值MOUNT*/
                     #ifdef HAS_IOPTRON
                     case "iOptron"_hash:{
                         MOUNT = &iOptronMount;
@@ -501,6 +515,7 @@ namespace AstroAir
                     #endif
                     #ifdef HAS_SKYWATCHER
                     case "SkyWatcher"_hash:{
+						/*初始化SkyWatcher赤道仪，并赋值MOUNT*/
                         MOUNT = &SkyWatcherMount;
                         mount_ok = MOUNT->Connect(Mount_name);
                         break;
@@ -508,13 +523,14 @@ namespace AstroAir
                     #endif
                     #ifdef HAS_INDI
                     case "INDIMount"_hash:{
+						/*初始化INDI赤道仪，并赋值MOUNT*/
                         MOUNT = &INDIMount
                         mount_ok = MOUNT->Connect(Mount_name);
                         break;
                     }
                     #endif
                     default:
-                        UnknownDevice(302,"Unknown mount");
+                        UnknownDevice(302,"Unknown mount");		//未知赤道仪返回错误信息
                 }
                 if(mount_ok == true)
                 {
@@ -523,6 +539,7 @@ namespace AstroAir
                 }
                 if(i == 3&& mount_ok == false)
                 {
+					/*赤道仪未连接成功，返回错误信息*/
                     SetupConnectError("Unable to connect mount");
                     break;
                 }
@@ -552,6 +569,7 @@ namespace AstroAir
                 {
                     #ifdef HAS_ASIEAF
                     case "ASIEAF"_hash:{
+						/*初始化EAF电动调焦座，并赋FOCUS*/
                         FOCUS = &EAFFocus;
                         focus_ok = FOCUS->Connect(Focus_name);
                         break;
@@ -559,6 +577,7 @@ namespace AstroAir
                     #endif
                     #ifdef HAS_GRUS
                     case "Grus"_hash:{
+						/*初始化Grus电动调焦座，并赋FOCUS*/
                         FOCUS = &GRUSFocus;
                         focus_ok = FOCUS->Connect(Focus_name);
                         break;
@@ -566,13 +585,14 @@ namespace AstroAir
                     #endif
                     #ifdef HAS_INDI
                     case "INDIFocus"_hash:{
+						/*初始化INDI电动调焦座，并赋FOCUS*/
                         FOCUS = &INDIFocus;
                         focus_ok = FOCUS->Connect(Focus_name);
                         break;
                     }
                     #endif
                     default:
-                        UnknownDevice(303,"Unknown focus");
+                        UnknownDevice(303,"Unknown focus");		//未知电动调焦座返回错误信息
                 }
                 if(focus_ok == true)
                 {
@@ -581,6 +601,7 @@ namespace AstroAir
                 }
                 if(i == 3&& focus_ok == false)
                 {
+					/*电动调焦座未连接成功，返回错误信息*/
                     SetupConnectError("Unable to connect focus");
                     break;
                 }
@@ -610,6 +631,7 @@ namespace AstroAir
                 {
                     #ifdef HAS_ASIEFW
                     case "ASIEFW"_hash:{
+						/*初始化EFW滤镜轮，并赋FILTER*/
                         FILTER = &ASIFilter;
                         filter_ok = FILTER->Connect(Filter_name);
                         break;
@@ -617,6 +639,7 @@ namespace AstroAir
                     #endif
                     #ifdef HAS_QHYCFW
                     case "QHYCFW"_hash:{
+						/*初始化QHY滤镜轮，并赋FILTER*/
                         FILTER = &QHYFilter
                         filter_ok = FILTER->Connect(Filter_name);
                         break;
@@ -624,13 +647,14 @@ namespace AstroAir
                     #endif
                     #ifdef HAS_INDI
                     case "INDIFilter"_hash:{
+						/*初始化INDI滤镜轮，并赋FILTER*/
                         FILTER = &INDIFilter;
                         filter_ok = FILTER->Connect(Filter_name);
                         break; 
                     }
                     #endif
                     default:
-                        UnknownDevice(304,"Unknown filter");
+                        UnknownDevice(304,"Unknown filter");		//未知滤镜轮返回错误信息
                 }
                 if(filter_ok == true)
                 {
@@ -639,6 +663,7 @@ namespace AstroAir
                 }
                 if(i == 3&& filter_ok == false)
                 {
+					/*滤镜轮未连接成功，返回错误信息*/
                     SetupConnectError("Unable to connect filter");
                     break;
                 }
@@ -666,6 +691,7 @@ namespace AstroAir
                 const char* a = Guide.c_str();
                 switch(hash_(a))
                 {
+					/*Max：事实上我们一般只会使用PHD2，所以LinGuider可以等其他做好以后再做*/
                     #ifdef HAS_PHD2
                     case "PHD2"_hash:{
                         GUIDE = &PHD2;
@@ -681,7 +707,7 @@ namespace AstroAir
                     }
                     #endif
                     default:
-                        UnknownDevice(305,"Unknown guide server");
+                        UnknownDevice(305,"Unknown guide server");		//未知导星软件返回错误信息
                 }
                 if(guide_ok == true)
                 {
@@ -690,6 +716,7 @@ namespace AstroAir
                 }
                 if(i == 3&& guide_ok == false)
                 {
+					/*导星软件未连接成功，返回错误信息*/
                     SetupConnectError("Unable to connect giude software");
                     break;
                 }
@@ -706,7 +733,7 @@ namespace AstroAir
         }
         /*判断设备是否完全连接成功*/
         if(connect_ok == true)
-            SetupConnectSuccess();
+            SetupConnectSuccess();		//将连接上的设备列表发送给客户端
         return;
     }
     
@@ -721,6 +748,7 @@ namespace AstroAir
      */
     bool WSSERVER::Connect(std::string Device_name)
     {
+		/*默认情况下不应该执行这个函数*/
         IDLog("Try to establish a connection with %s,Should never get here.\n",Device_name);
         IDLog_DEBUG("Try to establish a connection with %s,Should never get here.\n",Device_name);
         return true;
@@ -736,6 +764,7 @@ namespace AstroAir
      */
     bool WSSERVER::Disconnect()
     {
+		/*默认情况下不应该执行这个函数*/
         IDLog("Try to disconnect from %s,Should never get here.\n",Camera_name);
         IDLog_DEBUG("Try to disconnect from %s,Should never get here.\n",Camera_name);
         return true;
@@ -835,7 +864,7 @@ namespace AstroAir
 	 * calls: IDLog_DEBUG(const char *fmt, ...)
 	 * calls: send()
 	 */
-    void WSSERVER::StartExposureError(std::string message）
+    void WSSERVER::StartExposureError(std::string message)
     {
 		IDLog("Unable to start exposure\n");
 		IDLog_DEBUG("Unable to start exposure\n");
