@@ -11,9 +11,9 @@
 
 
 #define version_year                20
-#define version_month               11
-#define version_day                 29
-#define version_subday              16
+#define version_month               12
+#define version_day                 27
+#define version_subday              19
 
 #if defined (_WIN32)
 #define QHYCCD_OPENCV_SUPPORT

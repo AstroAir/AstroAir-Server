@@ -754,14 +754,20 @@ namespace AstroAir
      * @param offset:相机偏置
      * describe: Start exposure
      * 描述：开始曝光
+	 * calls: StartExposure(float exp,int bin,bool is_roi,int roi_type,int roi_x,int roi_y,bool is_save,std::string fitsname,int gain,int offset)
      * calls: IDLog(const char *fmt, ...)
      * calls: IDLog_DEBUG(const char *fmt, ...)
 	 * note:This function should not be executed normally
      */
     bool WSSERVER::StartExposure(float exp,int bin,bool is_roi,int roi_type,int roi_x,int roi_y,bool is_save,std::string fitsname,int gain,int offset)
     {
-        IDLog("Try to start exposure,Should never get here.\n");
-        IDLog_DEBUG("Try to start exposure,Should never get here.\n");
+		bool camera_ok = false;
+		if (camera_ok = CCD->StartExposure(exp, bin, is_roi, roi_type, roi_x, roi_y, is_save, fitsname, gain, offset) != true)
+		{
+			StartExposureError();
+			return false;
+		}
+		StartEcpo
         return true;
     }
     
@@ -809,6 +815,11 @@ namespace AstroAir
         send(json_messenge);
     }
     
+	void WSSERVER::StartExposureSuccess()
+	{
+
+	}
+
     void WSSERVER::StartExposureError()
     {
         

@@ -2,5 +2,6 @@
 *.a
 *.air
 *.txt
+.vs
 main
 server

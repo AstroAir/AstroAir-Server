@@ -26,7 +26,7 @@ Author:Max Qian
 
 E-mail:astro_air@126.com
  
-Date:2021-1-4
+Date:2021-1-8
  
 Description:Main framework of astroair server
  
@@ -40,7 +40,13 @@ Description:Main framework of astroair server
 #include "config.h"
 
 #ifdef HAS_WEBSOCKET
+/*如果需要使用wss客户端*/
+#ifdef HAS_OPENSSL
+#include <websocketpp/config/asio.hpp>
+#else
+/*默认无加密客户端*/
 #include <websocketpp/config/asio_no_tls.hpp>
+#endif
 #include <websocketpp/server.hpp>
 #endif
 
@@ -98,6 +104,7 @@ namespace AstroAir
 			void SetupConnect(int timeout);
 			/*处理正确返回信息*/
 			void SetupConnectSuccess();
+			void StartExposureSuccess();
 			/*处理错误信息函数*/
 			void SetupConnectError(std::string message);
 			void StartExposureError();
@@ -116,13 +123,9 @@ namespace AstroAir
 			airserver m_server;
 			
 			/*定义服务器设备参数*/
-			WSSERVER *CCD;
-			WSSERVER *MOUNT;
-			WSSERVER *FOCUS;
-			WSSERVER *FILTER;
-			WSSERVER *GUIDE;
-			
-			/*服务器连接状态参数*/
+			WSSERVER *CCD,*MOUNT,*FOCUS,*FILTER,*GUIDE;
+
+			/*服务器设备连接状态参数*/
 			std::atomic_bool isConnected;
 			std::atomic_bool isCameraConnected;
 			std::atomic_bool isMountConnected;
