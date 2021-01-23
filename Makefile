@@ -14,20 +14,20 @@
 #  MA 02110-1301, USA.
 #  
 
-CC = g++
+CC = g++-9
 
-OUTPUT = -g -std=c++17 -c
-OUT = -g -std=c++17 -o
+OUTPUT = -g -std=c++11 -c
+OUT = -g -std=c++11 -o
 #颜色配置文件
 GREEN = "\e[32;1m"
 BLUE = "\e[34;1m"
 RED = "\e[31;1m"
 #定义使用平台
-PLATFORM = armv7
+PLATFORM = x64
 #定义库
 WEBSOCKETPP = -D_WEBSOCKETPP_CPP11_STL_ -DASIO_STANDALONE -lpthread
 JSON = -ljsoncpp
-ASILIB = -Iair-asi/ -Llibasi/armv7/ -Ilibasi/ -lASICamera2 -lusb-1.0
+ASILIB = -Iair-asi/ -Llibasi/$(PLATFORM)/ -Ilibasi/ -lASICamera2 -lusb-1.0
 NOVA = -lnova
 
 all: wsserver astroair-server

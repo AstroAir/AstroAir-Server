@@ -795,9 +795,9 @@ namespace AstroAir
 		if (camera_ok = CCD->StartExposure(exp, bin, is_roi, roi_type, roi_x, roi_y, is_save, fitsname, gain, offset) != true)
 		{
 			/*返回曝光错误的原因*/
-			StartExposureError(camera_ok);
-			IDLog("Unable to stop the exposure of the camera. Please check the connection of the camera. If you have any problems, please contact the developer\n")
-			IDLog_DEBUG("Unable to stop the exposure of the camera. Please check the connection of the camera. If you have any problems, please contact the developer\n")
+			StartExposureError("Could not start exposure");
+			IDLog("Unable to stop the exposure of the camera. Please check the connection of the camera. If you have any problems, please contact the developer\n");
+			IDLog_DEBUG("Unable to stop the exposure of the camera. Please check the connection of the camera. If you have any problems, please contact the developer\n");
 			/*如果函数执行不成功返回false*/
 			return false;
 		}

@@ -40,22 +40,27 @@ Description:Main framework of astroair server
 #include "config.h"
 
 #ifdef HAS_WEBSOCKET
-/*如果需要使用wss客户端*/
-#ifdef HAS_OPENSSL
-#include <websocketpp/config/asio.hpp>
-#else
-/*默认无加密客户端*/
-#include <websocketpp/config/asio_no_tls.hpp>
-#endif
-#include <websocketpp/server.hpp>
+	/*如果需要使用wss客户端*/
+	#ifdef HAS_OPENSSL
+		#include <websocketpp/config/asio.hpp>
+	#else
+		/*默认无加密客户端*/
+		#include <websocketpp/config/asio_no_tls.hpp>
+	#endif
+	#include <websocketpp/server.hpp>
 #endif
 
 #ifdef HAS_JSONCPP
-#include <json/json.h>
+	#ifdef Ubuntu
+		#include <unistd.h>
+		#include <json/json.h>
+	#else
+		#include <json/json.h>
+	#endif
 #endif
 
 #ifdef HAS_NOVA
-#include "libastro.h"
+	#include "libastro.h"
 #endif
 
 #include <string>

@@ -3,3 +3,4 @@
 #define HAS_WEBSOCKET
 #define HAS_JSONCPP
 #define HAS_NOVA
+#define Ubuntu

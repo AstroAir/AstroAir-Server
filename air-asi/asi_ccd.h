@@ -36,7 +36,7 @@ Description:ZWO camera driver
 #define _ASICCD_H_
 
 #include "../wsserver.h"
-#include "libasi/ASICamera2.h"
+#include "../libasi/ASICamera2.h"
 
 #include <condition_variable>
 #include <mutex>

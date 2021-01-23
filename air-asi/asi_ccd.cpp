@@ -42,12 +42,12 @@ namespace AstroAir
      */
     ASICCD::ASICCD()
     {
-	CamNumber = 0;
-	CamId = 0;
-	isConnected = false;
-	InVideo = false;
-	InExposure = false;
-	InCooling = false;
+		CamNumber = 0;
+		CamId = 0;
+		isConnected = false;
+		InVideo = false;
+		InExposure = false;
+		InCooling = false;
     }
     
     /*
@@ -59,10 +59,10 @@ namespace AstroAir
      */
     ASICCD::~ASICCD()
     {
-	if (isConnected == true)
-	{
-	    Disconnect();
-	}
+		if (isConnected == true)
+		{
+			Disconnect();
+		}
     }
     
     /*
@@ -82,64 +82,64 @@ namespace AstroAir
      */
     bool ASICCD::Connect(std::string Device_name)
     {
-	/*获取已连接相机数量*/
-	CamNumber = ASIGetNumOfConnectedCameras();
-	if(CamNumber <= 0)
-	{
-	    IDLog("ASI camera not found, please check the power supply or make sure the camera is connected.\n");
-	    return false;
-	}
-	else
-	{
-	    for(int i = 0;i < CamNumber;i++)
-	    {
-		/*获取相机信息*/
-		if(ASIGetCameraProperty(&ASICameraInfo, i) != ASI_SUCCESS)
+		/*获取已连接相机数量*/
+		CamNumber = ASIGetNumOfConnectedCameras();
+		if(CamNumber <= 0)
 		{
-		    IDLog("Unable to get %s configuration information, please check program permissions.\n",ASICameraInfo.Name);
-		    return false;
+			IDLog("ASI camera not found, please check the power supply or make sure the camera is connected.\n");
+			return false;
 		}
 		else
 		{
-		    if(ASICameraInfo.Name == Device_name)
-		    {
-			IDLog("Find %s.\n",ASICameraInfo.Name);
-			CamId = ASICameraInfo.CameraID;
-			CamName[CamId] = ASICameraInfo.Name;
-			/*打开相机*/
-			if(ASIOpenCamera(CamId) != ASI_SUCCESS)		
+			for(int i = 0;i < CamNumber;i++)
 			{
-			    IDLog("Unable to turn on the %s.\n",CamName[CamId]);
-			    return false;
+			/*获取相机信息*/
+			if(ASIGetCameraProperty(&ASICameraInfo, i) != ASI_SUCCESS)
+			{
+				IDLog("Unable to get %s configuration information, please check program permissions.\n",ASICameraInfo.Name);
+				return false;
 			}
 			else
 			{
-			    /*初始化相机*/
-			    if(ASIInitCamera(CamId) != ASI_SUCCESS)	
-			    {
-				IDLog("Unable to initialize connection to camera.\n");
-				return false;
-			    }
-			    else 
-			    {
-				isConnected = true;
-				IDLog("Camera turned on successfully\n");
-				/*获取连接相机配置信息，并存入参数*/
-				UpdateCameraConfig();
-				return true;
-			    }
+				if(ASICameraInfo.Name == Device_name)
+				{
+				IDLog("Find %s.\n",ASICameraInfo.Name);
+				CamId = ASICameraInfo.CameraID;
+				CamName[CamId] = ASICameraInfo.Name;
+				/*打开相机*/
+				if(ASIOpenCamera(CamId) != ASI_SUCCESS)		
+				{
+					IDLog("Unable to turn on the %s.\n",CamName[CamId]);
+					return false;
+				}
+				else
+				{
+					/*初始化相机*/
+					if(ASIInitCamera(CamId) != ASI_SUCCESS)	
+					{
+					IDLog("Unable to initialize connection to camera.\n");
+					return false;
+					}
+					else 
+					{
+					isConnected = true;
+					IDLog("Camera turned on successfully\n");
+					/*获取连接相机配置信息，并存入参数*/
+					UpdateCameraConfig();
+					return true;
+					}
+				}
+				}
+				else
+				{
+				IDLog("This is not a designated camera, try to find the next one.\n");
+				}
 			}
-		    }
-		    else
-		    {
-			IDLog("This is not a designated camera, try to find the next one.\n");
-		    }
+			}
+			IDLog("The specified camera was not found. Please check the camera connection");
+			return false;
 		}
-	    }
-	    IDLog("The specified camera was not found. Please check the camera connection");
-	    return false;
-	}
-	return false;
+		return false;
     }
     
     /*
@@ -155,35 +155,35 @@ namespace AstroAir
      */
     bool ASICCD::Disconnect()
     {
-	/*在关闭相机之前停止所有任务*/
-	if(InVideo == true)
-	{
-	    if(ASIStopVideoCapture(CamId) != ASI_SUCCESS);		//停止视频拍摄
-	    {
-		IDLog("Unable to stop video capture, please try again.\n");
-		return false;
-	    }
-	    IDLog("Stop video capture.\n");
-	}
-	if(InExposure == true)
-	{
-	    if(ASIStopExposure(CamId) != ASI_SUCCESS)		//停止曝光
-	    {
-		IDLog("Unable to stop exposure, please try again.\n");
-		return false;
-	    }
-	    IDLog("Stop exposure.\n");
-	}
-	/*在关闭相机之前保存设置*/
-	//SaveConfig();
-	/*关闭相机*/
-	if(ASICloseCamera(CamId) != ASI_SUCCESS)		//关闭相机
-	{
-	    IDLog("Unable to turn off the camera, please try again");
-	    return false;
-	}
-	IDLog("Disconnect from camera\n");
-	return true;
+		/*在关闭相机之前停止所有任务*/
+		if(InVideo == true)
+		{
+			if(ASIStopVideoCapture(CamId) != ASI_SUCCESS);		//停止视频拍摄
+			{
+			IDLog("Unable to stop video capture, please try again.\n");
+			return false;
+			}
+			IDLog("Stop video capture.\n");
+		}
+		if(InExposure == true)
+		{
+			if(ASIStopExposure(CamId) != ASI_SUCCESS)		//停止曝光
+			{
+			IDLog("Unable to stop exposure, please try again.\n");
+			return false;
+			}
+			IDLog("Stop exposure.\n");
+		}
+		/*在关闭相机之前保存设置*/
+		//SaveConfig();
+		/*关闭相机*/
+		if(ASICloseCamera(CamId) != ASI_SUCCESS)		//关闭相机
+		{
+			IDLog("Unable to turn off the camera, please try again");
+			return false;
+		}
+		IDLog("Disconnect from camera\n");
+		return true;
     }
     
     /*
@@ -195,20 +195,20 @@ namespace AstroAir
      */
     bool ASICCD::UpdateCameraConfig()
     {
-	/*判断是否为彩色相机*/
-	if(ASICameraInfo.IsColorCam == true)
-	    isColorCamera = true;
-	/*判断是否为制冷相机*/
-	if(ASICameraInfo.IsCoolerCam == true)
-	    isCoolCamera = true;
-	/*判断是否为导星相机*/
-	if(ASICameraInfo.ST4Port == true)
-	    isGuideCamera = true;
-	/*获取相机最大画幅*/
-	iMaxWidth = ASICameraInfo.MaxWidth;
-	iMaxHeight = ASICameraInfo.MaxHeight;
-	IDLog("Camera information obtained successfully.\n");
-	return true;
+		/*判断是否为彩色相机*/
+		if(ASICameraInfo.IsColorCam == true)
+			isColorCamera = true;
+		/*判断是否为制冷相机*/
+		if(ASICameraInfo.IsCoolerCam == true)
+			isCoolCamera = true;
+		/*判断是否为导星相机*/
+		if(ASICameraInfo.ST4Port == true)
+			isGuideCamera = true;
+		/*获取相机最大画幅*/
+		iMaxWidth = ASICameraInfo.MaxWidth;
+		iMaxHeight = ASICameraInfo.MaxHeight;
+		IDLog("Camera information obtained successfully.\n");
+		return true;
     }
     
     /*
@@ -225,35 +225,35 @@ namespace AstroAir
      */
     bool ASICCD::SetTemperature(double temperature)
     {
-	/*判断输入温度是否合理*/
-	if(temperature < -50 ||temperature > 40)
-	{
-	    IDLog("The temperature setting is unreasonable, please reset it.\n");
-	    return false;
-	}
-	/*检查是否可以制冷*/
-	if(ActiveCool(true) == false)
-	{
-	    IDLog("Unable to start camera cooling, please check the power connection.\n");
-	    return false;
-	}
-	/*转化温度参数*/
-	long TargetTemp;
-	if (temperature > 0.5)
-	    TargetTemp = static_cast<long>(temperature + 0.49);
-	else if (temperature  < 0.5)
-	    TargetTemp = static_cast<long>(temperature - 0.49);
-	else
-	    TargetTemp = 0;
-	/*设置相机温度*/
-	if(ASISetControlValue(CamId,ASI_TEMPERATURE,TargetTemp,ASI_FALSE) != ASI_SUCCESS)
-	{
-	    IDLog("Unable to set camera temperature.\n");
-	    return false;
-	}
-	TemperatureRequest = temperature;
-	IDLog("Camera cooling temperature set successfully.\n");
-	return true;
+		/*判断输入温度是否合理*/
+		if(temperature < -50 ||temperature > 40)
+		{
+			IDLog("The temperature setting is unreasonable, please reset it.\n");
+			return false;
+		}
+		/*检查是否可以制冷*/
+		if(ActiveCool(true) == false)
+		{
+			IDLog("Unable to start camera cooling, please check the power connection.\n");
+			return false;
+		}
+		/*转化温度参数*/
+		long TargetTemp;
+		if (temperature > 0.5)
+			TargetTemp = static_cast<long>(temperature + 0.49);
+		else if (temperature  < 0.5)
+			TargetTemp = static_cast<long>(temperature - 0.49);
+		else
+			TargetTemp = 0;
+		/*设置相机温度*/
+		if(ASISetControlValue(CamId,ASI_TEMPERATURE,TargetTemp,ASI_FALSE) != ASI_SUCCESS)
+		{
+			IDLog("Unable to set camera temperature.\n");
+			return false;
+		}
+		TemperatureRequest = temperature;
+		IDLog("Camera cooling temperature set successfully.\n");
+		return true;
     }
     
     /*
@@ -268,23 +268,23 @@ namespace AstroAir
      */
     bool ASICCD::ActiveCool(bool enable)
     {
-	if(isCoolCamera == true)
-	{
-	    if(ASISetControlValue(CamId,ASI_COOLER_ON,enable ? ASI_TRUE : ASI_FALSE,ASI_FALSE) != ASI_SUCCESS)
-	    {
-		IDLog("Unable to turn on refrigeration, please check the power supply.\n");
-		return false;
-	    }
-	    InCooling = true;
-	    IDLog("Cooling is in progress. Please wait.\n");
-	}
-	return true;
+		if(isCoolCamera == true)
+		{
+			if(ASISetControlValue(CamId,ASI_COOLER_ON,enable ? ASI_TRUE : ASI_FALSE,ASI_FALSE) != ASI_SUCCESS)
+			{
+			IDLog("Unable to turn on refrigeration, please check the power supply.\n");
+			return false;
+			}
+			InCooling = true;
+			IDLog("Cooling is in progress. Please wait.\n");
+		}
+		return true;
     }
     
     bool ASICCD::StartExposure(float exp,int bin,bool is_roi,int roi_type,int roi_x,int roi_y,bool is_save,std::string fitsname,int gain,int offset)
     {
 	
-	return true;
+		return true;
     }
     
     /*
@@ -300,26 +300,26 @@ namespace AstroAir
      */
     bool ASICCD::AbortExposure()
     {
-	IDLog("Aborting camera exposure...");
-	//setThreadRequest(StateAbort);
-	//waitUntil(StateIdle);
-	if(ASIStopExposure(CamId) != ASI_SUCCESS)
-	{
-	    IDLog("Unable to stop camera exposure,please try again.\n");
-	    return false;
-	}
-	InExposure = false;
-	return true;
+		IDLog("Aborting camera exposure...");
+		//setThreadRequest(StateAbort);
+		//waitUntil(StateIdle);
+		if(ASIStopExposure(CamId) != ASI_SUCCESS)
+		{
+			IDLog("Unable to stop camera exposure,please try again.\n");
+			return false;
+		}
+		InExposure = false;
+		return true;
     }
     
     bool ASICCD::UpdateCCDFrame(int x, int y, int w, int h)
     {
-	return true;
+		return true;
     }
     
     bool ASICCD::SetCameraConfig()
     {
-	return true;
+		return true;
     }
 }
 
