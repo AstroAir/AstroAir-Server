@@ -1,0 +1,6 @@
+#define server_VERSION_MAJOR @server_VERSION_MAJOR@
+#define server_VERSION_MINOR @server_VERSION_MINOR@
+#define HAS_WEBSOCKET @server_HAS_WEBSOCKET@
+#define HAS_JSONCPP @server_HAS_JSONCPP@
+#define HAS_NOVA @server_HAS_NOVA@
+#define HAS_ASI @server_HAS_ASI@
