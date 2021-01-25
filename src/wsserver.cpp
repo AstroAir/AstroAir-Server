@@ -210,7 +210,7 @@ namespace AstroAir
             }
             /*相机开始拍摄*/
             case "RemoteCameraShot"_hash:{
-                std::thread CamThread(&WSSERVER::StartExposure,this,root["params"]["Expo"].asInt(),root["params"]["Bin"].asInt(),root["params"]["IsROI"].asBool(),root["params"]["ROITYPE"].asInt(),root["params"]["ROIX"].asInt(),root["params"]["ROIY"].asInt(),root["params"]["IsSaveFile"].asBool(),root["params"]["FitFileName"].asString(),root["params"]["Gain"].asInt(),root["params"]["Offset"].asInt());
+                std::thread CamThread(&WSSERVER::StartExposure,this,root["params"]["Expo"].asInt(),root["params"]["Bin"].asInt(),root["params"]["IsSaveFile"].asBool(),root["params"]["FitFileName"].asString(),root["params"]["Gain"].asInt(),root["params"]["Offset"].asInt());
                 CamThread.detach();
                 break;
             }
@@ -257,7 +257,7 @@ namespace AstroAir
      * @param len:需发送文件的大小
      * describe: Send binary information to client
      * 描述：向客户端发送二进制信息
-     * note: This function can send the image to the client and display it again
+     * note: This function can send the image to the client and display it aGain
      */
     void WSSERVER::send_binary(void const * image, size_t len)
     {
@@ -771,28 +771,26 @@ namespace AstroAir
     }
     
     /*
-     * name: StartExposure(float exp,int bin,bool is_roi,int roi_type,int roi_x,int roi_y,bool is_save,std::string fitsname,int gain,int offset)
+     * name: StartExposure(int exp,int bin,bool is_roi,int roi_type,int roi_x,int roi_y,bool IsSave,std::string FitsName,int Gain,int Offset)
      * @param exp:相机曝光时间
      * @param bin:像素合并
-     * @param is_roi:是否开启ROI模式
-     * @param roi_x:ROIx轴起点
-     * @param roi_y:ROIy轴起点
-     * @param is_save:是否保存图像
-     * @param fitsname:保存图像名称
-     * @param gain:相机增益
-     * @param offset:相机偏置
+     * @param IsSave:是否保存图像
+     * @param FitsName:保存图像名称
+     * @param Gain:相机增益
+     * @param Offset:相机偏置
      * describe: Start exposure
      * 描述：开始曝光
-	 * calls: StartExposure(float exp,int bin,bool is_roi,int roi_type,int roi_x,int roi_y,bool is_save,std::string fitsname,int gain,int offset)
+	 * calls: StartExposure(int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset)
      * calls: IDLog(const char *fmt, ...)
      * calls: IDLog_DEBUG(const char *fmt, ...)
 	 * calls :StartExposureError(std::string message）
 	 * note:This function should not be executed normally
      */
-    bool WSSERVER::StartExposure(float exp,int bin,bool is_roi,int roi_type,int roi_x,int roi_y,bool is_save,std::string fitsname,int gain,int offset)
+    bool WSSERVER::StartExposure(int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset)
     {
+		
 		bool camera_ok = false;
-		if (camera_ok = CCD->StartExposure(exp, bin, is_roi, roi_type, roi_x, roi_y, is_save, fitsname, gain, offset) != true)
+		if (camera_ok = CCD->StartExposure(exp, bin, IsSave, FitsName, Gain, Offset) != true)
 		{
 			/*返回曝光错误的原因*/
 			StartExposureError("Could not start exposure");

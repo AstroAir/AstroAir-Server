@@ -93,48 +93,48 @@ namespace AstroAir
 		{
 			for(int i = 0;i < CamNumber;i++)
 			{
-			/*获取相机信息*/
-			if(ASIGetCameraProperty(&ASICameraInfo, i) != ASI_SUCCESS)
-			{
-				IDLog("Unable to get %s configuration information, please check program permissions.\n",ASICameraInfo.Name);
-				return false;
-			}
-			else
-			{
-				if(ASICameraInfo.Name == Device_name)
+				/*获取相机信息*/
+				if(ASIGetCameraProperty(&ASICameraInfo, i) != ASI_SUCCESS)
 				{
-				IDLog("Find %s.\n",ASICameraInfo.Name);
-				CamId = ASICameraInfo.CameraID;
-				CamName[CamId] = ASICameraInfo.Name;
-				/*打开相机*/
-				if(ASIOpenCamera(CamId) != ASI_SUCCESS)		
-				{
-					IDLog("Unable to turn on the %s.\n",CamName[CamId]);
+					IDLog("Unable to get %s configuration information, please check program permissions.\n",ASICameraInfo.Name);
 					return false;
 				}
 				else
 				{
-					/*初始化相机*/
-					if(ASIInitCamera(CamId) != ASI_SUCCESS)	
+					if(ASICameraInfo.Name == Device_name)
 					{
-					IDLog("Unable to initialize connection to camera.\n");
-					return false;
+						IDLog("Find %s.\n",ASICameraInfo.Name);
+						CamId = ASICameraInfo.CameraID;
+						CamName[CamId] = ASICameraInfo.Name;
+						/*打开相机*/
+						if(ASIOpenCamera(CamId) != ASI_SUCCESS)		
+						{
+							IDLog("Unable to turn on the %s.\n",CamName[CamId]);
+							return false;
+						}
+						else
+						{
+							/*初始化相机*/
+							if(ASIInitCamera(CamId) != ASI_SUCCESS)	
+							{
+							IDLog("Unable to initialize connection to camera.\n");
+							return false;
+							}
+							else 
+							{
+							isConnected = true;
+							IDLog("Camera turned on successfully\n");
+							/*获取连接相机配置信息，并存入参数*/
+							UpdateCameraConfig();
+							return true;
+							}
+						}
 					}
-					else 
+					else
 					{
-					isConnected = true;
-					IDLog("Camera turned on successfully\n");
-					/*获取连接相机配置信息，并存入参数*/
-					UpdateCameraConfig();
-					return true;
+					IDLog("This is not a designated camera, try to find the next one.\n");
 					}
 				}
-				}
-				else
-				{
-				IDLog("This is not a designated camera, try to find the next one.\n");
-				}
-			}
 			}
 			IDLog("The specified camera was not found. Please check the camera connection");
 			return false;
@@ -160,7 +160,7 @@ namespace AstroAir
 		{
 			if(ASIStopVideoCapture(CamId) != ASI_SUCCESS);		//停止视频拍摄
 			{
-			IDLog("Unable to stop video capture, please try again.\n");
+			IDLog("Unable to stop video capture, please try aGain.\n");
 			return false;
 			}
 			IDLog("Stop video capture.\n");
@@ -169,7 +169,7 @@ namespace AstroAir
 		{
 			if(ASIStopExposure(CamId) != ASI_SUCCESS)		//停止曝光
 			{
-			IDLog("Unable to stop exposure, please try again.\n");
+			IDLog("Unable to stop exposure, please try aGain.\n");
 			return false;
 			}
 			IDLog("Stop exposure.\n");
@@ -179,7 +179,7 @@ namespace AstroAir
 		/*关闭相机*/
 		if(ASICloseCamera(CamId) != ASI_SUCCESS)		//关闭相机
 		{
-			IDLog("Unable to turn off the camera, please try again");
+			IDLog("Unable to turn off the camera, please try aGain");
 			return false;
 		}
 		IDLog("Disconnect from camera\n");
@@ -207,6 +207,8 @@ namespace AstroAir
 		/*获取相机最大画幅*/
 		iMaxWidth = ASICameraInfo.MaxWidth;
 		iMaxHeight = ASICameraInfo.MaxHeight;
+		CamWidth = iMaxWidth;
+		CamHeight = iMaxHeight;
 		IDLog("Camera information obtained successfully.\n");
 		return true;
     }
@@ -281,9 +283,77 @@ namespace AstroAir
 		return true;
     }
     
-    bool ASICCD::StartExposure(float exp,int bin,bool is_roi,int roi_type,int roi_x,int roi_y,bool is_save,std::string fitsname,int gain,int offset)
+    /*
+     * name: StartExposure(int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset)
+     * describe: Start camera exposure
+     * 描述：相机开始曝光
+     * @param exp: 曝光时间
+     * @param bin:像素合并模式
+     * @param IsSave:是否保存图像
+     * @param FitsName:图像名称
+     * @param Gain:相机增益
+     * @param Offset:相机偏置
+     * calls: ASISetControlValue()
+     * calls: IDLog()
+     * calls: ASIStartExposure()
+     * calls: ASIGetExpStatus()
+     */
+    bool ASICCD::StartExposure(int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset)
     {
-	
+		std::lock_guard<std::mutex> lock(condMutex);
+		const long blink_duration = exp * 1000000;
+		IDLog("Blinking %ld time(s) before exposure\n", blink_duration);
+		errCode = ASISetControlValue(CamId, ASI_EXPOSURE, blink_duration, ASI_FALSE);
+		if(errCode != ASI_SUCCESS)
+		{
+			IDLog("Failed to set blink exposure to %ldus, error %d\n", blink_duration, errCode);
+			return false;
+		}
+		else
+		{
+			if(SetCameraConfig(bin,Gain,Offset) != true)
+			{
+				IDLog("Failed to set camera configure\n");
+				return false;
+			}
+			else
+			{
+				errCode = ASIStartExposure(CamId, ASI_TRUE);
+				if(errCode != ASI_SUCCESS)
+				{
+					IDLog("Failed to start blink exposure, error %d,try it aGain\n", errCode);
+				}
+				else
+				{
+					InExposure = true;
+					do
+					{
+						usleep(100000);
+						errCode = ASIGetExpStatus(CamId, &expStatus);
+					}
+					while (errCode == ASI_SUCCESS && expStatus == ASI_EXP_WORKING);
+					if (errCode != ASI_SUCCESS || expStatus != ASI_EXP_SUCCESS)
+					{
+						IDLog("Blink exposure failed, error %d, status %d", errCode, expStatus);
+						return false;
+					}
+					InExposure = false;
+                }
+            }
+        }
+        if(IsSave == true)
+        {
+			IDLog("Finished exposure and save image locally\n");
+			if(SaveImage(FitsName) != true)
+			{
+				IDLog("Could not save image correctly,please check the config\n");
+				return false;
+			}
+			else
+			{
+				IDLog("Save image %s successfully\n",FitsName);
+			}
+		}
 		return true;
     }
     
@@ -301,8 +371,6 @@ namespace AstroAir
     bool ASICCD::AbortExposure()
     {
 		IDLog("Aborting camera exposure...");
-		//setThreadRequest(StateAbort);
-		//waitUntil(StateIdle);
 		if(ASIStopExposure(CamId) != ASI_SUCCESS)
 		{
 			IDLog("Unable to stop camera exposure,please try again.\n");
@@ -312,15 +380,88 @@ namespace AstroAir
 		return true;
     }
     
-    bool ASICCD::UpdateCCDFrame(int x, int y, int w, int h)
+    /*
+     * name: SetCameraConfig(long Bin,long Gain,long Offset)
+     * describe: set camera cinfig
+     * 描述：设置相机参数
+     * calls: IDLog()
+     * calls: ASISetControlValue()
+     * calls: ASISetROIFormat()
+     */
+    bool ASICCD::SetCameraConfig(long Bin,long Gain,long Offset)
     {
+		errCode = ASI_SUCCESS;
+		errCode = ASISetControlValue(CamId, ASI_GAIN, Gain, ASI_FALSE);
+		if(errCode != ASI_SUCCESS)
+		{
+			IDLog("Unable to set camera gain,error code is %d\n",errCode);
+			return false;
+		}
+		errCode = ASISetControlValue(CamId, ASI_BRIGHTNESS, Offset, ASI_FALSE);
+		if(errCode != ASI_SUCCESS)
+		{
+			IDLog("Unable to set camera offset,error code is %d\n",errCode);
+			return false;
+		}
+		CamWidth = iMaxWidth/Bin;
+		CamHeight = iMaxHeight/Bin;
+		errCode = ASISetROIFormat(CamId, CamWidth , CamHeight , Bin, (ASI_IMG_TYPE)Image_type);
+		if(errCode != ASI_SUCCESS)
+		{
+			IDLog("Unable to set camera offset,error code is %d\n",errCode);
+			return false;
+		}
 		return true;
     }
     
-    bool ASICCD::SetCameraConfig()
+    /*
+     * name: SaveImage(std::string FitsName)
+     * describe: Save Fits images
+     * 描述：存储Fits图像
+     * calls: ASIGetDataAfterExp()
+     * calls: fits_create_file()
+     * calls: fits_create_img()
+     * calls: fits_update_key()
+     * calls: fits_write_img()
+     * calls: fits_close_file()
+     * calls: fits_report_error()
+     */
+    bool ASICCD::SaveImage(std::string FitsName)
     {
+		if(InExposure == false && InVideo == false)
+		{	
+			#ifdef HAS_FITSIO
+				int FitsStatus;		//cFitsio状态
+				long imgSize = CamWidth*CamHeight*(1 + (Image_type==ASI_IMG_RAW16));		//设置图像大小
+				imgBuf = new unsigned char[imgSize];		//图像缓冲区大小
+				ASIGetDataAfterExp(CamId, imgBuf, imgSize);		//曝光后获取图像信息
+				naxis = 2;
+				long naxes[2] = {CamWidth,CamHeight};			
+				fits_create_file(&fptr, FitsName, &FitsStatus);		//创建Fits文件
+				if(Image_type==ASI_IMG_RAW16)		//创建Fits图像
+					fits_create_img(fptr, USHORT_IMG, naxis, naxes, &FitsStatus);		//16位
+				else
+					fits_create_img(fptr, BYTE_IMG,   naxis, naxes, &FitsStatus);		//8位或12位
+				strcpy(datatype, "TSTRING");
+				strcpy(keywords, "Camera");
+				strcpy(value,CamName[CamId]);
+				strcpy(description, "ZWOASI");
+				if(strcmp(datatype, "TSTRING") == 0)		//写入Fits图像头文件
+				{
+					fits_update_key(fptr, TSTRING, keywords, value, description, &FitsStatus);
+				}
+				if(Image_type==ASI_IMG_RAW16)		//将缓存图像写入SD卡
+					fits_write_img(fptr, TUSHORT, fpixel, imgSize, &imgBuf[0], &FitsStatus);		//16位
+				else
+					fits_write_img(fptr, TBYTE, fpixel, imgSize, &imgBuf[0], &FitsStatus);		//8位或12位
+				fits_close_file(fptr, &FitsStatus);		//关闭Fits图像
+				fits_report_error(stderr, FitsStatus);		//如果有错则返回错误信息
+			#endif
+		}
+		if(imgBuf)
+			delete[] imgBuf;		//删除图像缓存
 		return true;
-    }
+	}
 }
 
 

@@ -93,7 +93,7 @@ namespace AstroAir
 		public:
 			virtual bool Connect(std::string Device_name);
 			virtual bool Disconnect();
-			virtual bool StartExposure(float exp,int bin,bool is_roi,int roi_type,int roi_x,int roi_y,bool is_save,std::string fitsname,int gain,int offset);
+			virtual bool StartExposure(int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset);
 			virtual bool AbortExposure();
 		protected:
 			/*转化Json信息*/

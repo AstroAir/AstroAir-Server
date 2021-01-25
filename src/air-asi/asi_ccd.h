@@ -43,6 +43,8 @@ Description:ZWO camera driver
 #include <thread>
 #include <atomic>
 
+#include "fitsio.h"
+
 #define MAXDEVICENUM 5
 
 namespace AstroAir
@@ -63,41 +65,18 @@ namespace AstroAir
 			/*设置相机制冷温度*/
 			virtual bool SetTemperature(double temperature);
 			/*开始曝光*/
-			virtual bool StartExposure(float exp,int bin,bool is_roi,int roi_type,int roi_x,int roi_y,bool is_save,std::string fitsname,int gain,int offset) override;
+			virtual bool StartExposure(int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset) override;
 			/*停止曝光*/
 			virtual bool AbortExposure() override;
 			/*设置相机参数*/
-			virtual bool SetCameraConfig();
-		protected:
-			/*设置相机画幅大小*/
-			virtual bool UpdateCCDFrame(int x, int y, int w, int h);
-			/*添加Fits头部信息*/
-			//virtual void addFITSKeywords(fitsfile *fptr);
+			virtual bool SetCameraConfig(long Bin,long Gain,long Offset);
+			/*存储图像*/
+			virtual bool SaveImage(std::string FitsName);
 		private:
 			/*打开制冷*/
 			virtual bool ActiveCool(bool enable);
-			
-			typedef enum ImageState
-			{
-				StateNone = 0,
-				StateIdle,
-				StateStream,
-				StateExposure,
-				StateRestartExposure,
-				StateAbort,
-				StateTerminate,
-				StateTerminated
-			} ImageState;
-			
-			//void setThreadRequest(ImageState request);
-			//void waitUntil(ImageState request);
-			
-			ImageState threadRequest;
-			ImageState threadState;
-			
-			std::thread imagingThread;
+
 			std::mutex condMutex;
-			std::condition_variable cv;
 			
 			int CamNumber;
 			int CamId;
@@ -106,12 +85,26 @@ namespace AstroAir
 			double ExposureRequest;
 			double TemperatureRequest;
 			/*相机配置参数*/
+			int Image_type = 0;
+			int CamWidth = 0;
+			int CamHeight = 0;
 			int iMaxWidth = 0;		//最大高度
 			int iMaxHeight = 0;		//最大宽度
 			bool isCoolCamera = false;
 			bool isColorCamera = false;
 			bool isGuideCamera = false;
 			
+			unsigned char *imgBuf = 0;		//图像缓冲区
+			fitsfile *fptr;		//cFitsIO定义
+			long naxis;
+			long nelements;
+			long naxes[2];
+			long fpixel = 1;
+			char datatype[40];		//数据格式
+			char keywords[40];		//相机品牌
+			char value[20];		//相机名称
+			char description[40];		//相机描述
+				
 			/*相机使用参数*/
 			std::atomic_bool isConnected;
 			std::atomic_bool InExposure;
@@ -120,6 +113,8 @@ namespace AstroAir
 			
 			/*ASI相机参数*/
 			ASI_CAMERA_INFO ASICameraInfo;
+			ASI_ERROR_CODE errCode;
+			ASI_EXPOSURE_STATUS expStatus;
 	};
 }
 
