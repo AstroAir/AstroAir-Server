@@ -1,15 +1,34 @@
-AstroAir服务器
-=============
-## 简介
-- AstroAir是新一代的基于互联网的天文摄影终端，采用树莓派平台，具有良好的软件和设备兼容性，可以控制绝大多数的设备,进行预快便捷的天文摄影，我们目标就是让天文摄影变得简单。<br>
-## 特性
-- 采用GPL3协议，是开源的天文软件，大家可以根据需求自己修改<br>
-- 具有良好的设备支持性，可以支持大部分的设备（通过INDI），和原生的ZWO、QHY相机支持<br>
-- 轻量化，可以部署在较小的客户端上，甚至是树莓派ZeroW<br>
-- 采用网页显示，支持手机、平板、电脑等设备，不需要额外下载软件<br>
-- 优质的GNOME桌面，内置了Kstars、SkyChart等开源软件，稳定性良好<br>
-## 问题报告
-- 加入官方QQ群710622107
-- 在Github提交问题报告
-- 官方邮箱<astro_air@126.com>
-- 开发者邮箱<qwdmax@qq.com>
+AstroAir Server
+===============
+[![CircleCI](https://circleci.com/gh/indilib/indi.svg?style=svg)](https://circleci.com/gh/indilib/indi)
+## Introduction
+- Astroair is a new generation of astronomical photography terminal based on the Internet. It adopts raspberry pie platform and has good software and device compatibility. It can control most of the devices and take pre fast and convenient astronomical photography. Our goal is to make astronomical photography simple.<br>
+## Features
+- Using gpl3 protocol, is an open source astronomy software, you can modify according to your needs<br>
+- With good device support, it can support most devices (through indi) and native zwo and qhy cameras<br>
+- Lightweight, can be deployed on smaller clients, even raspberry pi zero<br>
+- Using web page display, support mobile phones, tablets, computers and other devices, no need to download additional software<br>
+- High quality GNOME desktop, built-in KStars, skychart and other open source software, good stability<br>
+## Building
+### Install Pre-requisites
+On Debian/Ubuntu:
+```
+sudo apt-get -y install libnova-dev libcfitsio-dev libusb-1.0-0-dev build-essential cmake git libasio-dev
+```
+### Get the code
+If you plan to submit a PR or engage in INDI driver development, then getting a full clone is recommended:
+```
+git clone https://github.com/AstroAir-Develop-Team/AstroAir-Server.git
+```
+### Building the server
+```
+mkdir build&&cd build 
+cmake ..
+sudo make 
+sudo make install #Currently, direct installation to the system is not supported. Please test in the build directory
+```
+## Problem report
+- Join the official QQ group 710622107
+- Problem report at GitHub
+- Official email<astro_air@126.com>
+- Developer email<qwdmax@qq.com>
