@@ -42,6 +42,7 @@ Description:ZWO camera driver
 #include <mutex>
 #include <thread>
 #include <atomic>
+#include <chrono>
 
 #include "fitsio.h"
 
@@ -77,10 +78,12 @@ namespace AstroAir
 			virtual bool ActiveCool(bool enable);
 
 			std::mutex condMutex;
+			std::mutex ccdBufferLock;
 			
 			int CamNumber;
 			int CamId;
 			char *CamName[MAXDEVICENUM];
+			int CamBin;
 			
 			double ExposureRequest;
 			double TemperatureRequest;

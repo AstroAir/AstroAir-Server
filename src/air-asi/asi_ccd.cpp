@@ -44,6 +44,7 @@ namespace AstroAir
     {
 		CamNumber = 0;
 		CamId = 0;
+		CamBin = 0;
 		isConnected = false;
 		InVideo = false;
 		InExposure = false;
@@ -107,32 +108,32 @@ namespace AstroAir
 						CamId = ASICameraInfo.CameraID;
 						CamName[CamId] = ASICameraInfo.Name;
 						/*打开相机*/
-						if(ASIOpenCamera(CamId) != ASI_SUCCESS)		
+						if((errCode = ASIOpenCamera(CamId)) != ASI_SUCCESS)		
 						{
-							IDLog("Unable to turn on the %s.\n",CamName[CamId]);
+							IDLog("Unable to turn on the %s,error code is %d.\n",CamName[CamId],errCode);
 							return false;
 						}
 						else
 						{
 							/*初始化相机*/
-							if(ASIInitCamera(CamId) != ASI_SUCCESS)	
+							if((errCode = ASIInitCamera(CamId)) != ASI_SUCCESS)	
 							{
-							IDLog("Unable to initialize connection to camera.\n");
-							return false;
+								IDLog("Unable to initialize connection to camera,the error code is %d.\n",errCode);
+								return false;
 							}
 							else 
 							{
-							isConnected = true;
-							IDLog("Camera turned on successfully\n");
-							/*获取连接相机配置信息，并存入参数*/
-							UpdateCameraConfig();
-							return true;
+								isConnected = true;
+								IDLog("Camera turned on successfully\n");
+								/*获取连接相机配置信息，并存入参数*/
+								UpdateCameraConfig();
+								return true;
 							}
 						}
 					}
 					else
 					{
-					IDLog("This is not a designated camera, try to find the next one.\n");
+						IDLog("This is not a designated camera, try to find the next one.\n");
 					}
 				}
 			}
@@ -158,28 +159,28 @@ namespace AstroAir
 		/*在关闭相机之前停止所有任务*/
 		if(InVideo == true)
 		{
-			if(ASIStopVideoCapture(CamId) != ASI_SUCCESS);		//停止视频拍摄
+			if((errCode = ASIStopVideoCapture(CamId)) != ASI_SUCCESS);		//停止视频拍摄
 			{
-			IDLog("Unable to stop video capture, please try aGain.\n");
-			return false;
+				IDLog("Unable to stop video capture,error code is %d,please try again.\n",errCode);
+				return false;
 			}
 			IDLog("Stop video capture.\n");
 		}
 		if(InExposure == true)
 		{
-			if(ASIStopExposure(CamId) != ASI_SUCCESS)		//停止曝光
+			if((errCode = ASIStopExposure(CamId)) != ASI_SUCCESS)		//停止曝光
 			{
-			IDLog("Unable to stop exposure, please try aGain.\n");
-			return false;
+				IDLog("Unable to stop exposure,error code is %d,please try again.\n",errCode);
+				return false;
 			}
 			IDLog("Stop exposure.\n");
 		}
 		/*在关闭相机之前保存设置*/
 		//SaveConfig();
 		/*关闭相机*/
-		if(ASICloseCamera(CamId) != ASI_SUCCESS)		//关闭相机
+		if((errCode = ASICloseCamera(CamId)) != ASI_SUCCESS)		//关闭相机
 		{
-			IDLog("Unable to turn off the camera, please try aGain");
+			IDLog("Unable to turn off the camera,error code is %d,please try again\n",errCode);
 			return false;
 		}
 		IDLog("Disconnect from camera\n");
@@ -204,6 +205,8 @@ namespace AstroAir
 		/*判断是否为导星相机*/
 		if(ASICameraInfo.ST4Port == true)
 			isGuideCamera = true;
+		/*获取相机格式*/
+		Image_type = ASICameraInfo.SupportedVideoFormat[8];
 		/*获取相机最大画幅*/
 		iMaxWidth = ASICameraInfo.MaxWidth;
 		iMaxHeight = ASICameraInfo.MaxHeight;
@@ -248,9 +251,9 @@ namespace AstroAir
 		else
 			TargetTemp = 0;
 		/*设置相机温度*/
-		if(ASISetControlValue(CamId,ASI_TEMPERATURE,TargetTemp,ASI_FALSE) != ASI_SUCCESS)
+		if((errCode = ASISetControlValue(CamId,ASI_TEMPERATURE,TargetTemp,ASI_FALSE)) != ASI_SUCCESS)
 		{
-			IDLog("Unable to set camera temperature.\n");
+			IDLog("Unable to set camera temperature,error code is %d.\n",errCode);
 			return false;
 		}
 		TemperatureRequest = temperature;
@@ -272,10 +275,10 @@ namespace AstroAir
     {
 		if(isCoolCamera == true)
 		{
-			if(ASISetControlValue(CamId,ASI_COOLER_ON,enable ? ASI_TRUE : ASI_FALSE,ASI_FALSE) != ASI_SUCCESS)
+			if((errCode = ASISetControlValue(CamId,ASI_COOLER_ON,enable ? ASI_TRUE : ASI_FALSE,ASI_FALSE)) != ASI_SUCCESS)
 			{
-			IDLog("Unable to turn on refrigeration, please check the power supply.\n");
-			return false;
+				IDLog("Unable to turn on refrigeration,error code is %d,please check the power supply.\n",errCode);
+				return false;
 			}
 			InCooling = true;
 			IDLog("Cooling is in progress. Please wait.\n");
@@ -302,9 +305,9 @@ namespace AstroAir
     {
 		std::lock_guard<std::mutex> lock(condMutex);
 		const long blink_duration = exp * 1000000;
+		CamBin = bin;
 		IDLog("Blinking %ld time(s) before exposure\n", blink_duration);
-		errCode = ASISetControlValue(CamId, ASI_EXPOSURE, blink_duration, ASI_FALSE);
-		if(errCode != ASI_SUCCESS)
+		if((errCode = ASISetControlValue(CamId, ASI_EXPOSURE, blink_duration, ASI_FALSE)) != ASI_SUCCESS)
 		{
 			IDLog("Failed to set blink exposure to %ldus, error %d\n", blink_duration, errCode);
 			return false;
@@ -318,8 +321,7 @@ namespace AstroAir
 			}
 			else
 			{
-				errCode = ASIStartExposure(CamId, ASI_TRUE);
-				if(errCode != ASI_SUCCESS)
+				if((errCode = ASIStartExposure(CamId, ASI_TRUE))!= ASI_SUCCESS)
 				{
 					IDLog("Failed to start blink exposure, error %d,try it aGain\n", errCode);
 				}
@@ -371,9 +373,9 @@ namespace AstroAir
     bool ASICCD::AbortExposure()
     {
 		IDLog("Aborting camera exposure...");
-		if(ASIStopExposure(CamId) != ASI_SUCCESS)
+		if((errCode = ASIStopExposure(CamId)) != ASI_SUCCESS)
 		{
-			IDLog("Unable to stop camera exposure,please try again.\n");
+			IDLog("Unable to stop camera exposure,error id is %d,please try again.\n",errCode);
 			return false;
 		}
 		InExposure = false;
@@ -390,34 +392,30 @@ namespace AstroAir
      */
     bool ASICCD::SetCameraConfig(long Bin,long Gain,long Offset)
     {
-		errCode = ASI_SUCCESS;
-		errCode = ASISetControlValue(CamId, ASI_GAIN, Gain, ASI_FALSE);
-		if(errCode != ASI_SUCCESS)
+		if((errCode = ASISetControlValue(CamId, ASI_GAIN, Gain, ASI_FALSE)) != ASI_SUCCESS)
 		{
 			IDLog("Unable to set camera gain,error code is %d\n",errCode);
 			return false;
 		}
-		errCode = ASISetControlValue(CamId, ASI_BRIGHTNESS, Offset, ASI_FALSE);
-		if(errCode != ASI_SUCCESS)
+		if((errCode = ASISetControlValue(CamId, ASI_BRIGHTNESS, Offset, ASI_FALSE)) != ASI_SUCCESS)
 		{
 			IDLog("Unable to set camera offset,error code is %d\n",errCode);
 			return false;
 		}
 		CamWidth = iMaxWidth/Bin;
 		CamHeight = iMaxHeight/Bin;
-		errCode = ASISetROIFormat(CamId, CamWidth , CamHeight , Bin, (ASI_IMG_TYPE)Image_type);
-		if(errCode != ASI_SUCCESS)
+		if((errCode = ASISetROIFormat(CamId, CamWidth , CamHeight , Bin, (ASI_IMG_TYPE)Image_type)) != ASI_SUCCESS)
 		{
 			IDLog("Unable to set camera offset,error code is %d\n",errCode);
 			return false;
 		}
 		return true;
     }
-    
+
     /*
      * name: SaveImage(std::string FitsName)
-     * describe: Save Fits images
-     * 描述：存储Fits图像
+     * describe: Save images
+     * 描述：存储图像
      * calls: ASIGetDataAfterExp()
      * calls: fits_create_file()
      * calls: fits_create_img()
@@ -430,14 +428,64 @@ namespace AstroAir
     {
 		if(InExposure == false && InVideo == false)
 		{	
+			std::unique_lock<std::mutex> guard(ccdBufferLock);
+			long imgSize = CamWidth*CamHeight*(1 + (Image_type==ASI_IMG_RAW16));		//设置图像大小
+			imgBuf = new unsigned char[imgSize];		//图像缓冲区大小
+			uint16_t subW = CamWidth/CamBin , subH = CamHeight/CamBin;
+			int nChannels = (Image_type == ASI_IMG_RGB24) ? 3 : 1;
+			uint8_t * imgBuffer = nullptr;
+			uint8_t * image = nullptr;
+			/*曝光后获取图像信息*/
+			if ((errCode = ASIGetDataAfterExp(CamId, imgBuf, imgSize)) != ASI_SUCCESS)
+			{	
+				image = (uint8_t *)imgBuf;
+				imgBuffer = image;
+				IDLog("ASIGetDataAfterExp (%dx%d #%d channels) error (%d)", subW, subH, nChannels,errCode);
+				if (Image_type == ASI_IMG_RGB24)
+					free(imgBuffer);
+				return false;
+			}
+			naxis = 2;
+			size_t nTotalBytes = subW * subH * nChannels * (24 / 8);
+			if (Image_type == ASI_IMG_RGB24)
+			{
+				imgBuffer = static_cast<uint8_t *>(malloc(nTotalBytes));
+				if (imgBuffer == nullptr)
+				{
+					IDLog("Unable to convert image\n");
+					return false;
+				}
+			}
+			/*如果图像为16位，则执行如下操作*/
+			if (Image_type == ASI_IMG_RGB24)
+			{
+				uint8_t *subR = image;
+				uint8_t *subG = image + subW * subH;
+				uint8_t *subB = image + subW * subH * 2;
+				uint32_t nPixels = subW * subH * 3 - 3;
+				for (uint32_t i = 0; i <= nPixels; i += 3)
+				{
+					*subB++ = imgBuffer[i];
+					*subG++ = imgBuffer[i + 1];
+					*subR++ = imgBuffer[i + 2];
+				}
+				free(imgBuffer);
+			}
+			guard.unlock();
+			IDLog("Download complete.");
+			/*将图像传送至客户端*/
+			#ifdef HAS_WEBSOCKET
+				auto start = std::chrono::high_resolution_clock::now();
+				WSSERVER::send_binary(image,sizeof(image));
+				auto end = std::chrono::high_resolution_clock::now();
+				std::chrono::duration<double> diff = end - start;
+				IDLog("Websocket transfer took %g seconds", diff.count());
+			#endif
+			/*将图像写入本地文件*/
 			#ifdef HAS_FITSIO
 				int FitsStatus;		//cFitsio状态
-				long imgSize = CamWidth*CamHeight*(1 + (Image_type==ASI_IMG_RAW16));		//设置图像大小
-				imgBuf = new unsigned char[imgSize];		//图像缓冲区大小
-				ASIGetDataAfterExp(CamId, imgBuf, imgSize);		//曝光后获取图像信息
-				naxis = 2;
 				long naxes[2] = {CamWidth,CamHeight};			
-				fits_create_file(&fptr, FitsName, &FitsStatus);		//创建Fits文件
+				fits_create_file(&fptr, FitsName.c_str(), &FitsStatus);		//创建Fits文件
 				if(Image_type==ASI_IMG_RAW16)		//创建Fits图像
 					fits_create_img(fptr, USHORT_IMG, naxis, naxes, &FitsStatus);		//16位
 				else
