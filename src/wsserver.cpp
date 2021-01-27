@@ -211,9 +211,13 @@ namespace AstroAir
             /*相机开始拍摄*/
             case "RemoteCameraShot"_hash:{
                 std::thread CamThread(&WSSERVER::StartExposure,this,root["params"]["Expo"].asInt(),root["params"]["Bin"].asInt(),root["params"]["IsSaveFile"].asBool(),root["params"]["FitFileName"].asString(),root["params"]["Gain"].asInt(),root["params"]["Offset"].asInt());
-                CamThread.detach();
+                CamThread.join();
                 break;
             }
+            /*相机停止拍摄*/
+            case "RemoteActionAbort"_hash:
+				AbortExposure();
+				break;
             /*轮询，保持连接*/
             case "Polling"_hash:
                 Polling();
@@ -788,19 +792,27 @@ namespace AstroAir
      */
     bool WSSERVER::StartExposure(int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset)
     {
-		
-		bool camera_ok = false;
-		if (camera_ok = CCD->StartExposure(exp, bin, IsSave, FitsName, Gain, Offset) != true)
+		if(isCameraConnected == true)
 		{
-			/*返回曝光错误的原因*/
-			StartExposureError("Could not start exposure");
-			IDLog("Unable to stop the exposure of the camera. Please check the connection of the camera. If you have any problems, please contact the developer\n");
-			IDLog_DEBUG("Unable to stop the exposure of the camera. Please check the connection of the camera. If you have any problems, please contact the developer\n");
-			/*如果函数执行不成功返回false*/
-			return false;
+			bool camera_ok = false;
+			if ((camera_ok = CCD->StartExposure(exp, bin, IsSave, FitsName, Gain, Offset)) != true)
+			{
+				/*返回曝光错误的原因*/
+				StartExposureError("Could not start exposure");
+				IDLog("Unable to stop the exposure of the camera. Please check the connection of the camera. If you have any problems, please contact the developer\n");
+				IDLog_DEBUG("Unable to stop the exposure of the camera. Please check the connection of the camera. If you have any problems, please contact the developer\n");
+				/*如果函数执行不成功返回false*/
+				return false;
+			}
+			/*将拍摄成功的消息返回至客户端*/
+			StartExposureSuccess();
 		}
-		/*将拍摄成功的消息返回至客户端*/
-		StartExposureSuccess();
+		else
+		{
+			IDLog("There seems to be some unknown mistakes here.Maybe you need to check the camera connection\n");
+			IDLog_DEBUG("There seems to be some unknown mistakes here.Maybe you need to check the camera connection\n");
+			return false;
+        }
         return true;
     }
     
@@ -814,8 +826,27 @@ namespace AstroAir
      */
     bool WSSERVER::AbortExposure()
     {
-        IDLog("Try to stop exposure,Should never get here.\n");
-        IDLog_DEBUG("Try to stop exposure,Should never get here.\n");
+		if(isCameraConnected == true)
+		{
+			bool camera_ok = false;
+			if ((camera_ok = CCD->AbortExposure()) != true)
+			{
+				/*返回曝光错误的原因*/
+				AbortExposureError("Could not start exposure");
+				IDLog("Unable to stop the exposure of the camera. Please check the connection of the camera. If you have any problems, please contact the developer\n");
+				IDLog_DEBUG("Unable to stop the exposure of the camera. Please check the connection of the camera. If you have any problems, please contact the developer\n");
+				/*如果函数执行不成功返回false*/
+				return false;
+			}
+			/*将拍摄成功的消息返回至客户端*/
+			AbortExposureSuccess();
+		}
+		else
+		{
+			IDLog("Try to stop exposure,Should never get here.\n");
+			IDLog_DEBUG("Try to stop exposure,Should never get here.\n");
+			return false;
+        }
         return true;
     }
     
@@ -852,9 +883,14 @@ namespace AstroAir
 	{
 
 	}
+	
+	void WSSERVER::AbortExposureSuccess()
+	{
+		
+	}
 
 	/*
-	 * name: SetupExposureError(std::string message)
+	 * name: StartExposureError(std::string message)
 	 * @prama message:需要返回至客户端的错误信息
 	 * describe: Error handling connection to device
 	 * 描述：处理开始曝光时的错误
@@ -870,7 +906,31 @@ namespace AstroAir
 		Json::Value Root,error;
 		Root["result"] = Json::Value(1);
 		Root["code"] = Json::Value();
-		Root["id"] = Json::Value(201);
+		Root["id"] = Json::Value(202);
+		error["message"] = Json::Value(message);
+		Root["error"] = error;
+		json_messenge = Root.toStyledString();
+		send(json_messenge);
+    }
+    
+    /*
+	 * name: AbortExposureError(std::string message)
+	 * @prama message:需要返回至客户端的错误信息
+	 * describe: Unable to stop camera exposure
+	 * 描述：无法停止相机曝光
+	 * calls: IDLog(const char *fmt, ...)
+	 * calls: IDLog_DEBUG(const char *fmt, ...)
+	 * calls: send()
+	 */
+    void WSSERVER::AbortExposureError(std::string message)
+    {
+		IDLog("Unable to stop camera exposure\n");
+		IDLog_DEBUG("Unable to stop camera exposure\n");
+		/*整合信息并发送至客户端*/
+		Json::Value Root,error;
+		Root["result"] = Json::Value(1);
+		Root["code"] = Json::Value();
+		Root["id"] = Json::Value(203);
 		error["message"] = Json::Value(message);
 		Root["error"] = error;
 		json_messenge = Root.toStyledString();
@@ -923,6 +983,11 @@ namespace AstroAir
         send(json_messenge);
     }
     
+    void WSSERVER::ErrorCode()
+    {
+		
+	}
+	
     /*
      * name: Polling()
      * describe: The client remains connected to the server

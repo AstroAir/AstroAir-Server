@@ -105,11 +105,14 @@ namespace AstroAir
 			/*处理正确返回信息*/
 			void SetupConnectSuccess();
 			void StartExposureSuccess();
+			void AbortExposureSuccess();
 			/*处理错误信息函数*/
 			void SetupConnectError(std::string message);
 			void StartExposureError(std::string message);
+			void AbortExposureError(std::string message);
 			void UnknownMsg();
 			void UnknownDevice(int id,std::string message);
+			void ErrorCode();
 			void Polling();
 		private:
 			Json::Value root;

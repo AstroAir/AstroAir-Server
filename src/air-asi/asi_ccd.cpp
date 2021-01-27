@@ -95,9 +95,9 @@ namespace AstroAir
 			for(int i = 0;i < CamNumber;i++)
 			{
 				/*获取相机信息*/
-				if(ASIGetCameraProperty(&ASICameraInfo, i) != ASI_SUCCESS)
+				if((errCode = ASIGetCameraProperty(&ASICameraInfo, i)) != ASI_SUCCESS)
 				{
-					IDLog("Unable to get %s configuration information, please check program permissions.\n",ASICameraInfo.Name);
+					IDLog("Unable to get %s configuration information,the error code is %d,please check program permissions.\n",ASICameraInfo.Name,errCode);
 					return false;
 				}
 				else
