@@ -89,6 +89,13 @@ namespace AstroAir
         isFocusConnected = false;       //电动调焦座连接状态
         isFilterConnected = false;      //滤镜轮连接状态
         isGuideConnected = false;       //导星软件连接状态
+        #ifdef HAS_OPENSSL
+        m_server_tls.init_asio(&ios);
+		m_server_tls.set_message_handler(bind(&<airserver_tls>WSSERVER::on_message_tls,&m_server_tls,::_1,::_2));
+		m_server_tls.set_tls_init_handler(bind(&WSSERVER::on_tls_init,this,::_1));
+		m_server_tls.listen(5951);
+		m_server_tls.start_accept();
+		#endif
     }
     
     /*
@@ -154,6 +161,23 @@ namespace AstroAir
         readJson(message);
     }
     
+    #ifdef HAS_OPENSSL
+    template<typename EndpointType>
+    void WSSERVER::on_message_tls(EndpointType* s, websocketpp::connection_hdl hdl,typename EndpointType::message_ptr msg)
+	{
+		std::string message = msg->get_payload();
+        /*将接收到的信息打印至终端*/
+        IDLog("Get information from client: %s\n",message.c_str());
+        if(DebugMode == true)
+        {
+            /*将接收到的信息写入文件*/
+            IDLog_CMDL(message.c_str());
+        }
+        /*处理信息*/
+        readJson(message);
+	}
+    #endif
+    
     /*以下三个函数均是用于switch支持string*/
 	constexpr hash_t hash_compile_time(char const* str, hash_t last_value = basis)  
     {  
@@ -204,8 +228,8 @@ namespace AstroAir
                 break;
             /*连接设备*/
             case "RemoteSetupConnect"_hash:{
-                std::thread t1(&WSSERVER::SetupConnect,this,root["params"]["TimeoutConnect"].asInt());
-                t1.detach();
+                std::thread ConnectThread(&WSSERVER::SetupConnect,this,root["params"]["TimeoutConnect"].asInt());
+                ConnectThread.join();
                 break;
             }
             /*相机开始拍摄*/
@@ -245,8 +269,7 @@ namespace AstroAir
             }
             catch (websocketpp::exception const &e)
             {
-                IDLog("Unable to send message, please check connection\n");
-                IDLog_DEBUG("%s\n",e.what());
+                std::cerr << e.what() << std::endl;
             }
             catch (...)
             {
@@ -271,10 +294,9 @@ namespace AstroAir
             {
                 m_server.send(it, image, len, websocketpp::frame::opcode::binary);
             }
-            catch (websocketpp::exception const &e)
+            catch (websocketpp::exception const & e)
             {
-                IDLog("Unable to send binary message, please check connection\n");
-                std::cerr << e.what() << std::endl;
+				std::cerr << e.what() << std::endl;
             }
             catch (...)
             {
@@ -325,17 +347,50 @@ namespace AstroAir
             m_server.listen(port);
             m_server.start_accept();
             m_server.run();
+            #ifdef HAS_OPENSSL
+            IDLog("Start the ssl server..\n");
+            m_server_tls.listen(443);
+			m_server_tls.start_accept();
+			m_server_tls.run();
+			#endif
         }
-        catch (websocketpp::exception const &e)
+        catch (websocketpp::exception const & e)
         {   
-            IDLog("Unable to start the server\nThe reason is:");
-            IDLog_DEBUG("%s\n",e.what());
+			std::cerr << e.what() << std::endl;
         }
         catch (...)
         {
             std::cerr << "other exception" << std::endl;
         }
     }
+    
+    #ifdef HAS_OPENSSL
+    std::string WSSERVER::get_password()
+    {
+		return "test";
+	}
+
+    context_ptr WSSERVER::on_tls_init(websocketpp::connection_hdl hdl) 
+    {
+		std::cout << "on_tls_init called with hdl: " << hdl.lock().get() << std::endl;
+		context_ptr ctx(new boost::asio::ssl::context(boost::asio::ssl::context::tlsv1));
+		try 
+		{
+			ctx->set_options(boost::asio::ssl::context::default_workarounds |
+							 boost::asio::ssl::context::no_sslv2 |
+							 boost::asio::ssl::context::no_sslv3 |
+							 boost::asio::ssl::context::single_dh_use);
+			ctx->set_password_callback(bind(&WSSERVER::get_password,this));
+			ctx->use_certificate_chain_file("server.pem");
+			ctx->use_private_key_file("server.pem", boost::asio::ssl::context::pem);
+		} 
+		catch (std::exception& e) 
+		{
+			std::cout << e.what() << std::endl;
+		}
+		return ctx;
+	}
+	#endif
 #endif
 
     /*

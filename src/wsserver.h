@@ -67,6 +67,10 @@ Description:Main framework of astroair server
 
 #ifdef HAS_WEBSOCKET
 typedef websocketpp::server<websocketpp::config::asio> airserver;
+#ifdef HAS_OPENSSL
+typedef websocketpp::server<websocketpp::config::asio_tls> airserver_tls;
+typedef websocketpp::lib::shared_ptr<boost::asio::ssl::context> context_ptr;
+#endif
 using websocketpp::lib::placeholders::_1;
 using websocketpp::lib::placeholders::_2;
 using websocketpp::lib::bind;
@@ -90,6 +94,12 @@ namespace AstroAir
 			virtual bool is_running();
 			/*运行服务器*/
 			void run(int port);
+			#ifdef HAS_OPENSSL
+			std::string get_password();
+			context_ptr on_tls_init(websocketpp::connection_hdl hdl);
+			template<typename EndpointType>
+			void on_message_tls(EndpointType* s, websocketpp::connection_hdl hdl,typename EndpointType::message_ptr msg);
+			#endif
 		public:
 			virtual bool Connect(std::string Device_name);
 			virtual bool Disconnect();
@@ -124,7 +134,10 @@ namespace AstroAir
 			typedef std::set<websocketpp::connection_hdl, std::owner_less<websocketpp::connection_hdl>> con_list;
 			con_list m_connections;
 			airserver m_server;
-			
+			#ifdef HAS_OPENSSL
+			boost::asio::io_service ios;
+			airserver_tls m_server_tls;
+			#endif
 			/*定义服务器设备参数*/
 			WSSERVER *CCD,*MOUNT,*FOCUS,*FILTER,*GUIDE;
 
