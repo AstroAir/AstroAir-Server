@@ -229,13 +229,13 @@ namespace AstroAir
             /*连接设备*/
             case "RemoteSetupConnect"_hash:{
                 std::thread ConnectThread(&WSSERVER::SetupConnect,this,root["params"]["TimeoutConnect"].asInt());
-                ConnectThread.join();
+                ConnectThread.detach();
                 break;
             }
             /*相机开始拍摄*/
             case "RemoteCameraShot"_hash:{
                 std::thread CamThread(&WSSERVER::StartExposure,this,root["params"]["Expo"].asInt(),root["params"]["Bin"].asInt(),root["params"]["IsSaveFile"].asBool(),root["params"]["FitFileName"].asString(),root["params"]["Gain"].asInt(),root["params"]["Offset"].asInt());
-                CamThread.join();
+                CamThread.detach();
                 break;
             }
             /*相机停止拍摄*/

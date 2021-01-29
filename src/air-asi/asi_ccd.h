@@ -43,8 +43,10 @@ Description:ZWO camera driver
 #include <thread>
 #include <atomic>
 #include <chrono>
+#include <vector>
 
 #include "fitsio.h"
+#include "fitsio2.h"
 
 #define MAXDEVICENUM 5
 
@@ -79,7 +81,7 @@ namespace AstroAir
 
 			std::mutex condMutex;
 			std::mutex ccdBufferLock;
-			
+			/*基础参数*/
 			int CamNumber;
 			int CamId;
 			char *CamName[MAXDEVICENUM];
@@ -96,19 +98,21 @@ namespace AstroAir
 			bool isCoolCamera = false;
 			bool isColorCamera = false;
 			bool isGuideCamera = false;
-			
+			/*图像参数*/
 			unsigned char *imgBuf = 0;		//图像缓冲区
+			/*FitsIO*/
 			fitsfile *fptr;		//cFitsIO定义
-			long naxis;
+			std::vector<int> compression_params;		//图像质量
 			long nelements;
-			long naxes[2];
 			long fpixel = 1;
 			char datatype[40];		//数据格式
 			char keywords[40];		//相机品牌
 			char value[20];		//相机名称
 			char description[40];		//相机描述
-				
-			/*相机使用参数*/
+			/*OPENCV*/
+			
+
+			/*相机使用参数（使用原子变量）*/
 			std::atomic_bool isConnected;
 			std::atomic_bool InExposure;
 			std::atomic_bool InVideo;

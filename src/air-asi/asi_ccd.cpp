@@ -511,7 +511,3 @@ namespace AstroAir
 		return true;
 	}
 }
-
-
-
-

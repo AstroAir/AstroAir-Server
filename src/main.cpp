@@ -94,6 +94,12 @@ void stop_server()
  */
 int main(int argc, char *argv[])
 {
+	/*输出Logo*/
+	std::cout << "    _        _               _    _          ____" << std::endl;
+	std::cout << "   / \\   ___| |_ _ __ ___   / \\  (_)_ __    / ___|" << std::endl;
+	std::cout << "  / _ \\ / __| __| '__/ _ \\ / _ \\ | | '__|___\\___ \\ / _ \\ '__\\ \\ / / _ \\ '__|" << std::endl;
+    std::cout << " / ___ \\__ \\ |_| | | (_) / ___ \\| | | |_____|__) |  __/ |   \\ V /  __/ |" << std::endl;
+    std::cout << "/_/   \\_\\___/\\__|_|  \\___/_/   \\_\\_|_|      |____/ \\___|_|    \\_/ \\___|_|" << std::endl;
     me = argv[0];
     extern char *optarg;
     extern int optind, opterr, optopt;

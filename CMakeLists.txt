@@ -62,6 +62,8 @@ if(HAS_ASI)
 		add_custom_command(COMMAND sudo mkdir /usr/include/libasi
 						COMMAND sudo cp *.h /usr/include/libasi)
 	endif()
+	target_link_libraries(airserver PUBLIC libopencv_core.so)
+	target_link_libraries(airserver PUBLIC libopencv_imgcodecs.so)
 else()
 	message("-- Not built ASI camera library")
 endif()
@@ -127,6 +129,9 @@ target_link_libraries(airserver PUBLIC libcfitsio.so)
 target_link_libraries(airserver PUBLIC libpthread.so)
 target_link_libraries(airserver PUBLIC libnova.so)
 target_link_libraries(airserver PUBLIC libusb-1.0.so)
+target_link_libraries(airserver PUBLIC libopencv_highgui.so)
+target_link_libraries(airserver PUBLIC libopencv_imgproc.so)
+target_link_libraries(airserver PUBLIC libopencv_imgcodecs.so)
 
 target_include_directories(airserver PUBLIC
                            "${PROJECT_BINARY_DIR}/src"
