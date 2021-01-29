@@ -314,7 +314,7 @@ namespace AstroAir
 		const long blink_duration = exp * 1000000;
 		CamBin = bin;
 		IDLog("Blinking %ld time(s) before exposure\n", blink_duration);
-		if((errCode = ASISetControlValue(CamId, ASI_EXPOSURE, blink_duration, ASI_TRUE)) != ASI_SUCCESS)
+		if((errCode = ASISetControlValue(CamId, ASI_EXPOSURE, blink_duration, ASI_FALSE)) != ASI_SUCCESS)
 		{
 			IDLog("Failed to set blink exposure to %ldus, error %d\n", blink_duration, errCode);
 			return false;
@@ -328,7 +328,7 @@ namespace AstroAir
 			}
 			else
 			{
-				if((errCode = ASIStartExposure(CamId, ASI_TRUE)) != ASI_SUCCESS)
+				if((errCode = ASIStartExposure(CamId, ASI_FALSE)) != ASI_SUCCESS)
 				{
 					IDLog("Failed to start blink exposure, error %d,try it again\n", errCode);
 					AbortExposure();
@@ -341,6 +341,7 @@ namespace AstroAir
 					{
 						usleep(10000);
 						errCode = ASIGetExpStatus(CamId, &expStatus);
+						
 					}
 					while (errCode == ASI_SUCCESS && expStatus == ASI_EXP_WORKING);
 					if (errCode != ASI_SUCCESS)
@@ -441,14 +442,15 @@ namespace AstroAir
 		{	
 			std::unique_lock<std::mutex> guard(ccdBufferLock);
 			long imgSize = CamWidth*CamHeight*(1 + (Image_type==ASI_IMG_RAW16));		//设置图像大小
-			imgBuf = new unsigned char[imgSize];		//图像缓冲区大小
+			unsigned char * imgBuf = new unsigned char[imgSize];		//图像缓冲区大小
+			errCode = ASIGetDataAfterExp(CamId, imgBuf, imgSize);
 			long naxis = 2;
 			uint16_t subW = CamWidth/CamBin , subH = CamHeight/CamBin;
 			int nChannels = (Image_type == ASI_IMG_RGB24) ? 3 : 1;
 			uint8_t * imgBuffer = nullptr;
 			uint8_t * image = nullptr;
 			/*曝光后获取图像信息*/
-			if ((errCode = ASIGetDataAfterExp(CamId, imgBuf, imgSize)) != ASI_SUCCESS)
+			if (errCode != ASI_SUCCESS)
 			{
 				/*获取图像失败*/
 				IDLog("ASIGetDataAfterExp (%dx%d #%d channels) error (%d)\n", subW, subH, nChannels,errCode);
@@ -518,7 +520,7 @@ namespace AstroAir
 				{
 					fits_update_key(fptr, TSTRING, keywords, value, description, &FitsStatus);
 				}
-				if(Image_type==ASI_IMG_RAW16)		//将缓存图像写入SD卡
+				if(Image_type == ASI_IMG_RAW16)		//将缓存图像写入SD卡
 					fits_write_img(fptr, TUSHORT, fpixel, imgSize, &imgBuf[0], &FitsStatus);		//16位
 				else
 					fits_write_img(fptr, TBYTE, fpixel, imgSize, &imgBuf[0], &FitsStatus);		//8位或12位
@@ -564,9 +566,9 @@ namespace AstroAir
 					cv::waitKey(0);
 				}
 			#endif
+			if(imgBuf)
+				delete[] imgBuf;		//删除图像缓存
 		}
-		if(imgBuf)
-			delete[] imgBuf;		//删除图像缓存
 		return true;
 	}
 }

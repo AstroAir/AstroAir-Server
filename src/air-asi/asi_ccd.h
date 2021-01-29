@@ -99,7 +99,7 @@ namespace AstroAir
 			bool isColorCamera = false;
 			bool isGuideCamera = false;
 			/*图像参数*/
-			unsigned char *imgBuf = 0;		//图像缓冲区
+			//unsigned char *imgBuf = 0;		//图像缓冲区
 			/*FitsIO*/
 			fitsfile *fptr;		//cFitsIO定义
 			std::vector<int> compression_params;		//图像质量
