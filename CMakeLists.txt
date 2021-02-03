@@ -87,6 +87,12 @@ if(HAS_NOVA)
 	endif()
 endif()
 
+option(HAS_OPENCV "Using opencv Library" ON)
+if(HAS_OPENCV)
+	add_library(LIBOPENCV src/opencv.cpp)
+	target_link_libraries(airserver PUBLIC LIBOPENCV)
+endif()
+
 set(LINK_DIR_L /usr/local/lib)
 link_directories(${LINK_DIR_L})
 set(LINK_DIR /usr/lib)
@@ -132,6 +138,7 @@ target_link_libraries(airserver PUBLIC libusb-1.0.so)
 target_link_libraries(airserver PUBLIC libopencv_highgui.so)
 target_link_libraries(airserver PUBLIC libopencv_imgproc.so)
 target_link_libraries(airserver PUBLIC libopencv_imgcodecs.so)
+target_link_libraries(airserver PUBLIC libopencv_core.so)
 
 target_include_directories(airserver PUBLIC
                            "${PROJECT_BINARY_DIR}/src"

@@ -32,13 +32,9 @@ Description:ZWO camera driver
 
 #include "asi_ccd.h"
 #include "../logger.h"
+#include "../opencv.h"
 
 #include "string.h"
-#ifdef HAS_OPENCV
-	#include <opencv2/imgcodecs.hpp>
-	#include <opencv2/opencv.hpp>
-	#include <opencv2/highgui/highgui.hpp>
-#endif
 
 namespace AstroAir
 {
@@ -445,62 +441,15 @@ namespace AstroAir
 			unsigned char * imgBuf = new unsigned char[imgSize];		//图像缓冲区大小
 			errCode = ASIGetDataAfterExp(CamId, imgBuf, imgSize);
 			long naxis = 2;
-			uint16_t subW = CamWidth/CamBin , subH = CamHeight/CamBin;
-			int nChannels = (Image_type == ASI_IMG_RGB24) ? 3 : 1;
-			uint8_t * imgBuffer = nullptr;
-			uint8_t * image = nullptr;
 			/*曝光后获取图像信息*/
 			if (errCode != ASI_SUCCESS)
 			{
 				/*获取图像失败*/
-				IDLog("ASIGetDataAfterExp (%dx%d #%d channels) error (%d)\n", subW, subH, nChannels,errCode);
+				IDLog("ASIGetDataAfterExp error (%d)\n",errCode);
 				return false;
-			}
-			else
-			{	
-				image = (uint8_t *)imgBuf;
-				imgBuffer = image;
-				if (Image_type == ASI_IMG_RGB24)
-					free(imgBuffer);
-			}
-			size_t nTotalBytes;
-			if(Image_type == 0)
-				nTotalBytes = subW * subH * nChannels * (8 / 8);		//8位
-			else	
-				nTotalBytes = subW * subH * nChannels * (24 / 8);		//24位
-			/*如果图像为16位，则执行如下操作*/
-			if (Image_type == ASI_IMG_RGB24)
-			{
-				/*转化图像*/
-				imgBuffer = static_cast<uint8_t *>(malloc(nTotalBytes));
-				if (imgBuffer == nullptr)
-				{
-					IDLog("Unable to convert image\n");
-					return false;
-				}
-				uint8_t *subR = image;
-				uint8_t *subG = image + subW * subH;
-				uint8_t *subB = image + subW * subH * 2;
-				uint32_t nPixels = subW * subH * 3 - 3;
-				for (uint32_t i = 0; i <= nPixels; i += 3)
-				{
-					*subB++ = imgBuffer[i];
-					*subG++ = imgBuffer[i + 1];
-					*subR++ = imgBuffer[i + 2];
-				}
-				free(imgBuffer);
 			}
 			guard.unlock();
 			IDLog("Download complete.\n");
-			/*将图像传送至客户端*/
-			#ifdef HAS_WEBSOCKET
-				/*记录上传时间*/
-				auto start = std::chrono::high_resolution_clock::now();
-				WSSERVER::send_binary(image,sizeof(image));
-				auto end = std::chrono::high_resolution_clock::now();
-				std::chrono::duration<double> diff = end - start;
-				IDLog("Websocket transfer took %g seconds\n", diff.count());
-			#endif
 			/*将图像写入本地文件*/
 			#ifdef HAS_FITSIO
 				/*存储Fits图像*/
@@ -528,7 +477,7 @@ namespace AstroAir
 				fits_report_error(stderr, FitsStatus);		//如果有错则返回错误信息
 			#endif
 			#ifdef HAS_OPENCV
-				/*存储JPG图片*/
+				/*存储JPG图片
 				compression_params.push_back(cv::IMWRITE_JPEG_QUALITY);		//JPG图像质量
 				compression_params.push_back(100);
 				const char* JPGName = strtok(const_cast<char *>(FitsName.c_str()),".");
@@ -542,7 +491,7 @@ namespace AstroAir
 				{
 					cv::Mat img(CamHeight,CamWidth, CV_8UC1, imgBuf);		//单通道图像信息
 					imwrite(JPGName,img, compression_params);		//写入文件
-					/*计算直方图*/
+					/*计算直方图
 					cv::MatND dstHist;  
 					float hranges[] = { 0,255 }; //特征空间的取值范围
 					const float *ranges[] = { hranges };
@@ -553,18 +502,8 @@ namespace AstroAir
 					double maxValue = 0;
 					int scale = 1;
 					cv::calcHist(&img, 1, &channels, cv::Mat(), dstHist, dims, &size, ranges);
-					cv::Mat dstImage(size * scale, size, CV_8U, cv::Scalar(0));
-					cv::minMaxLoc(dstHist, &minValue, &maxValue, 0, 0);
-					int hpt = cv::saturate_cast<int>(0.9*size);
-					for (int i = 0; i < 256; i++)
-					{
-						float binValue = dstHist.at<float>(i);
-						int realValue = cv::saturate_cast<int>(binValue*hpt / maxValue);
-						cv::rectangle(dstImage, cv::Point(i*scale, size - 1), cv::Point((i + 1)*scale - 1, size - realValue), cv::Scalar(255));
-					}
-					imshow("直方图", dstImage);
-					cv::waitKey(0);
-				}
+				}*/
+				OPENCV::SaveImage(imgBuf,FitsName,isColorCamera,CamHeight,CamWidth);
 			#endif
 			if(imgBuf)
 				delete[] imgBuf;		//删除图像缓存
