@@ -15,12 +15,27 @@
  * MA 02110-1301, USA.
  * 
  */
+/************************************************* 
+ 
+Copyright: 2020-2021 Max Qian. All rights reserved
+ 
+Author:Max Qian
 
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/opencv.hpp>
-#include <opencv2/highgui/highgui.hpp>
+E-mail:astro_air@126.com
+ 
+Date:2021-2-5
+ 
+Description:OPENCV Library
+ 
+**************************************************/
+
 #include <vector>
 #include <string.h>
+#include <string>
+#include <fstream>
+
+#include "logger.h"
+#include "opencv.h"
 
 namespace AstroAir::OPENCV
 {
@@ -40,6 +55,43 @@ namespace AstroAir::OPENCV
 		{
 			cv::Mat img(ImageHeight,ImageWidth, CV_8UC1, imgBuf);		//单通道图像信息
 			imwrite(JPGName,img, compression_params);		//写入文件
+		}
+		IDLog("JPG image saved successfully\n");
+	} 
+
+	void clacHistogram(unsigned char *imgBuf,bool isColor,int ImageHeight,int ImageWidth)
+	{
+		cv::MatND dstHist;  
+		/*最大值&最小值*/
+		double minValue = 0;
+		double maxValue = 0;
+		float hranges[] = { 0,255 }; //特征空间的取值范围
+		if(isColor == true)		//如果是彩色相机
+		{
+			IDLog("Start calculating color image histogram\n");
+			cv::Mat img(ImageHeight,ImageWidth, CV_8UC3, imgBuf);		//3通道图像信息
+			int histSize[3] = {256,256,256};
+			const float *ranges[3] = { hranges , hranges , hranges};
+			int channels[3] = {0,1,2};
+			cv::calcHist(&img, 1, channels, cv::Mat(), dstHist, 3, histSize, ranges);
+			IDLog("Finish calculating color image histogram\n");
+		}
+		else		//默认为黑白相机
+		{
+			IDLog("Start calculating histogram of black and white image\n");
+			cv::Mat img(ImageHeight,ImageWidth, CV_8UC1, imgBuf);		//单通道图像信息
+			const float *ranges[] = { hranges };
+			int histSize = 256;  //存放每个维度的直方图的尺寸的数组
+			int channels = 0;  //通道数
+			cv::calcHist(&img, 1, &channels, cv::Mat(), dstHist, 1, &histSize, ranges);
+			IDLog("Finish calculating histogram of black and white image\n");
+		}
+		std::ofstream outfile;
+		outfile.open("histogram.txt");
+		if(outfile.is_open())
+		{
+			outfile << dstHist;
+			outfile.close();
 		}
 	}
 }

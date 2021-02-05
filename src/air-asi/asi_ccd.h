@@ -98,20 +98,14 @@ namespace AstroAir
 			bool isCoolCamera = false;
 			bool isColorCamera = false;
 			bool isGuideCamera = false;
-			/*图像参数*/
-			//unsigned char *imgBuf = 0;		//图像缓冲区
 			/*FitsIO*/
 			fitsfile *fptr;		//cFitsIO定义
-			std::vector<int> compression_params;		//图像质量
 			long nelements;
 			long fpixel = 1;
 			char datatype[40];		//数据格式
 			char keywords[40];		//相机品牌
 			char value[20];		//相机名称
 			char description[40];		//相机描述
-			/*OPENCV*/
-			
-
 			/*相机使用参数（使用原子变量）*/
 			std::atomic_bool isConnected;
 			std::atomic_bool InExposure;

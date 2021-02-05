@@ -24,9 +24,9 @@ Author:Max Qian
 
 E-mail:astro_air@126.com
  
-Date:2021-1-4
+Date:2021-2-5
  
-Description:ZWO camera driver
+Description:OPENCV Library
  
 **************************************************/
 
@@ -35,9 +35,14 @@ Description:ZWO camera driver
 #ifndef _OPENCV_H_
 #define _OPENCV_H_
 
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/opencv.hpp>
+#include <opencv2/highgui/highgui.hpp>
+
 namespace AstroAir::OPENCV
 {
 	void SaveImage(unsigned char *imgBuf,std::string ImageName,bool isColor,int ImageHeight,int ImageWidth);
+	void clacHistogram(unsigned char *imgBuf,bool isColor,int ImageHeight,int ImageWidth);
 }
 
 #endif

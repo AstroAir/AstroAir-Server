@@ -504,6 +504,7 @@ namespace AstroAir
 					cv::calcHist(&img, 1, &channels, cv::Mat(), dstHist, dims, &size, ranges);
 				}*/
 				OPENCV::SaveImage(imgBuf,FitsName,isColorCamera,CamHeight,CamWidth);
+				OPENCV::clacHistogram(imgBuf,isColorCamera,CamHeight,CamWidth);
 			#endif
 			if(imgBuf)
 				delete[] imgBuf;		//删除图像缓存
