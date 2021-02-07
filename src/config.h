@@ -1,5 +1,6 @@
 #define DebugMode true
 #define HAS_ASI
+#define HAS_QHY
 #define HAS_WEBSOCKET
 #define HAS_JSONCPP
 #define HAS_FITSIO

@@ -4,7 +4,7 @@
 #include <string.h>
 #include <time.h>
 
-#include "qhyccd.h"
+#include "../libqhy/qhyccd.h"
 #include "fitsio.h"
 #include "fitsio2.h"
 
@@ -204,66 +204,7 @@ int main(int argc, char *argv[])
   int bin;
   int k = 1;
   int i = 0;
-  
-  pt=fopen("qhy_filter.txt","r");  //Get filter setting
-	fscanf(pt,"%d",&filter);
-	fclose(pt);
-  switch(filter)    //If position is {R,G,B,L,Ha,SII,OIII}
-	{
-  case 0:
-    break;
-	case 11:    //RGB
-		i_filter=1;
-		n_filter=3;
-		break;
-	case 12:    //RGBL
-		i_filter=1;
-		n_filter=4;
-		break;
-	case 13:    //RGBLHa
-		i_filter=1;
-		n_filter=5;
-		break;
-  case 14:    //RGBLHaSIIOIII
-		i_filter=1;
-		n_filter=7;
-		break;
-	case 15:    //HaSIIOIII
-		i_filter=5;
-		n_filter=7;
-		break;
-	default:
-		i_filter=filter;
-		n_filter=filter;
-	}
-  
-  pt=fopen("qhy_num.txt","r");  //Get usb traffic
-	fscanf(pt,"%d",&number);
-	fclose(pt);
-  
-  pt=fopen("qhy_usb.txt","r");  //Get usb traffic
-	fscanf(pt,"%d",&USB_TRAFFIC);
-	fclose(pt);
-  
-  pt=fopen("qhy_nf.txt","r");   //Get n_frame
-	fscanf(pt,"%d",&n_frames);
-	fclose(pt);
-  
-  pt=fopen("qhy_ex.txt","r");   //Get exposure
-	fscanf(pt,"%d",&EXPOSURE_TIME);
-	fclose(pt);
-  
-  pt=fopen("qhy_gain.txt","r");   //Get gain
-	fscanf(pt,"%d",&CHIP_GAIN);
-	fclose(pt);
-  
-  pt=fopen("qhy_offset.txt","r");   //Get offset
-	fscanf(pt,"%d",&CHIP_OFFSET);
-	fclose(pt);
-  
-  pt=fopen("qhy_bin.txt","r");    //Get bin mode
-	fscanf(pt,"%d",&bin);
-	fclose(pt);
+
   if(bin == 1)
     camBinX=1,camBinY=1;
   if(bin == 2)
@@ -276,23 +217,6 @@ int main(int argc, char *argv[])
 
 	char RA[100];
 	char DEC[100];
-
-	pt=fopen("coord_RA.txt","r");
-	fscanf(pt,"%d\n%d\n%d",&ra_h,&ra_m,&ra_s);
-	fclose(pt);
-
-	pt=fopen("coord_DEC.txt","r");
-	fscanf(pt,"%d\n%d\n%d\n%d",&dec_sign,&dec_d,&dec_m,&dec_s);
-	fclose(pt);
-
-	sprintf(RA,"%d:%d:%d",ra_h,ra_m,ra_s);/*Set RA*/
-
-	if (dec_sign > 0){/*Set DEC*/
-		sprintf(DEC,"+%d:%d:%d",dec_d,dec_m,dec_s);
-	} else {
-		sprintf(DEC,"-%d:%d:%d",dec_d,dec_m,dec_s);
-	}
-
   double chipWidthMM;
   double chipHeightMM;
   double pixelWidthUM;

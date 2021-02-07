@@ -936,7 +936,13 @@ namespace AstroAir
     
 	void WSSERVER::StartExposureSuccess()
 	{
-
+        IDLog("Successful exposure\n");
+        /*整合信息并发送至客户端*/
+        Json::Value Root;
+        Root["UID"] = Json::Value("RemoteCameraShot");
+        Root["ActionResultInt"] = Json::Value(4);
+        json_messenge = Root.toStyledString();
+        send(json_messenge);
 	}
 	
 	void WSSERVER::AbortExposureSuccess()

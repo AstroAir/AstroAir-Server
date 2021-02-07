@@ -18,19 +18,23 @@
 
 /************************************************* 
 
-Copyright: 2020 Max Qian. All rights reserved
+Copyright: 2020-2021 Max Qian. All rights reserved
 
 Author:Max Qian
 
 E-mail:astro_air@126.com
 
-Date:2020-12-11
+Date:2021-2-7
 
 Description:QHY camera driver
 
 **************************************************/
 
-namespace AstroAir::QHYCAMERA
+#include "qhy_ccd.h"
+#include "../logger.h"
+#include "../opencv.h"
+
+namespace AstroAir
 {
 	/*
      * name: QHYCCD()
@@ -41,6 +45,7 @@ namespace AstroAir::QHYCAMERA
 	{
 		CamNumber = 0;
 		CamId = 0;
+		CamBin = 0;
 		isConnected = false;
 		InVideo = false;
 		InExposure = false;
@@ -54,7 +59,7 @@ namespace AstroAir::QHYCAMERA
      * calls: Disconnect()
      * note: Ensure camera safety
      */
-	QHYCCD::~QHYCCD
+	QHYCCD::~QHYCCD()
 	{
 		if (isConnected == true)
 		{
@@ -80,67 +85,66 @@ namespace AstroAir::QHYCAMERA
      */
 	bool QHYCCD::Connect(std::string Device_name)
 	{
-		if(InitQHYCCDResource() == QHYCCD_SUCCESS)
+		if((retVal = InitQHYCCDResource()) != QHYCCD_SUCCESS)
 		{
-			IDLog("Init SDK success!\n");
-		}
-		else
-		{
-			IDLog("Unable to initialize SDK settings, please check system settings\n");
-			return false;
-		}
-		CamNumber = ScanQHYCCD();
-		if(CamNumber <= 0)
-		{
-			IDLog("QHY camera not found, please check the power supply or make sure the camera is connected.\n");
+			IDLog("Unable to initialize SDK settings,error code is %d please check system settings\n",retVal);
 			return false;
 		}
 		else
 		{
-			for(int i = 0;i < CamNumber;i++)
+			IDLog("Init SDK successfully!\n");
+			if((CamNumber = ScanQHYCCD()) <= 0)
 			{
-				GetQHYCCDId(i, iCamId);
-				if(GetQHYCCDModel(iCamId,CamName[i]) != QHYCCD_SUCCESS)
+				IDLog("QHY camera not found, please check the power supply or make sure the camera is connected.\n");
+				return false;
+			}
+			else
+			{
+				for(int i = 0;i < CamNumber;i++)
 				{
-					IDLog("Unable to get %s name, please check program permissions.\n",CamName[i]);
-					return false;
-				}
-				else
-				{
-					if(CamName[i] == Device_Name)
+					GetQHYCCDId(i, iCamId);
+					if(GetQHYCCDModel(iCamId,CamName[i]) != QHYCCD_SUCCESS)
 					{
-						IDLog("Find %s.\n",CamName[i]);
-						CamId = i;
-						if(pCamHandle = OpenQHYCCD(CamId) ==NULL)
+						IDLog("Unable to get %s name, please check program permissions.\n",CamName[i]);
+						return false;
+					}
+					else
+					{
+						if(CamName[i] == Device_name)
 						{
-							IDLog("Unable to turn on the %s.\n",CamName[CamId]);
-							return false;
-						}
-						else
-						{
-							if(InitQHYCCD(pCamHandle) != QHYCCD_SUCCESS)
+							IDLog("Find %s.\n",CamName[i]);
+							CamId = i;
+							if((pCamHandle = OpenQHYCCD(iCamId)) == NULL)
 							{
-								IDLog("Unable to initialize connection to camera.\n");
+								IDLog("Unable to turn on the %s.\n",CamName[CamId]);
 								return false;
 							}
 							else
 							{
-								isConnected = true;
-								IDLog("Camera turned on successfully\n");
-								/*获取连接相机配置信息，并存入参数*/
-								UpdateCameraConfig();
-								return true;
+								if(InitQHYCCD(pCamHandle) != QHYCCD_SUCCESS)
+								{
+									IDLog("Unable to initialize connection to camera.\n");
+									return false;
+								}
+								else
+								{
+									isConnected = true;
+									IDLog("Camera turned on successfully\n");
+									/*获取连接相机配置信息，并存入参数*/
+									UpdateCameraConfig();
+									return true;
+								}
 							}
 						}
-					}
-					else
-					{
-						IDLog("This is not a designated camera, try to find the next one.\n");
+						else
+						{
+							IDLog("This is not a designated camera, try to find the next one.\n");
+						}
 					}
 				}
+				IDLog("The specified camera was not found. Please check the camera connection");
+				return false;
 			}
-			IDLog("The specified camera was not found. Please check the camera connection");
-			return false;
 		}
 		return false;
 	}
@@ -185,9 +189,20 @@ namespace AstroAir::QHYCAMERA
 			IDLog("Unable to turn off the camera, please try again");
 			return false;
 		}
+		if ((retVal = ReleaseQHYCCDResource()) != QHYCCD_SUCCESS)
+		{
+			printf("Cannot release SDK resources, error %d.\n", retVal);
+		}
+		else
+		{
+			printf("SDK resources released.\n"); 
+		}
 		IDLog("Disconnect from camera\n");
 		return true;
     }
     
-    
+    bool QHYCCD::UpdateCameraConfig()
+	{
+		return true;
+	}
 }

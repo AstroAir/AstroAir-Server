@@ -57,15 +57,29 @@ if(HAS_ASI)
 		message("-- Found ASI camera library in ${PATH_ASI}")
 		add_library(LIBASI src/air-asi/asi_ccd.cpp)
 		target_link_libraries(airserver PUBLIC LIBASI)
+		link_directories("${PROJECT_SOURCE_DIR}/src/libasi/${PLATFORM}/")
 	else()
-		message("-- Could not found ASI camera library.Try to build it!")
-		add_custom_command(COMMAND sudo mkdir /usr/include/libasi
-						COMMAND sudo cp *.h /usr/include/libasi)
+		message("-- Could not found ASI camera library.Please build it before intall!")
 	endif()
-	target_link_libraries(airserver PUBLIC libopencv_core.so)
-	target_link_libraries(airserver PUBLIC libopencv_imgcodecs.so)
 else()
 	message("-- Not built ASI camera library")
+endif()
+
+#设置QHY相机库
+option(HAS_QHY "Using QHY camera Library" ON)
+if(HAS_QHY)
+	find_path(PATH_QHY qhyccd.h /usr/include/libqhy)
+	find_path(PATH_QHY qhyccd.h /usr/local/include/libqhy)
+	if(PATH_QHY)
+		message("-- Found QHY camera library in ${PATH_QHY}")
+		add_library(LIBQHY src/air-qhy/qhy_ccd.cpp)
+		target_link_libraries(airserver PUBLIC LIBQHY)
+		link_directories("${PROJECT_SOURCE_DIR}/src/libqhy/${PLATFORM}/")
+	else()
+		message("-- Could not found QHY camera library.Please build it before intall!")
+	endif()
+else()
+	message("-- Not built QHY camera library")
 endif()
 
 #设置日至系统库
@@ -98,21 +112,6 @@ link_directories(${LINK_DIR_L})
 set(LINK_DIR /usr/lib)
 link_directories(${LINK_DIR})
 
-if(${PLATFORM} EQUAL "x64")
-	message("Using the x64 platform ASI camera Library")
-	set(LIBASI_x64 libasi/x64)
-	link_directories(${LIBASI_x64})
-elseif(${PLATFORM} EQUAL "armv7")
-	message("Using the armv7 platform ASI camera Library")
-	set(LIBASI_armv7 libasi/armv7)
-	link_directories(${LIBASI_armv7})
-elseif(${PLATFORM} EQUAL armv8)
-	message("Using the armv8 platform ASI camera Library")
-	set(LIBASI_armv8 libasi/armv8)
-	link_directories(${LIBASI_armv8})
-endif()
-
-target_link_libraries(airserver PUBLIC libASICamera2.so)
 option(HAS_JSONCPP "Using JsonCpp Library" ON)
 if(HAS_JSONCPP)
 	find_path(PATH_JSONCPP json.h /usr/include/json)
@@ -131,6 +130,8 @@ else()
 	message("Please check setting,jsoncpp is one of the main library!")
 endif()
 
+target_link_libraries(airserver PUBLIC libASICamera2.so)
+target_link_libraries(airserver PUBLIC libqhyccd.so)
 target_link_libraries(airserver PUBLIC libcfitsio.so)
 target_link_libraries(airserver PUBLIC libpthread.so)
 target_link_libraries(airserver PUBLIC libnova.so)
@@ -144,6 +145,8 @@ target_include_directories(airserver PUBLIC
                            "${PROJECT_BINARY_DIR}/src"
                            "${PROJECT_SOURCE_DIR}/src/air-asi"
                            "${PROJECT_SOURCE_DIR}/src/libasi"
+						   "${PROJECT_SOURCE_DIR}/src/air-qhy"
+                           "${PROJECT_SOURCE_DIR}/src/libqhy"
                            )
 
 #安装到系统

@@ -34,14 +34,16 @@ Description:QHY camera driver
 #ifndef _QHYCCD_H_
 #define _QHYCCD_H_
 
-#include <qhyccd.h>
+#include "../wsserver.h"
+#include "../libqhy/qhyccd.h"
+
 #include <atomic>
 
 #define MAXDEVICENUM 5
 
-namespace AstroAir::QHYCAMERA
+namespace AstroAir
 {
-	class QHYCCD
+	class QHYCCD: public WSSERVER
 	{
 		public:
 			/*构造函数，重置参数*/
@@ -49,17 +51,19 @@ namespace AstroAir::QHYCAMERA
 			/*析构函数*/
 			~QHYCCD();
 			/*连接相机*/
-			virtual bool Connect(std::string Device_name);
+			virtual bool Connect(std::string Device_name) override;
 			/*断开连接*/
-			virtual bool Disconnect();
+			virtual bool Disconnect() override;
 			/*更新相机配置信息*/
 			virtual bool UpdateCameraConfig();
 		private:
 			int CamNumber = 0;
-			char CamName*[MAXDEVICENUM];
+			char *CamName[MAXDEVICENUM];
 			int CamId;
-			int iCamId[100] = {0};
-			
+			int CamBin;
+			char iCamId[32] = {0};
+			unsigned int retVal;
+
 			/*相机配置参数*/
 			int iMaxWidth = 0;		//最大高度
 			int iMaxHeight = 0;		//最大宽度
