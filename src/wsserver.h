@@ -62,6 +62,7 @@ Description:Main framework of astroair server
 #include <set>
 #include <dirent.h>
 #include <vector>
+#include <chrono>
 #include <atomic>
 #include <fstream>
 
@@ -89,17 +90,10 @@ namespace AstroAir
 			void on_close(websocketpp::connection_hdl hdl);
 			void on_message(websocketpp::connection_hdl hdl,message_ptr msg);
 			void send(std::string payload);
-			void send_binary(void const * payload, size_t len);
 			void stop();
 			virtual bool is_running();
 			/*运行服务器*/
 			void run(int port);
-			#ifdef HAS_OPENSSL
-			std::string get_password();
-			context_ptr on_tls_init(websocketpp::connection_hdl hdl);
-			template<typename EndpointType>
-			void on_message_tls(EndpointType* s, websocketpp::connection_hdl hdl,typename EndpointType::message_ptr msg);
-			#endif
 		public:
 			virtual bool Connect(std::string Device_name);
 			virtual bool Disconnect();
@@ -117,9 +111,9 @@ namespace AstroAir
 			void StartExposureSuccess();
 			void AbortExposureSuccess();
 			/*处理错误信息函数*/
-			void SetupConnectError(std::string message);
-			void StartExposureError(std::string message);
-			void AbortExposureError(std::string message);
+			void SetupConnectError(int id);
+			void StartExposureError();
+			void AbortExposureError();
 			void UnknownMsg();
 			void UnknownDevice(int id,std::string message);
 			void ErrorCode();
@@ -134,10 +128,6 @@ namespace AstroAir
 			typedef std::set<websocketpp::connection_hdl, std::owner_less<websocketpp::connection_hdl>> con_list;
 			con_list m_connections;
 			airserver m_server;
-			#ifdef HAS_OPENSSL
-			boost::asio::io_service ios;
-			airserver_tls m_server_tls;
-			#endif
 			/*定义服务器设备参数*/
 			WSSERVER *CCD,*MOUNT,*FOCUS,*FILTER,*GUIDE;
 

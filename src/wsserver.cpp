@@ -26,7 +26,7 @@ Author:Max Qian
 
 E-mail:astro_air@126.com
  
-Date:2021-1-4
+Date:2021-2-10
  
 Description:Main framework of astroair server
 
@@ -62,7 +62,6 @@ namespace AstroAir
 		INDICCD INDICamera;
 	#endif
 #ifdef HAS_WEBSOCKET
-
     /*
      * name: WSSERVER()
      * describe: Constructor for initializing server parameters
@@ -89,13 +88,6 @@ namespace AstroAir
         isFocusConnected = false;       //电动调焦座连接状态
         isFilterConnected = false;      //滤镜轮连接状态
         isGuideConnected = false;       //导星软件连接状态
-        #ifdef HAS_OPENSSL
-        m_server_tls.init_asio(&ios);
-		m_server_tls.set_message_handler(bind(&<airserver_tls>WSSERVER::on_message_tls,&m_server_tls,::_1,::_2));
-		m_server_tls.set_tls_init_handler(bind(&WSSERVER::on_tls_init,this,::_1));
-		m_server_tls.listen(5951);
-		m_server_tls.start_accept();
-		#endif
     }
     
     /*
@@ -150,33 +142,12 @@ namespace AstroAir
     void WSSERVER::on_message(websocketpp::connection_hdl hdl,message_ptr msg)
     {
         std::string message = msg->get_payload();
-        /*将接收到的信息打印至终端*/
-        IDLog("Get information from client: %s\n",message.c_str());
+        /*将接收到的信息写入文件*/
         if(DebugMode == true)
-        {
-            /*将接收到的信息写入文件*/
             IDLog_CMDL(message.c_str());
-        }
         /*处理信息*/
         readJson(message);
     }
-    
-    #ifdef HAS_OPENSSL
-    template<typename EndpointType>
-    void WSSERVER::on_message_tls(EndpointType* s, websocketpp::connection_hdl hdl,typename EndpointType::message_ptr msg)
-	{
-		std::string message = msg->get_payload();
-        /*将接收到的信息打印至终端*/
-        IDLog("Get information from client: %s\n",message.c_str());
-        if(DebugMode == true)
-        {
-            /*将接收到的信息写入文件*/
-            IDLog_CMDL(message.c_str());
-        }
-        /*处理信息*/
-        readJson(message);
-	}
-    #endif
     
     /*以下三个函数均是用于switch支持string*/
 	constexpr hash_t hash_compile_time(char const* str, hash_t last_value = basis)  
@@ -279,33 +250,6 @@ namespace AstroAir
     }
     
     /*
-     * name: send_binary(void const * payload, size_t len)
-     * @param image:需要发送的二进制信息
-     * @param len:需发送文件的大小
-     * describe: Send binary information to client
-     * 描述：向客户端发送二进制信息
-     * note: This function can send the image to the client and display it aGain
-     */
-    void WSSERVER::send_binary(void const * image, size_t len)
-    {
-        for (auto it : m_connections)
-        {
-            try
-            {
-                m_server.send(it, image, len, websocketpp::frame::opcode::binary);
-            }
-            catch (websocketpp::exception const & e)
-            {
-				std::cerr << e.what() << std::endl;
-            }
-            catch (...)
-            {
-                std::cerr << "other exception" << std::endl;
-            }
-        }
-    }
-    
-    /*
      * name: stop()
      * describe: Stop the websocket server
      * 描述：停止WebSocket服务器
@@ -347,12 +291,6 @@ namespace AstroAir
             m_server.listen(port);
             m_server.start_accept();
             m_server.run();
-            #ifdef HAS_OPENSSL
-            IDLog("Start the ssl server..\n");
-            m_server_tls.listen(443);
-			m_server_tls.start_accept();
-			m_server_tls.run();
-			#endif
         }
         catch (websocketpp::exception const & e)
         {   
@@ -363,34 +301,6 @@ namespace AstroAir
             std::cerr << "other exception" << std::endl;
         }
     }
-    
-    #ifdef HAS_OPENSSL
-    std::string WSSERVER::get_password()
-    {
-		return "test";
-	}
-
-    context_ptr WSSERVER::on_tls_init(websocketpp::connection_hdl hdl) 
-    {
-		std::cout << "on_tls_init called with hdl: " << hdl.lock().get() << std::endl;
-		context_ptr ctx(new boost::asio::ssl::context(boost::asio::ssl::context::tlsv1));
-		try 
-		{
-			ctx->set_options(boost::asio::ssl::context::default_workarounds |
-							 boost::asio::ssl::context::no_sslv2 |
-							 boost::asio::ssl::context::no_sslv3 |
-							 boost::asio::ssl::context::single_dh_use);
-			ctx->set_password_callback(bind(&WSSERVER::get_password,this));
-			ctx->use_certificate_chain_file("server.pem");
-			ctx->use_private_key_file("server.pem", boost::asio::ssl::context::pem);
-		} 
-		catch (std::exception& e) 
-		{
-			std::cout << e.what() << std::endl;
-		}
-		return ctx;
-	}
-	#endif
 #endif
 
     /*
@@ -430,8 +340,13 @@ namespace AstroAir
 		while((ptr=readdir(dir))!=NULL)  
 		{  
 			if(ptr->d_name[0] == '.')  
-				continue;  
-			files.push_back(ptr->d_name);  
+				continue; 
+            /*
+            std::vector<std::string> res = split(ptr->d_name, ".");
+            if(res[1] == "air")
+            */
+                files.push_back(ptr->d_name);
+            
 		}  
 		for (int i = 0; i < files.size(); ++i)  
 		{  
@@ -439,16 +354,12 @@ namespace AstroAir
 		}  
 		closedir(dir);
         /*整合信息并发送至客户端*/
-        Json::Value Root,list,name;
-        Root["result"] = Json::Value(1);
-		Root["code"] = Json::Value();
+        Json::Value Root;
 		Root["Event"] = Json::Value("RemoteActionResult");
         Root["UID"] = Json::Value("RemoteGetAstroAirProfiles");
-        name["name"] = Json::Value("config.air");
-        Root["list"] = Json::Value("config2.air");
-        list["list"] = name;
-        Root["ParamRet"] = list;
         Root["ActionResultInt"] = Json::Value(4);
+        Root["ParamRet"]["list"]["name"] = Json::Value("config.air");
+        Root["ParamRet"]["list"]["profItem"]["name"] = Json::Value("config2.air");
         json_messenge = Root.toStyledString();
         send(json_messenge);
     }
@@ -488,6 +399,7 @@ namespace AstroAir
         std::unique_ptr<Json::CharReader>const json_read(reader.newCharReader());
         json_read->parse(jsonStr.c_str(), jsonStr.c_str() + jsonStr.length(), &root,&errs);
         bool connect_ok = false;
+        auto start = std::chrono::high_resolution_clock::now();
         /*连接指定品牌的指定型号相机*/
         bool camera_ok = false;
         bool Has_Camera = false;
@@ -536,10 +448,10 @@ namespace AstroAir
                 if(i == 3&& camera_ok == false)
                 {
 					/*相机未连接成功，返回错误信息*/
-                    SetupConnectError("Unable to connect camera");
+                    SetupConnectError(5);
                     break;
                 }
-                sleep(10);
+                sleep(4);
             }
         }
         /*判断相机是否连接成功*/
@@ -567,6 +479,7 @@ namespace AstroAir
 					/*初始化iOptron赤道仪，并赋值MOUNT*/
                     #ifdef HAS_IOPTRON
                     case "iOptron"_hash:{
+                        iOptron iOptronMount;
                         MOUNT = &iOptronMount;
                         monut_ok = MOUNT->Connect(Mount_name);
                         break;
@@ -575,6 +488,7 @@ namespace AstroAir
                     #ifdef HAS_SKYWATCHER
                     case "SkyWatcher"_hash:{
 						/*初始化SkyWatcher赤道仪，并赋值MOUNT*/
+                        SkyWatcher SkyWatcherMount;
                         MOUNT = &SkyWatcherMount;
                         mount_ok = MOUNT->Connect(Mount_name);
                         break;
@@ -599,10 +513,10 @@ namespace AstroAir
                 if(i == 3&& mount_ok == false)
                 {
 					/*赤道仪未连接成功，返回错误信息*/
-                    SetupConnectError("Unable to connect mount");
+                    SetupConnectError(5);
                     break;
                 }
-                sleep(10);
+                sleep(4);
             }
         }
         /*判断赤道仪是否连接成功*/
@@ -661,10 +575,10 @@ namespace AstroAir
                 if(i == 3&& focus_ok == false)
                 {
 					/*电动调焦座未连接成功，返回错误信息*/
-                    SetupConnectError("Unable to connect focus");
+                    SetupConnectError(5);
                     break;
                 }
-                sleep(10);
+                sleep(4);
             }
         }
         /*判断电动调焦座是否连接成功*/
@@ -723,10 +637,10 @@ namespace AstroAir
                 if(i == 3&& filter_ok == false)
                 {
 					/*滤镜轮未连接成功，返回错误信息*/
-                    SetupConnectError("Unable to connect filter");
+                    SetupConnectError(5);
                     break;
                 }
-                sleep(10);
+                sleep(4);
             }
         }
         /*判断滤镜轮是否连接成功*/
@@ -776,10 +690,10 @@ namespace AstroAir
                 if(i == 3&& guide_ok == false)
                 {
 					/*导星软件未连接成功，返回错误信息*/
-                    SetupConnectError("Unable to connect giude software");
+                    SetupConnectError(5);
                     break;
                 }
-                sleep(10);
+                sleep(4);
             }
         }
         /*判断导星软件是否连接成功*/
@@ -790,9 +704,16 @@ namespace AstroAir
             else
                 connect_ok == false;
         }
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> diff = end - start;
+        IDLog("Connecting to device took %g seconds\n", diff.count());
+        if(diff.count() >= 20)
+        {
+            SetupConnectError(8);
+            return;
+        }
         /*判断设备是否完全连接成功*/
-        if(connect_ok == true)
-            SetupConnectSuccess();		//将连接上的设备列表发送给客户端
+        SetupConnectSuccess();		//将连接上的设备列表发送给客户端
         return;
     }
     
@@ -853,7 +774,7 @@ namespace AstroAir
 			if ((camera_ok = CCD->StartExposure(exp, bin, IsSave, FitsName, Gain, Offset)) != true)
 			{
 				/*返回曝光错误的原因*/
-				StartExposureError("Could not start exposure");
+				StartExposureError();
 				IDLog("Unable to stop the exposure of the camera. Please check the connection of the camera. If you have any problems, please contact the developer\n");
 				IDLog_DEBUG("Unable to stop the exposure of the camera. Please check the connection of the camera. If you have any problems, please contact the developer\n");
 				/*如果函数执行不成功返回false*/
@@ -887,7 +808,7 @@ namespace AstroAir
 			if ((camera_ok = CCD->AbortExposure()) != true)
 			{
 				/*返回曝光错误的原因*/
-				AbortExposureError("Could not start exposure");
+				AbortExposureError();
 				IDLog("Unable to stop the exposure of the camera. Please check the connection of the camera. If you have any problems, please contact the developer\n");
 				IDLog_DEBUG("Unable to stop the exposure of the camera. Please check the connection of the camera. If you have any problems, please contact the developer\n");
 				/*如果函数执行不成功返回false*/
@@ -905,96 +826,123 @@ namespace AstroAir
         return true;
     }
     
+    /*
+     * name: SetupConnectSuccess()
+     * describe: Successfully connect device
+     * 描述：成功连接设备
+     * calls: IDLog(const char *fmt, ...)
+     * calls: send()
+     */
     void WSSERVER::SetupConnectSuccess()
     {
-        
+        IDLog("Successfully connect device\n");
+        /*整合信息并发送至客户端*/
+        Json::Value Root;
+        Root["Event"] = Json::Value("RemoteActionResult");
+        Root["UID"] = Json::Value("RemoteSetupConnect");
+        Root["ActionResultInt"] = Json::Value(4);
+        json_messenge = Root.toStyledString();
+        send(json_messenge);
     }
     
     /*
-     * name: SetupConnectError(std::string message)
-     * @prama message:需要返回至客户端的错误信息
+     * name: SetupConnectError(int id)
      * describe: Error handling connection to device
      * 描述：处理连接设备时的错误
      * calls: IDLog(const char *fmt, ...)
      * calls: IDLog_DEBUG(const char *fmt, ...)
      * calls: send()
      */
-    void WSSERVER::SetupConnectError(std::string message)
+    void WSSERVER::SetupConnectError(int id)
     {
         IDLog("Unable to connect device\n");
         IDLog_DEBUG("Unable to connect device\n");
         /*整合信息并发送至客户端*/
-        Json::Value Root,error;
-        Root["result"] = Json::Value(1);
-		Root["code"] = Json::Value();
-        Root["id"] = Json::Value(201);
-        error["message"] = Json::Value(message);
-        Root["error"] = error;
+        Json::Value Root;
+        Root["Event"] = Json::Value("RemoteActionResult");
+        Root["UID"] = Json::Value("RemoteSetupConnect");
+        Root["ActionResultInt"] = Json::Value(id);
         json_messenge = Root.toStyledString();
         send(json_messenge);
     }
     
+    /*
+     * name: StartExposureSuccess()
+     * describe: Successfully exposure
+     * 描述：成功连接设备
+     * calls: IDLog(const char *fmt, ...)
+     * calls: send()
+     */
 	void WSSERVER::StartExposureSuccess()
 	{
-        IDLog("Successful exposure\n");
+        IDLog("Successfully exposure\n");
         /*整合信息并发送至客户端*/
         Json::Value Root;
+        Root["Event"] = Json::Value("RemoteActionResult");
         Root["UID"] = Json::Value("RemoteCameraShot");
         Root["ActionResultInt"] = Json::Value(4);
         json_messenge = Root.toStyledString();
         send(json_messenge);
 	}
 	
+    /*
+     * name: AbortExposureSuccess()
+     * describe: Successfully stop exposure
+     * 描述：成功连接设备
+     * calls: IDLog(const char *fmt, ...)
+     * calls: send()
+     */
 	void WSSERVER::AbortExposureSuccess()
 	{
-		
+		IDLog("Successfully stop exposure\n");
+        /*整合信息并发送至客户端*/
+        Json::Value Root;
+        Root["Event"] = Json::Value("RemoteActionResult");
+        Root["UID"] = Json::Value("RemoteCameraShot");
+        Root["ActionResultInt"] = Json::Value(6);
+        json_messenge = Root.toStyledString();
+        send(json_messenge);
 	}
 
 	/*
-	 * name: StartExposureError(std::string message)
-	 * @prama message:需要返回至客户端的错误信息
+	 * name: StartExposureError()
 	 * describe: Error handling connection to device
 	 * 描述：处理开始曝光时的错误
 	 * calls: IDLog(const char *fmt, ...)
 	 * calls: IDLog_DEBUG(const char *fmt, ...)
 	 * calls: send()
 	 */
-    void WSSERVER::StartExposureError(std::string message)
+    void WSSERVER::StartExposureError()
     {
 		IDLog("Unable to start exposure\n");
 		IDLog_DEBUG("Unable to start exposure\n");
 		/*整合信息并发送至客户端*/
-		Json::Value Root,error;
-		Root["result"] = Json::Value(1);
-		Root["code"] = Json::Value();
-		Root["id"] = Json::Value(202);
-		error["message"] = Json::Value(message);
-		Root["error"] = error;
-		json_messenge = Root.toStyledString();
+        Json::Value Root;
+        Root["Event"] = Json::Value("RemoteActionResult");
+        Root["UID"] = Json::Value("RemoteCameraShot");
+        Root["ActionResultInt"] = Json::Value(5);
+        json_messenge = Root.toStyledString();
 		send(json_messenge);
     }
     
     /*
-	 * name: AbortExposureError(std::string message)
-	 * @prama message:需要返回至客户端的错误信息
+	 * name: AbortExposureError()
 	 * describe: Unable to stop camera exposure
 	 * 描述：无法停止相机曝光
 	 * calls: IDLog(const char *fmt, ...)
 	 * calls: IDLog_DEBUG(const char *fmt, ...)
 	 * calls: send()
 	 */
-    void WSSERVER::AbortExposureError(std::string message)
+    void WSSERVER::AbortExposureError()
     {
 		IDLog("Unable to stop camera exposure\n");
 		IDLog_DEBUG("Unable to stop camera exposure\n");
 		/*整合信息并发送至客户端*/
-		Json::Value Root,error;
-		Root["result"] = Json::Value(1);
-		Root["code"] = Json::Value();
-		Root["id"] = Json::Value(203);
-		error["message"] = Json::Value(message);
-		Root["error"] = error;
-		json_messenge = Root.toStyledString();
+		Json::Value Root;
+        Root["Event"] = Json::Value("RemoteActionResult");
+        Root["UID"] = Json::Value("RemoteCameraShot");
+        Root["ActionResultInt"] = Json::Value(5);
+        json_messenge = Root.toStyledString();
 		send(json_messenge);
     }
     

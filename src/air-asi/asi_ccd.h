@@ -38,15 +38,12 @@ Description:ZWO camera driver
 #include "../wsserver.h"
 #include "../libasi/ASICamera2.h"
 
-#include <condition_variable>
 #include <mutex>
 #include <thread>
 #include <atomic>
-#include <chrono>
 #include <vector>
-
-#include "fitsio.h"
-#include "fitsio2.h"
+#include <string.h>
+#include <fitsio.h>
 
 #define MAXDEVICENUM 5
 

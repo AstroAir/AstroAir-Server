@@ -34,8 +34,6 @@ Description:ZWO camera driver
 #include "../logger.h"
 #include "../opencv.h"
 
-#include "string.h"
-
 namespace AstroAir
 {
     /*

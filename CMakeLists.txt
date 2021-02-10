@@ -20,15 +20,14 @@ project(airserver VERSION 1.0)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-set(PLATFORM x64)
-set(MODE DEBUG)
-
 configure_file(config.h.in config.h)
 
+add_executable(airserver src/main.cpp)
+
+set(PLATFORM armv7)
+set(MODE DEBUG)
 message("-- Building on the ${PLATFORM} platform")
 message("-- Building mode is ${MODE}")
-
-add_executable(airserver src/main.cpp)
 
 #设置Websocketpp库
 option(HAS_WEBSOCKET "Using Websocketpp Library" ON)
@@ -40,9 +39,8 @@ if(HAS_WEBSOCKET)
 		add_library(LIBWEBSOCKET src/wsserver.cpp)
 		target_link_libraries(airserver PUBLIC LIBWEBSOCKET)
 	else()
-		message("-- Could not found websocketpp library.Use local version!")
-		target_include_directories(airserver PUBLIC "${PROJECT_SOURCE_DIR}/include/websocketpp")
-		#add_custom_command(COMMAND sudo cp -r include/websocketpp /usr/include)
+		message("-- Could not found websocketpp library.Try to build it!")
+		add_custom_command(COMMAND sudo apt install libwebsocketpp-dev -y)
 	endif()
 else()
 	message("Please check setting,websocketpp is one of the main library!")
@@ -120,19 +118,17 @@ if(HAS_JSONCPP)
 		message("-- Found JsonCpp library in ${PATH_JSONCPP}")
 		target_link_libraries(airserver PUBLIC libjsoncpp.so)
 	else()
-		message("-- Could not found ASI camera library.Use local version!")
-		target_include_directories(airserver PUBLIC "${PROJECT_SOURCE_DIR}/include/json")
-		set(LOCAL_JSONCPP lib/json)
-		link_directories(${LOCAL_JSONCPP})
-		target_link_libraries(airserver PUBLIC libjsoncpp.so)
+		message("-- Could not found ASI camera library.Try to build it!")
+		add_custom_command(COMMAND sudo apt install libjsoncpp-dev -y)
 	endif()
 else()
 	message("Please check setting,jsoncpp is one of the main library!")
 endif()
 
-target_link_libraries(airserver PUBLIC libASICamera2.so)
-target_link_libraries(airserver PUBLIC libqhyccd.so)
-target_link_libraries(airserver PUBLIC libcfitsio.so)
+#链接动态库
+target_link_libraries(airserver PUBLIC libASICamera2.so)		#ASI相机
+target_link_libraries(airserver PUBLIC libqhyccd.so)		#QHY相机
+target_link_libraries(airserver PUBLIC libcfitsio.so)		#CFitsIO
 target_link_libraries(airserver PUBLIC libpthread.so)
 target_link_libraries(airserver PUBLIC libnova.so)
 target_link_libraries(airserver PUBLIC libusb-1.0.so)
@@ -140,6 +136,7 @@ target_link_libraries(airserver PUBLIC libopencv_highgui.so)
 target_link_libraries(airserver PUBLIC libopencv_imgproc.so)
 target_link_libraries(airserver PUBLIC libopencv_imgcodecs.so)
 target_link_libraries(airserver PUBLIC libopencv_core.so)
+target_link_libraries(airserver PUBLIC libboost_system.so)
 
 target_include_directories(airserver PUBLIC
                            "${PROJECT_BINARY_DIR}/src"

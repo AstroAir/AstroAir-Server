@@ -40,6 +40,8 @@ Description:Log system of astroair server
 #include <cstdarg>
 #include <time.h>
 #include <sys/time.h>
+#include <vector>
+#include <string>
 
 #ifdef WINDOWS
 #include <windows.h>
@@ -60,7 +62,6 @@ typedef struct {
 
 namespace AstroAir
 {
-	/*日志输出*/
 	/*在终端输出*/
 	void IDLog(const char *fmt, ...);
 	/*输出服务器Debug日志*/
@@ -75,6 +76,8 @@ namespace AstroAir
 	bool setSystemTime(TIME *_time);
 	/*获取本地系统时间*/
 	TIME* getSystemLocalTime();
+	/*获取制定目录制定后缀的文件*/
+	std::vector<std::string> split(const std::string& str, const std::string& delim);
 }
 
 #endif
