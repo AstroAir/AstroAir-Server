@@ -1,21 +1,20 @@
 /*
- * wsserver.h <Hangzhou@astroair.cn>
+ * wsserver.h
  * 
- * This program is free software; you can redistribute it and/or modify
+ * Copyright (C) 2020-2021 Max Qian
+ * 
+ * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
- * MA 02110-1301, USA.
- * 
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
  
 /************************************************* 
@@ -26,7 +25,7 @@ Author:Max Qian
 
 E-mail:astro_air@126.com
  
-Date:2021-1-8
+Date:2021-2-14
  
 Description:Main framework of astroair server
  
@@ -40,13 +39,7 @@ Description:Main framework of astroair server
 #include "config.h"
 
 #ifdef HAS_WEBSOCKET
-	/*如果需要使用wss客户端*/
-	#ifdef HAS_OPENSSL
-		#include <websocketpp/config/asio.hpp>
-	#else
-		/*默认无加密客户端*/
-		#include <websocketpp/config/asio_no_tls.hpp>
-	#endif
+	#include <websocketpp/config/asio_no_tls.hpp>
 	#include <websocketpp/server.hpp>
 #endif
 
@@ -68,10 +61,6 @@ Description:Main framework of astroair server
 
 #ifdef HAS_WEBSOCKET
 typedef websocketpp::server<websocketpp::config::asio> airserver;
-#ifdef HAS_OPENSSL
-typedef websocketpp::server<websocketpp::config::asio_tls> airserver_tls;
-typedef websocketpp::lib::shared_ptr<boost::asio::ssl::context> context_ptr;
-#endif
 using websocketpp::lib::placeholders::_1;
 using websocketpp::lib::placeholders::_2;
 using websocketpp::lib::bind;

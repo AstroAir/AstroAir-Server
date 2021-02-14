@@ -1,5 +1,5 @@
 /*
- * opencv.h
+ * base64.h
  * 
  * Copyright (C) 2020-2021 Max Qian
  * 
@@ -27,22 +27,24 @@ E-mail:astro_air@126.com
  
 Date:2021-2-14
  
-Description:OPENCV Library
+Description:Base64 Library
  
 **************************************************/
 
 #pragma once
 
-#ifndef _OPENCV_H_
-#define _OPENCV_H_
+#ifndef _BASE64_H_
+#define _BASE64_H_
 
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/opencv.hpp>
 
-namespace AstroAir::OPENCV
+namespace AstroAir
 {
-	void SaveImage(unsigned char *imgBuf,std::string ImageName,bool isColor,int ImageHeight,int ImageWidth);
-	void clacHistogram(unsigned char *imgBuf,bool isColor,int ImageHeight,int ImageWidth);
+    std::string base64Encode(const unsigned char* Data, int DataByte);
+	std::string Mat2Base64(const cv::Mat &img, std::string imgType);
+    std::string base64Decode(const char* Data, int DataByte);
+    cv::Mat Base2Mat(std::string &base64_data);
 }
 
 #endif

@@ -1,19 +1,20 @@
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * asi_ccd.cpp
  * 
+ * Copyright (C) 2020-2021 Max Qian
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
- * MA 02110-1301, USA.
- * 
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
  
 /************************************************* 
@@ -24,7 +25,7 @@ Author:Max Qian
 
 E-mail:astro_air@126.com
 
-Date:2020-1-29
+Date:2020-2-14
 
 Description:ZWO camera driver
 
@@ -33,6 +34,7 @@ Description:ZWO camera driver
 #include "asi_ccd.h"
 #include "../logger.h"
 #include "../opencv.h"
+#include "../cfitsio.h"
 
 namespace AstroAir
 {
@@ -160,7 +162,7 @@ namespace AstroAir
 		/*在关闭相机之前停止所有任务*/
 		if(InVideo == true)
 		{
-			if((errCode = ASIStopVideoCapture(CamId)) != ASI_SUCCESS);		//停止视频拍摄
+			if((errCode = ASIStopVideoCapture(CamId)) != ASI_SUCCESS)		//停止视频拍摄
 			{
 				IDLog("Unable to stop video capture,error code is %d,please try again.\n",errCode);
 				return false;
@@ -207,7 +209,7 @@ namespace AstroAir
 		if(ASICameraInfo.ST4Port == true)
 			isGuideCamera = true;
 		/*获取相机格式*/
-		Image_type = ASICameraInfo.SupportedVideoFormat[8];
+		Image_type = ASICameraInfo.SupportedVideoFormat[7];
 		/*获取相机最大画幅*/
 		iMaxWidth = ASICameraInfo.MaxWidth;
 		iMaxHeight = ASICameraInfo.MaxHeight;
@@ -437,10 +439,9 @@ namespace AstroAir
 			std::unique_lock<std::mutex> guard(ccdBufferLock);
 			long imgSize = CamWidth*CamHeight*(1 + (Image_type==ASI_IMG_RAW16));		//设置图像大小
 			unsigned char * imgBuf = new unsigned char[imgSize];		//图像缓冲区大小
-			errCode = ASIGetDataAfterExp(CamId, imgBuf, imgSize);
 			long naxis = 2;
 			/*曝光后获取图像信息*/
-			if (errCode != ASI_SUCCESS)
+			if ((errCode = ASIGetDataAfterExp(CamId, imgBuf, imgSize)) != ASI_SUCCESS)
 			{
 				/*获取图像失败*/
 				IDLog("ASIGetDataAfterExp error (%d)\n",errCode);
@@ -449,58 +450,10 @@ namespace AstroAir
 			guard.unlock();
 			IDLog("Download complete.\n");
 			/*将图像写入本地文件*/
-			#ifdef HAS_FITSIO
-				/*存储Fits图像*/
-				int FitsStatus;		//cFitsio状态
-				long naxes[2] = {CamWidth,CamHeight};
-				fits_create_file(&fptr, FitsName.c_str(), &FitsStatus);		//创建Fits文件
-				if(Image_type==ASI_IMG_RAW16)		//创建Fits图像
-					fits_create_img(fptr, USHORT_IMG, naxis, naxes, &FitsStatus);		//16位
-				else
-					fits_create_img(fptr, BYTE_IMG,   naxis, naxes, &FitsStatus);		//8位或12位
-				/*xieruFits头文件关键字*/
-				strcpy(datatype, "TSTRING");
-				strcpy(keywords, "Camera");
-				strcpy(value,CamName[CamId]);
-				strcpy(description, "ZWOASI");
-				if(strcmp(datatype, "TSTRING") == 0)		//写入Fits图像头文件
-				{
-					fits_update_key(fptr, TSTRING, keywords, value, description, &FitsStatus);
-				}
-				if(Image_type == ASI_IMG_RAW16)		//将缓存图像写入SD卡
-					fits_write_img(fptr, TUSHORT, fpixel, imgSize, &imgBuf[0], &FitsStatus);		//16位
-				else
-					fits_write_img(fptr, TBYTE, fpixel, imgSize, &imgBuf[0], &FitsStatus);		//8位或12位
-				fits_close_file(fptr, &FitsStatus);		//关闭Fits图像
-				fits_report_error(stderr, FitsStatus);		//如果有错则返回错误信息
+			#if HAS_FITSIO == ON
+				FITSIO::SaveFitsImage(imgBuf,FitsName,isColorCamera,Image_type,CamHeight,CamWidth,CamName[CamId],"ZWOASI");
 			#endif
-			#ifdef HAS_OPENCV
-				/*存储JPG图片
-				compression_params.push_back(cv::IMWRITE_JPEG_QUALITY);		//JPG图像质量
-				compression_params.push_back(100);
-				const char* JPGName = strtok(const_cast<char *>(FitsName.c_str()),".");
-				strcat(const_cast<char *>(JPGName), ".jpg");
-				if(isColorCamera == true)		//判断是否为彩色相机
-				{
-					cv::Mat img(CamHeight,CamWidth, CV_8UC3, imgBuf);		//3通道图像信息
-					imwrite(JPGName,img, compression_params);		//写入文件
-				}
-				else
-				{
-					cv::Mat img(CamHeight,CamWidth, CV_8UC1, imgBuf);		//单通道图像信息
-					imwrite(JPGName,img, compression_params);		//写入文件
-					/*计算直方图
-					cv::MatND dstHist;  
-					float hranges[] = { 0,255 }; //特征空间的取值范围
-					const float *ranges[] = { hranges };
-					int size = 256;  //存放每个维度的直方图的尺寸的数组
-					int channels = 0;  //通道数
-					int dims = 1;  //特征数目
-					double minValue = 0;
-					double maxValue = 0;
-					int scale = 1;
-					cv::calcHist(&img, 1, &channels, cv::Mat(), dstHist, dims, &size, ranges);
-				}*/
+			#if HAS_OPENCV == ON
 				OPENCV::SaveImage(imgBuf,FitsName,isColorCamera,CamHeight,CamWidth);
 				OPENCV::clacHistogram(imgBuf,isColorCamera,CamHeight,CamWidth);
 			#endif

@@ -1,6 +1,12 @@
 #define VERSION_MAJOR @airserver_VERSION_MAJOR@
 #define VERSION_MINOR @airserver_VERSION_MINOR@
-#define HAS_WEBSOCKET @airserver_HAS_WEBSOCKET@
-#define HAS_JSONCPP @airserver_HAS_JSONCPP@
-#define HAS_NOVA @airserver_HAS_NOVA@
-#define HAS_ASI @airserver_HAS_ASI@
+
+#define DEBUG_MODE ${DEBUG_MODE}
+
+#define HAS_WEBSOCKET @HAS_WEBSOCKET@
+#define HAS_JSONCPP @HAS_JSONCPP@
+#define HAS_OPENCV @HAS_OPENCV@
+#define HAS_FITSIO @HAS_FITSIO@
+#define HAS_NOVA @HAS_NOVA@
+#define HAS_QHY @HAS_QHY@
+#define HAS_ASI @HAS_ASI@

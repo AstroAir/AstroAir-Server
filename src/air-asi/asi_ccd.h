@@ -1,19 +1,20 @@
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * asi_ccd.h
  * 
+ * Copyright (C) 2020-2021 Max Qian
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
- * MA 02110-1301, USA.
- * 
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /************************************************* 
@@ -43,7 +44,7 @@ Description:ZWO camera driver
 #include <atomic>
 #include <vector>
 #include <string.h>
-#include <fitsio.h>
+//#include <fitsio.h>
 
 #define MAXDEVICENUM 5
 
@@ -96,7 +97,7 @@ namespace AstroAir
 			bool isColorCamera = false;
 			bool isGuideCamera = false;
 			/*FitsIO*/
-			fitsfile *fptr;		//cFitsIO定义
+			//fitsfile *fptr;		//cFitsIO定义
 			long nelements;
 			long fpixel = 1;
 			char datatype[40];		//数据格式

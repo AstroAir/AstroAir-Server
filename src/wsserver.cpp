@@ -1,21 +1,20 @@
 /*
- * wsserver.cpp <Hangzhou@astroair.cn>
+ * wsserver.cpp
  * 
- * This program is free software; you can redistribute it and/or modify
+ * Copyright (C) 2020-2021 Max Qian
+ * 
+ * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
- * MA 02110-1301, USA.
- * 
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
  
 /************************************************* 
@@ -26,7 +25,7 @@ Author:Max Qian
 
 E-mail:astro_air@126.com
  
-Date:2021-2-10
+Date:2021-2-14
  
 Description:Main framework of astroair server
 
@@ -38,6 +37,7 @@ Using:JsonCpp<https://github.com/open-source-parsers/jsoncpp>
 
 #include "wsserver.h"
 #include "logger.h"
+#include "base64.h"
 #ifdef HAS_ASI
 #include "air-asi/asi_ccd.h"
 #endif
@@ -72,7 +72,7 @@ namespace AstroAir
         /*初始化WebSocket服务器*/
         /*加载设置*/
         m_server.set_access_channels(websocketpp::log::alevel::all);
-        m_server.clear_access_channels(websocketpp::log::alevel::frame_payload);
+        m_server.clear_access_channels(websocketpp::log::alevel::all ^ websocketpp::log::alevel::frame_payload);
         /*初始化服务器*/
         m_server.init_asio();
         /*设置打开事件*/
@@ -143,8 +143,9 @@ namespace AstroAir
     {
         std::string message = msg->get_payload();
         /*将接收到的信息写入文件*/
-        if(DebugMode == true)
+        #if DEBUG_MODE == ON
             IDLog_CMDL(message.c_str());
+        #endif
         /*处理信息*/
         readJson(message);
     }
@@ -337,16 +338,14 @@ namespace AstroAir
 		std::string PATH = "./";  
 		dir=opendir(PATH.c_str());   
 		std::vector<std::string> files;  
-		while((ptr=readdir(dir))!=NULL)  
+		while((ptr = readdir(dir)) != NULL)  
 		{  
-			if(ptr->d_name[0] == '.')  
+			if(ptr->d_name[0] == '.' || strcmp(ptr->d_name,"..") == 0)  
 				continue; 
-            /*
-            std::vector<std::string> res = split(ptr->d_name, ".");
-            if(res[1] == "air")
-            */
-                files.push_back(ptr->d_name);
-            
+            int size = strlen(ptr->d_name);
+            if(strcmp( ( ptr->d_name + (size - 4) ) , ".air") != 0)
+                continue;
+            files.push_back(ptr->d_name);
 		}  
 		for (int i = 0; i < files.size(); ++i)  
 		{  
@@ -354,12 +353,11 @@ namespace AstroAir
 		}  
 		closedir(dir);
         /*整合信息并发送至客户端*/
-        Json::Value Root;
+        Json::Value Root,profile;
 		Root["Event"] = Json::Value("RemoteActionResult");
         Root["UID"] = Json::Value("RemoteGetAstroAirProfiles");
         Root["ActionResultInt"] = Json::Value(4);
         Root["ParamRet"]["list"]["name"] = Json::Value("config.air");
-        Root["ParamRet"]["list"]["profItem"]["name"] = Json::Value("config2.air");
         json_messenge = Root.toStyledString();
         send(json_messenge);
     }
@@ -413,7 +411,7 @@ namespace AstroAir
                 const char* a = Camera.c_str();
                 switch(hash_(a))
                 {
-                    #ifdef HAS_ASI
+                    #if HAS_ASI == ON
                     case "ZWOASI"_hash:{
 						/*初始化ASI相机，并赋值CCD*/
                         CCD = &ASICamera;
@@ -422,11 +420,15 @@ namespace AstroAir
                     }
                     #endif
                     #ifdef HAS_QHY
-                    case "QHYCCD"_hash:{
-						/*初始化QHY相机，并赋值CCD*/
-                        CCD = &QHYCamera;
-                        camera_ok = CCD->Connect(Camera_name);
-                        break;
+                    {
+                        #if HAS_QHY == ON
+                        case "QHYCCD"_hash:{
+                            /*初始化QHY相机，并赋值CCD*/
+                            CCD = &QHYCamera;
+                            camera_ok = CCD->Connect(Camera_name);
+                            break;
+                        }
+                        #endif
                     }
                     #endif
                     #ifdef HAS_INDI
@@ -459,9 +461,9 @@ namespace AstroAir
         {
 			/*Max：这一段的使用逻辑尚需优化，关于如何判断是否所有设备都连接成功*/
             if(camera_ok == true)
-                connect_ok == true;
+                connect_ok = true;
             else
-                connect_ok == false;
+                connect_ok = false;
         }
         /*连接指定品牌的指定型号赤道仪*/
         bool mount_ok = false;		//赤道仪连接状态
@@ -497,7 +499,7 @@ namespace AstroAir
                     #ifdef HAS_INDI
                     case "INDIMount"_hash:{
 						/*初始化INDI赤道仪，并赋值MOUNT*/
-                        MOUNT = &INDIMount
+                        MOUNT = &INDIMount;
                         mount_ok = MOUNT->Connect(Mount_name);
                         break;
                     }
@@ -523,9 +525,9 @@ namespace AstroAir
         if(Has_Mount == true)
         {
             if(mount_ok == true)
-                connect_ok == true;
+                connect_ok = true;
             else
-                connect_ok == false;
+                connect_ok = false;
         }
         /*连接指定品牌的指定型号电动调焦座*/
         bool focus_ok = false;
@@ -585,9 +587,9 @@ namespace AstroAir
         if(Has_Focus == true)
         {
             if(focus_ok == true)
-                connect_ok == true;
+                connect_ok = true;
             else
-                connect_ok == false;
+                connect_ok = false;
         }
         /*连接指定品牌的指定型号滤镜轮*/
         bool filter_ok = false;
@@ -647,9 +649,9 @@ namespace AstroAir
         if(Has_Filter == true)
         {
             if(filter_ok == true)
-                connect_ok == true;
+                connect_ok = true;
             else
-                connect_ok == false;
+                connect_ok = false;
         }
         /*连接指定品牌的指定型号导星软件*/
         bool guide_ok = false;
@@ -700,9 +702,9 @@ namespace AstroAir
         if(Has_Guide == true)
         {
             if(guide_ok == true)
-                connect_ok == true;
+                connect_ok = true;
             else
-                connect_ok == false;
+                connect_ok = false;
         }
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> diff = end - start;
@@ -729,8 +731,8 @@ namespace AstroAir
     bool WSSERVER::Connect(std::string Device_name)
     {
 		/*默认情况下不应该执行这个函数*/
-        IDLog("Try to establish a connection with %s,Should never get here.\n",Device_name);
-        IDLog_DEBUG("Try to establish a connection with %s,Should never get here.\n",Device_name);
+        IDLog("Try to establish a connection with %s,Should never get here.\n",Device_name.c_str());
+        IDLog_DEBUG("Try to establish a connection with %s,Should never get here.\n",Device_name.c_str());
         return true;
     }
     
@@ -745,8 +747,8 @@ namespace AstroAir
     bool WSSERVER::Disconnect()
     {
 		/*默认情况下不应该执行这个函数*/
-        IDLog("Try to disconnect from %s,Should never get here.\n",Camera_name);
-        IDLog_DEBUG("Try to disconnect from %s,Should never get here.\n",Camera_name);
+        IDLog("Try to disconnect from %s,Should never get here.\n",Camera_name.c_str());
+        IDLog_DEBUG("Try to disconnect from %s,Should never get here.\n",Camera_name.c_str());
         return true;
     }
     

@@ -1,9 +1,12 @@
-#define DebugMode true
-#define HAS_ASI
-#define HAS_QHY
-#define HAS_WEBSOCKET
-#define HAS_JSONCPP
-#define HAS_FITSIO
-#define HAS_OPENCV
-#define HAS_NOVA
-#define Ubuntu
+#define VERSION_MAJOR 1
+#define VERSION_MINOR 0
+
+#define DEBUG_MODE ON
+
+#define HAS_WEBSOCKET ON
+#define HAS_JSONCPP ON
+#define HAS_OPENCV ON
+#define HAS_FITSIO ON
+#define HAS_NOVA ON
+#define HAS_QHY ON
+#define HAS_ASI ON

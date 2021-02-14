@@ -1,19 +1,20 @@
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * qhy_ccd.cpp
  * 
+ * Copyright (C) 2020-2021 Max Qian
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
- * MA 02110-1301, USA.
- * 
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /************************************************* 
@@ -24,7 +25,7 @@ Author:Max Qian
 
 E-mail:astro_air@126.com
 
-Date:2021-2-7
+Date:2021-2-15
 
 Description:QHY camera driver
 
@@ -165,7 +166,7 @@ namespace AstroAir
 		/*在关闭相机之前停止所有任务*/
 		if(InVideo == true)
 		{
-			if(StopQHYCCDLive(pCamHandle) != QHYCCD_SUCCESS);		//停止视频拍摄
+			if(StopQHYCCDLive(pCamHandle) != QHYCCD_SUCCESS)		//停止视频拍摄
 			{
 				IDLog("Unable to stop video capture, please try again.\n");
 				return false;

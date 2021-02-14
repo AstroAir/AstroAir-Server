@@ -1,5 +1,5 @@
 /*
- * opencv.h
+ * cfitsio.h
  * 
  * Copyright (C) 2020-2021 Max Qian
  * 
@@ -16,7 +16,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
 /************************************************* 
  
 Copyright: 2020-2021 Max Qian. All rights reserved
@@ -27,22 +26,14 @@ E-mail:astro_air@126.com
  
 Date:2021-2-14
  
-Description:OPENCV Library
+Description:CFitIO Library
  
 **************************************************/
 
-#pragma once
+#include <fitsio.h>
+#include <string>
 
-#ifndef _OPENCV_H_
-#define _OPENCV_H_
-
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/opencv.hpp>
-
-namespace AstroAir::OPENCV
+namespace AstroAir::FITSIO
 {
-	void SaveImage(unsigned char *imgBuf,std::string ImageName,bool isColor,int ImageHeight,int ImageWidth);
-	void clacHistogram(unsigned char *imgBuf,bool isColor,int ImageHeight,int ImageWidth);
+    void SaveFitsImage(unsigned char *imgBuf,std::string ImageName,bool isColor,int Image_type,int ImageHeight,int ImageWidth,char *CameraName,const char* CameraBrand);
 }
-
-#endif

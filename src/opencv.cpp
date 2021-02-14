@@ -1,19 +1,20 @@
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * opencv.cpp
  * 
+ * Copyright (C) 2020-2021 Max Qian
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
- * MA 02110-1301, USA.
- * 
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 /************************************************* 
  
@@ -23,7 +24,7 @@ Author:Max Qian
 
 E-mail:astro_air@126.com
  
-Date:2021-2-5
+Date:2021-2-14
  
 Description:OPENCV Library
  
@@ -31,7 +32,6 @@ Description:OPENCV Library
 
 #include <vector>
 #include <string.h>
-#include <string>
 #include <fstream>
 
 #include "logger.h"
@@ -39,9 +39,23 @@ Description:OPENCV Library
 
 namespace AstroAir::OPENCV
 {
+	/*
+     * name: SaveImage(unsigned char *imgBuf,std::string ImageName,bool isColor,int ImageHeight,int ImageWidth)
+     * @param imgBuf:图像缓冲区
+	 * @param ImageName:保存图像名称
+	 * @param isColor:图像是否为彩色
+	 * @param ImageHeight:图像高度
+	 * @param ImageWidth:图像宽度
+     * describe: Save JPG Image
+     * 描述： 保存JPG图像
+     * calls: imwrite()
+     * calls: IDLog()
+     * note: The default quality of JPG image is 100
+     */
 	void SaveImage(unsigned char *imgBuf,std::string ImageName,bool isColor,int ImageHeight,int ImageWidth)
 	{
 		std::vector<int> compression_params;		//图像质量
+		std::string imgdate;
 		compression_params.push_back(cv::IMWRITE_JPEG_QUALITY);		//JPG图像质量
 		compression_params.push_back(100);
 		const char* JPGName = strtok(const_cast<char *>(ImageName.c_str()),".");
@@ -49,7 +63,7 @@ namespace AstroAir::OPENCV
 		if(isColor == true)
 		{
 			cv::Mat img(ImageHeight,ImageWidth, CV_8UC3, imgBuf);		//3通道图像信息
-			imwrite(JPGName,img, compression_params);	
+			imwrite(JPGName,img, compression_params);
 		}
 		else
 		{
@@ -59,6 +73,18 @@ namespace AstroAir::OPENCV
 		IDLog("JPG image saved successfully\n");
 	} 
 
+	/*
+     * name: clacHistogram(unsigned char *imgBuf,bool isColor,int ImageHeight,int ImageWidth)
+     * @param imgBuf:图像缓冲区
+	 * @param isColor:图像是否为彩色
+	 * @param ImageHeight:图像高度
+	 * @param ImageWidth:图像宽度
+     * describe: Calculate histogram
+     * 描述： 计算直方图
+     * calls: calcHist()
+     * calls: IDLog()
+     * note: The result of histogram calculation will be output to a file
+     */
 	void clacHistogram(unsigned char *imgBuf,bool isColor,int ImageHeight,int ImageWidth)
 	{
 		cv::MatND dstHist;  
@@ -78,13 +104,13 @@ namespace AstroAir::OPENCV
 		}
 		else		//默认为黑白相机
 		{
-			IDLog("Start calculating histogram of black and white image\n");
+			IDLog("Start calculating histogram of mono image\n");
 			cv::Mat img(ImageHeight,ImageWidth, CV_8UC1, imgBuf);		//单通道图像信息
 			const float *ranges[] = { hranges };
 			int histSize = 256;  //存放每个维度的直方图的尺寸的数组
 			int channels = 0;  //通道数
 			cv::calcHist(&img, 1, &channels, cv::Mat(), dstHist, 1, &histSize, ranges);
-			IDLog("Finish calculating histogram of black and white image\n");
+			IDLog("Finish calculating histogram of mono image\n");
 		}
 		std::ofstream outfile;
 		outfile.open("histogram.txt");
