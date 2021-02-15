@@ -37,7 +37,7 @@ Using:JsonCpp<https://github.com/open-source-parsers/jsoncpp>
 
 #include "wsserver.h"
 #include "logger.h"
-#include "base64.h"
+
 #ifdef HAS_ASI
 #include "air-asi/asi_ccd.h"
 #endif
@@ -770,6 +770,7 @@ namespace AstroAir
      */
     bool WSSERVER::StartExposure(int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset)
     {
+        std::string ImgData;
 		if(isCameraConnected == true)
 		{
 			bool camera_ok = false;
@@ -784,6 +785,20 @@ namespace AstroAir
 			}
 			/*将拍摄成功的消息返回至客户端*/
 			StartExposureSuccess();
+            if(IsSave == true)
+            {
+                IDLog("Finished exposure and save image locally\n");
+                if((ImgData = CCD->SaveImage(FitsName)) == "false")
+                {
+                    IDLog("Could not save image correctly,please check the config\n");
+                    return false;
+                }
+                else
+                {
+                    IDLog("Saved Fits and JPG images %s successfully in locally\n",FitsName.c_str());
+                }
+            }
+            newJPGReadySend(ImgData);
 		}
 		else
 		{
@@ -828,6 +843,13 @@ namespace AstroAir
         return true;
     }
     
+    std::string WSSERVER::SaveImage(std::string FitsName)
+    {
+        /*默认情况下不应该执行这个函数*/
+        IDLog("Try to disconnect from %s,Should never get here.\n",Camera_name.c_str());
+        IDLog_DEBUG("Try to disconnect from %s,Should never get here.\n",Camera_name.c_str());
+        return "false";
+    }
     /*
      * name: SetupConnectSuccess()
      * describe: Successfully connect device
@@ -948,6 +970,16 @@ namespace AstroAir
 		send(json_messenge);
     }
     
+    void WSSERVER::newJPGReadySend(std::string ImgData)
+    {
+        Json::Value Root;
+        Root["Event"] = Json::Value("newJPGReadyReceived");
+        Root["UID"] = Json::Value("RemoteCameraShot");
+        Root["ActionResultInt"] = Json::Value(5);
+        Root["Base64Data"] = ImgData;
+        json_messenge = Root.toStyledString();
+		send(json_messenge);
+    }
     /*
      * name: UnknownMsg()
      * describe: Processing unknown information from clients

@@ -39,6 +39,7 @@ namespace AstroAir::FITSIO
 {
     void SaveFitsImage(unsigned char *imgBuf,std::string ImageName,bool isColor,int Image_type,int ImageHeight,int ImageWidth,char *CameraName,const char* CameraBrand)
     {
+		/*插入头文件信息*/
 		char datatype[40];		//相机品牌
         char keywords[40];		//相机品牌
 		char value[20];		//相机名称

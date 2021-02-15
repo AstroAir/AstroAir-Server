@@ -1,5 +1,5 @@
 /*
- * opencv.h
+ * indi_client.cpp
  * 
  * Copyright (C) 2020-2021 Max Qian
  * 
@@ -16,33 +16,34 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
+ 
 /************************************************* 
- 
+
 Copyright: 2020-2021 Max Qian. All rights reserved
- 
+
 Author:Max Qian
 
 E-mail:astro_air@126.com
- 
-Date:2021-2-14
- 
-Description:OPENCV Library
- 
+
+Date:2020-2-15
+
+Description:INDI driver
+
 **************************************************/
 
-#pragma once
+#include "indi_client.h"
 
-#ifndef _OPENCV_H_
-#define _OPENCV_H_
-
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/opencv.hpp>
-
-namespace AstroAir::OPENCV
+namespace AstroAir
 {
-	std::string SaveImage(unsigned char *imgBuf,std::string ImageName,bool isColor,int ImageHeight,int ImageWidth);
-	void clacHistogram(unsigned char *imgBuf,bool isColor,int ImageHeight,int ImageWidth);
-}
+    INDIClient::INDIClient()
+    {
 
-#endif
+    }
+
+    INDIClient::~INDIClient()
+    {
+
+    }
+
+    
+}

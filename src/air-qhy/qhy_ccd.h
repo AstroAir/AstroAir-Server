@@ -58,6 +58,8 @@ namespace AstroAir
 			virtual bool Disconnect() override;
 			/*更新相机配置信息*/
 			virtual bool UpdateCameraConfig();
+			/*存储图像*/
+			virtual std::string SaveImage(std::string FitsName) override;
 		private:
 			int CamNumber = 0;
 			char *CamName[MAXDEVICENUM];

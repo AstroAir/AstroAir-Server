@@ -72,7 +72,7 @@ namespace AstroAir
 			/*设置相机参数*/
 			virtual bool SetCameraConfig(long Bin,long Gain,long Offset);
 			/*存储图像*/
-			virtual bool SaveImage(std::string FitsName);
+			virtual std::string SaveImage(std::string FitsName) override;
 		private:
 			/*打开制冷*/
 			virtual bool ActiveCool(bool enable);

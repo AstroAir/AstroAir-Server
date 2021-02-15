@@ -36,6 +36,7 @@ Description:OPENCV Library
 
 #include "logger.h"
 #include "opencv.h"
+#include "base64.h"
 
 namespace AstroAir::OPENCV
 {
@@ -52,7 +53,7 @@ namespace AstroAir::OPENCV
      * calls: IDLog()
      * note: The default quality of JPG image is 100
      */
-	void SaveImage(unsigned char *imgBuf,std::string ImageName,bool isColor,int ImageHeight,int ImageWidth)
+	std::string SaveImage(unsigned char *imgBuf,std::string ImageName,bool isColor,int ImageHeight,int ImageWidth)
 	{
 		std::vector<int> compression_params;		//图像质量
 		std::string imgdate;
@@ -64,13 +65,16 @@ namespace AstroAir::OPENCV
 		{
 			cv::Mat img(ImageHeight,ImageWidth, CV_8UC3, imgBuf);		//3通道图像信息
 			imwrite(JPGName,img, compression_params);
+			imgdate = Mat2Base64(img,"jpg");
 		}
 		else
 		{
 			cv::Mat img(ImageHeight,ImageWidth, CV_8UC1, imgBuf);		//单通道图像信息
 			imwrite(JPGName,img, compression_params);		//写入文件
+			imgdate = Mat2Base64(img,"jpg");
 		}
 		IDLog("JPG image saved successfully\n");
+		return imgdate;
 	} 
 
 	/*

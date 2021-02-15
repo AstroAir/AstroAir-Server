@@ -88,6 +88,7 @@ namespace AstroAir
 			virtual bool Disconnect();
 			virtual bool StartExposure(int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset);
 			virtual bool AbortExposure();
+			virtual std::string SaveImage(std::string FitsName);
 		protected:
 			/*转化Json信息*/
 			void readJson(std::string message);	
@@ -99,6 +100,7 @@ namespace AstroAir
 			void SetupConnectSuccess();
 			void StartExposureSuccess();
 			void AbortExposureSuccess();
+			void newJPGReadySend(std::string ImgData);
 			/*处理错误信息函数*/
 			void SetupConnectError(int id);
 			void StartExposureError();
