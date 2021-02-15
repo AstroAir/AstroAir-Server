@@ -10,3 +10,4 @@
 #define HAS_NOVA @HAS_NOVA@
 #define HAS_QHY @HAS_QHY@
 #define HAS_ASI @HAS_ASI@
+#define HAS_INDI @HAS_INDI@

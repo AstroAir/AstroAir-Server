@@ -36,9 +36,31 @@ Description:INDI driver
 #ifndef _INDI_DEVICE_H_
 #define _INDI_DEVICE_H_
 
+#include "../wsserver.h"
+#include "indi_client.h"
+
+#include <atomic>
+
 namespace AstroAir
 {
-
+    class INDICCD : public WSSERVER
+    {
+        public:
+            /*构造函数，重置参数*/
+			explicit INDICCD();
+            /*析构函数*/
+            ~INDICCD();
+            /*连接相机*/
+            virtual bool Connect(std::string Device_name) override;
+            /*断开连接*/
+			virtual bool Disconnect() override;
+        private:
+            /*相机使用参数（使用原子变量）*/
+			std::atomic_bool isConnected;
+			std::atomic_bool InExposure;
+			std::atomic_bool InVideo;
+			std::atomic_bool InCooling;
+    };
 }
 
 #endif

@@ -32,6 +32,11 @@ Description:INDI driver
 **************************************************/
 
 #include "indi_client.h"
+#include "../logger.h"
+
+#include <string.h>
+
+#define MYCCD "CCD Simulator"
 
 namespace AstroAir
 {
@@ -45,5 +50,55 @@ namespace AstroAir
 
     }
 
-    
+    void INDIClient::newDevice(INDI::BaseDevice *dp)
+    {
+        if (!strcmp(dp->getDeviceName(), MYCCD))
+        {
+            IDLog("Receiving %s Device...\n", dp->getDeviceName());
+            CCD = dp;
+        }
+    }
+
+    void INDIClient::newProperty(INDI::Property *property)
+    {
+        if (!strcmp(property->getDeviceName(), MYCCD) && !strcmp(property->getName(), "CONNECTION"))
+        {
+            connectDevice(MYCCD);
+            return;
+        }
+
+        if (!strcmp(property->getDeviceName(), MYCCD) && !strcmp(property->getName(), "CCD_TEMPERATURE"))
+        {
+            if (CCD->isConnected())
+            {
+                IDLog("CCD is connected. Setting temperature to -20 C.\n");
+                setTemperature();
+            }
+            return;
+        }
+    }
+
+    void INDIClient::newNumber(INumberVectorProperty *nvp)
+    {
+        // Let's check if we get any new values for CCD_TEMPERATURE
+        if (!strcmp(nvp->name, "CCD_TEMPERATURE"))
+        {
+            IDLog("Receving new CCD Temperature: %g C\n", nvp->np[0].value);
+            if (nvp->np[0].value == -20)
+                IDLog("CCD temperature reached desired value!\n");
+        }
+    }
+
+    void INDIClient::setTemperature()
+    {
+        INumberVectorProperty *ccd_temperature = NULL;
+        ccd_temperature = CCD->getNumber("CCD_TEMPERATURE");
+        if (ccd_temperature == NULL)
+        {
+            IDLog("Error: unable to find CCD Simulator CCD_TEMPERATURE property...\n");
+            return;
+        }
+        ccd_temperature->np[0].value = -20;
+        sendNewNumber(ccd_temperature);
+    }
 }

@@ -45,7 +45,7 @@ Using:JsonCpp<https://github.com/open-source-parsers/jsoncpp>
 #include "air-qhy/qhy_ccd.h"
 #endif
 #ifdef HAS_INDI
-#include "air-indi/indi_ccd.h"
+#include "air-indi/indi_device.h"
 #endif
 namespace AstroAir
 {
@@ -59,7 +59,7 @@ namespace AstroAir
     #endif
 	/*定义INDI相机*/
 	#ifdef HAS_INDI
-		INDICCD INDICamera;
+		INDICCD INDIDevice;
 	#endif
 #ifdef HAS_WEBSOCKET
     /*
@@ -434,7 +434,7 @@ namespace AstroAir
                     #ifdef HAS_INDI
                     case "INDI"_hash:{
 						/*初始化INDI相机，并赋值CCD*/
-                        CCD = &INDICamera;
+                        CCD = &INDIDevice;
                         camera_ok = CCD->Connect(Camera_name);
                         break;
 					}
@@ -499,7 +499,7 @@ namespace AstroAir
                     #ifdef HAS_INDI
                     case "INDIMount"_hash:{
 						/*初始化INDI赤道仪，并赋值MOUNT*/
-                        MOUNT = &INDIMount;
+                        MOUNT = &INDIDevice;
                         mount_ok = MOUNT->Connect(Mount_name);
                         break;
                     }
@@ -561,7 +561,7 @@ namespace AstroAir
                     #ifdef HAS_INDI
                     case "INDIFocus"_hash:{
 						/*初始化INDI电动调焦座，并赋FOCUS*/
-                        FOCUS = &INDIFocus;
+                        FOCUS = &INDIDevice;
                         focus_ok = FOCUS->Connect(Focus_name);
                         break;
                     }
@@ -623,7 +623,7 @@ namespace AstroAir
                     #ifdef HAS_INDI
                     case "INDIFilter"_hash:{
 						/*初始化INDI滤镜轮，并赋FILTER*/
-                        FILTER = &INDIFilter;
+                        FILTER = &INDIDevice;
                         filter_ok = FILTER->Connect(Filter_name);
                         break; 
                     }

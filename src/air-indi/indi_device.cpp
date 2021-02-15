@@ -30,3 +30,28 @@ Date:2020-2-15
 Description:INDI driver
 
 **************************************************/
+
+#include "indi_device.h"
+
+namespace AstroAir
+{
+    INDICCD::INDICCD()
+    {
+
+    }
+
+    INDICCD::~INDICCD()
+    {
+        
+    }
+
+    bool INDICCD::Connect(std::string Device_name)
+    {
+        return true;
+    }
+
+    bool INDICCD::Disconnect()
+    {
+        return true;
+    }
+}

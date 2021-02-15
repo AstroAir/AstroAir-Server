@@ -10,3 +10,4 @@
 #define HAS_NOVA ON
 #define HAS_QHY ON
 #define HAS_ASI ON
+#define HAS_INDI ON

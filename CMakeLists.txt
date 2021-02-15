@@ -21,7 +21,7 @@ project(airserver VERSION 1.0)
 
 set(CMAKE_CXX_STANDARD 20)		#默认C++风格为20
 set(CMAKE_CXX_STANDARD_REQUIRED True)
-set(CMAKE_CXX_COMPILER /usr/bin/clang++-11)		#默认使用clang++-11
+set(CMAKE_CXX_COMPILER /usr/bin/clang++-11)		#默认使用clang++-11,GCC 9.3.0亦可
 
 configure_file(config.h.in ${PROJECT_SOURCE_DIR}/src/config.h)
 
@@ -75,6 +75,12 @@ if(HAS_ASI)
 		target_link_libraries(airserver PUBLIC libusb-1.0.so)
 	else()
 		message("-- Could not found ASI camera library.Please build it before intall!")
+		add_custom_command(
+			TARGET LIBASI
+			PRE_BUILD 
+			COMMAND sudo apt install libasi -y
+			COMMENT "Downloaded and Building ASI Library"
+		)
 	endif()
 else()
 	message("-- Not built ASI camera library")
@@ -95,29 +101,37 @@ if(HAS_QHY)
 		target_link_libraries(airserver PUBLIC libqhyccd.so)		#QHY相机
 	else()
 		message("-- Could not found QHY camera library.Please build it before intall!")
+		add_custom_command(
+			TARGET LIBQHY
+			PRE_BUILD 
+			COMMAND sudo apt install libqhy -y
+			COMMENT "Downloaded and Building QHY Library"
+		)
 	endif()
 else()
 	message("-- Not built QHY camera library")
 endif()
 
 #设置INDI库
-option(HAS_INDI "Using INDI Library" OFF)
+option(HAS_INDI "Using INDI Library" ON)
 if(HAS_INDI)
-	find_path(PATH_INDI indiapi.h /usr/include/libindi)
-	find_path(PATH_INDI indiapi.h /usr/local/include/libindi)
-	find_library(PATH_INDI_LIB libindidriver.so /usr/lib)
-	find_library(PATH_INDI_LIB libindidriver.so /usr/local/lib)
+	find_path(PATH_INDI baseclient.h /usr/include/libindi)
+	find_path(PATH_INDI baseclient.h /usr/local/include/libindi)
+	find_library(PATH_INDI_LIB libindiclient.a /usr/lib)
+	find_library(PATH_INDI_LIB libindiclient.a /usr/local/lib)
 	if(PATH_INDI AND PATH_INDI_LIB)
 		message("-- Found INDI header file in ${PATH_INDI} and library in ${PATH_INDI_LIB}")
-		add_library(LIBINDI src/air-indi/indi_ccd.cpp)
-		add_library(LIBINDI src/air-indi/indi_mount.cpp)
-		add_library(LIBINDI src/air-indi/indi_focus.cpp)
-		add_library(LIBINDI src/air-indi/indi_filter.cpp)
+		add_library(LIBINDI src/air-indi/indi_device.cpp)
 		target_link_libraries(airserver PUBLIC LIBINDI)
-		link_directories("${PROJECT_SOURCE_DIR}/src/libindi/${PLATFORM}/")
-		target_link_libraries(airserver PUBLIC libindidriver.so)		#QHY相机
+		target_link_libraries(airserver PUBLIC libindiclient.a)
 	else()
-		message("-- Could not found INDI library.Please build it before intall!")
+		message("-- Could not found INDI library.Try to build it!")
+		add_custom_command(
+			TARGET LIBINDI
+			PRE_BUILD 
+			COMMAND sudo apt install libindi-dev -y
+			COMMENT "Downloaded and Building INDI Library"
+		)
 	endif()
 else()
 	message("-- Not built INDI library")
