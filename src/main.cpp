@@ -42,7 +42,6 @@ using namespace AstroAir;
 
 #define AIRPORT 5950
 
-char *me = new char [100];
 int port = AIRPORT;
 
 /*
@@ -51,7 +50,7 @@ int port = AIRPORT;
  * 描述：输出帮助信息
  * note: If you execute this function, the program will exit automatically
  */
-void usage()
+void usage(char *me)
 {
     fprintf(stderr, "Usage: %s [options]\n", me);
     fprintf(stderr, "Purpose: Start or stop the server\n");
@@ -99,39 +98,39 @@ int main(int argc, char *argv[])
 	std::cout << "  / _ \\ / __| __| '__/ _ \\ / _ \\ | | '__|___\\___ \\ / _ \\ '__\\ \\ / / _ \\ '__|" << std::endl;
     std::cout << " / ___ \\__ \\ |_| | | (_) / ___ \\| | | |_____|__) |  __/ |   \\ V /  __/ |" << std::endl;
     std::cout << "/_/   \\_\\___/\\__|_|  \\___/_/   \\_\\_|_|      |____/ \\___|_|    \\_/ \\___|_|" << std::endl;
-    me = argv[0];
-    extern char *optarg;
-    extern int optind, opterr, optopt;
+    char *optarg;
+    int optind, opterr, optopt;
     int verbose = 0;
     int opt = -1;
     while ((opt = getopt(argc, argv, "vp:s")) != -1) 
     {    
-	switch (opt) {    
-	    case 'v':
-		verbose = 1;
-		break;
-	    case 'p':
-		port = atoi(optarg);
-		break;
-	    case 's':
-		verbose = 2;
-		break;
-	    default:
-		usage();
-	}
+		switch (opt) 
+		{    
+			case 'v':
+				verbose = 1;
+				break;
+			case 'p':
+				port = atoi(optarg);
+				break;
+			case 's':
+				verbose = 2;
+				break;
+			default:
+				usage(argv[0]);
+		}
     }
     switch(verbose)
     {
-	case 1:{
-	    std::thread t1(start_server);
-	    t1.join();
-	    break;
-	}
-	case 2:
-	    stop_server();
-	    break;
-	default:
-	    usage();
+		case 1:{
+			std::thread t1(start_server);
+			t1.join();
+			break;
+		}
+		case 2:
+			stop_server();
+			break;
+		default:
+			usage(argv[0]);
     }
     return 0;
 }

@@ -39,7 +39,7 @@ Description:Main framework of astroair server
 #include "config.h"
 
 #ifdef HAS_WEBSOCKET
-	#include <websocketpp/config/asio_no_tls.hpp>
+	#include <websocketpp/config/asio.hpp>
 	#include <websocketpp/server.hpp>
 #endif
 
@@ -60,11 +60,22 @@ Description:Main framework of astroair server
 #include <fstream>
 
 #ifdef HAS_WEBSOCKET
-typedef websocketpp::server<websocketpp::config::asio> airserver;
-using websocketpp::lib::placeholders::_1;
-using websocketpp::lib::placeholders::_2;
-using websocketpp::lib::bind;
-typedef airserver::message_ptr message_ptr;
+	typedef websocketpp::server<websocketpp::config::asio> airserver;
+	typedef websocketpp::server<websocketpp::config::asio_tls> airserver_tls;
+	using websocketpp::lib::placeholders::_1;
+	using websocketpp::lib::placeholders::_2;
+	using websocketpp::lib::bind;
+	using websocketpp::lib::mutex;
+	using websocketpp::lib::lock_guard;
+	using websocketpp::lib::condition_variable;
+	typedef airserver::message_ptr message_ptr;
+	/*SSL信息格式*/
+	enum tls_mode {
+		MOZILLA_INTERMEDIATE = 1,
+		MOZILLA_MODERN = 2
+	};
+	typedef airserver_tls::message_ptr message_ptr_tls;
+	typedef websocketpp::lib::shared_ptr<websocketpp::lib::asio::ssl::context> context_ptr_tls;
 #endif
 
 namespace AstroAir
@@ -75,14 +86,19 @@ namespace AstroAir
 			/*WebSocket服务器主体函数*/
 			explicit WSSERVER();
 			~WSSERVER();
-			void on_open(websocketpp::connection_hdl hdl);
-			void on_close(websocketpp::connection_hdl hdl);
-			void on_message(websocketpp::connection_hdl hdl,message_ptr msg);
-			void send(std::string payload);
-			void stop();
+			virtual void on_open(websocketpp::connection_hdl hdl);
+			virtual void on_open_tls(websocketpp::connection_hdl hdl);
+			virtual void on_close(websocketpp::connection_hdl hdl);
+			virtual void on_close_tls(websocketpp::connection_hdl hdl);
+			virtual void on_message(websocketpp::connection_hdl hdl,message_ptr msg);
+			virtual void on_message_tls(websocketpp::connection_hdl hdl,message_ptr_tls msg);
+			virtual void on_http(websocketpp::connection_hdl hdl);
+			virtual context_ptr_tls on_tls_init(tls_mode mode, websocketpp::connection_hdl hdl);
+			virtual void send(std::string payload);
+			virtual void stop();
 			virtual bool is_running();
 			/*运行服务器*/
-			void run(int port);
+			virtual void run(int port);
 		public:
 			virtual bool Connect(std::string Device_name);
 			virtual bool Disconnect();
@@ -118,12 +134,17 @@ namespace AstroAir
 			std::string Camera_name,Mount_name,Focus_name,Filter_name,Guide_name;
 			typedef std::set<websocketpp::connection_hdl, std::owner_less<websocketpp::connection_hdl>> con_list;
 			con_list m_connections;
+			con_list m_connections_tls;
 			airserver m_server;
+			airserver_tls m_server_tls;
+			mutex mtx,mtx_action;
+			condition_variable m_server_cond,m_server_action;
 			/*定义服务器设备参数*/
 			WSSERVER *CCD,*MOUNT,*FOCUS,*FILTER,*GUIDE;
 
 			/*服务器设备连接状态参数*/
 			std::atomic_bool isConnected;
+			std::atomic_bool isConnectedTLS;
 			std::atomic_bool isCameraConnected;
 			std::atomic_bool isMountConnected;
 			std::atomic_bool isFocusConnected;

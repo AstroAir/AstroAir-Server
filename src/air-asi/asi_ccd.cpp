@@ -35,6 +35,7 @@ Description:ZWO camera driver
 #include "../logger.h"
 #include "../opencv.h"
 #include "../cfitsio.h"
+#include "../config.h"
 
 namespace AstroAir
 {
@@ -458,10 +459,10 @@ namespace AstroAir
 			guard.unlock();
 			IDLog("Download complete.\n");
 			/*将图像写入本地文件*/
-			#if HAS_FITSIO == ON
+			#if(HAS_FITSIO==ON)
 				FITSIO::SaveFitsImage(imgBuf,FitsName,isColorCamera,Image_type,CamHeight,CamWidth,CamName[CamId],"ZWOASI");
 			#endif
-			#if HAS_OPENCV == ON
+			#if(HAS_OPENCV==ON)
 				OPENCV::SaveImage(imgBuf,FitsName,isColorCamera,CamHeight,CamWidth);
 				OPENCV::clacHistogram(imgBuf,isColorCamera,CamHeight,CamWidth);
 			#endif

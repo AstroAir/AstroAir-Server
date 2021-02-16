@@ -30,10 +30,18 @@ Description:CFitIO Library
  
 **************************************************/
 
+#pragma once
+
+#ifndef _CFITSIO_H_
+#define _CFITSIO_H_
+
 #include <fitsio.h>
 #include <string>
 
 namespace AstroAir::FITSIO
 {
+    /*保存Fits图像*/
     void SaveFitsImage(unsigned char *imgBuf,std::string ImageName,bool isColor,int Image_type,int ImageHeight,int ImageWidth,char *CameraName,const char* CameraBrand);
 }
+
+#endif

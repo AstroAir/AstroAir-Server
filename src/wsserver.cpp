@@ -41,28 +41,17 @@ Using:JsonCpp<https://github.com/open-source-parsers/jsoncpp>
 #include "base64.h"
 
 #ifdef HAS_ASI
-#include "air-asi/asi_ccd.h"
+    #include "air-asi/asi_ccd.h"
 #endif
 #ifdef HAS_QHY
-#include "air-qhy/qhy_ccd.h"
+    #include "air-qhy/qhy_ccd.h"
 #endif
 #ifdef HAS_INDI
-#include "air-indi/indi_device.h"
+    #include "air-indi/indi_device.h"
 #endif
+
 namespace AstroAir
 {
-    /*定义ASI相机*/
-    #ifdef HAS_ASI
-        ASICCD ASICamera;
-    #endif
-    /*定义QHY相机*/
-    #ifdef HAS_QHY
-        QHYCCD QHYCamera;
-    #endif
-	/*定义INDI相机*/
-	#ifdef HAS_INDI
-		INDICCD INDIDevice;
-	#endif
 #ifdef HAS_WEBSOCKET
     /*
      * name: WSSERVER()
@@ -73,16 +62,23 @@ namespace AstroAir
     {
         /*初始化WebSocket服务器*/
         /*加载设置*/
-        m_server.set_access_channels(websocketpp::log::alevel::all);
         m_server.clear_access_channels(websocketpp::log::alevel::all ^ websocketpp::log::alevel::frame_payload);
+        m_server_tls.clear_access_channels(websocketpp::log::alevel::all ^ websocketpp::log::alevel::frame_payload);
         /*初始化服务器*/
         m_server.init_asio();
+        m_server_tls.init_asio();
         /*设置打开事件*/
         m_server.set_open_handler(bind(&WSSERVER::on_open, this , ::_1));
+        m_server_tls.set_open_handler(bind(&WSSERVER::on_open_tls, this , ::_1));
         /*设置关闭事件*/
         m_server.set_close_handler(bind(&WSSERVER::on_close, this , ::_1));
+        m_server_tls.set_close_handler(bind(&WSSERVER::on_close_tls, this , ::_1));
         /*设置事件*/
         m_server.set_message_handler(bind(&WSSERVER::on_message, this ,::_1,::_2));
+        m_server_tls.set_message_handler(bind(&WSSERVER::on_message_tls,this,::_1,::_2));
+        /*SSL设置*/
+        m_server_tls.set_http_handler(bind(&WSSERVER::on_http,this,::_1));
+        m_server_tls.set_tls_init_handler(bind(&WSSERVER::on_tls_init,this,MOZILLA_INTERMEDIATE,::_1));
         /*重置参数*/
         isConnected = false;            //客户端连接状态
         isCameraConnected = false;      //相机连接状态
@@ -101,23 +97,32 @@ namespace AstroAir
     WSSERVER::~WSSERVER()
     {
 		/*如果服务器正在工作，则在停止程序之前停止服务器*/
-        if(isConnected ==true)
+        if(isConnected ==true || isConnectedTLS == true)
         {
             stop();
         }
+        delete [] CCD;
+        delete [] MOUNT;
+        delete [] FOCUS;
+        delete [] FILTER;
+        delete [] GUIDE;
     }
 
     /*
      * name: on_open(websocketpp::connection_hdl hdl)
      * @param hdl:WebSocket句柄
-     * describe: Clear data on server connection
+     * describe: Insert handle when server connects
      * 描述：服务器连接时插入句柄
      */
     void WSSERVER::on_open(websocketpp::connection_hdl hdl)
     {
-        IDLog("Successfully established connection with client\n");
+        lock_guard<mutex> guard(mtx);
+        airserver::connection_ptr con = m_server.get_con_from_hdl( hdl );      // 根据连接句柄获得连接对象
+        std::string path = con->get_resource();
+        IDLog("Successfully established connection with client path %s\n",path.c_str());
         m_connections.insert(hdl);
         isConnected = true;
+        m_server_cond.notify_one();
     }
     
     /*
@@ -128,11 +133,45 @@ namespace AstroAir
      */
     void WSSERVER::on_close(websocketpp::connection_hdl hdl)
     {
+        lock_guard<mutex> guard(mtx);
         IDLog("Disconnect from client\n");
         m_connections.erase(hdl);
         isConnected = false;
+        m_server_cond.notify_one();
     }
     
+    /*
+     * name: on_open_tls(websocketpp::connection_hdl hdl)
+     * @param hdl:WebSocket句柄
+     * describe: Insert handle when server connects
+     * 描述：服务器连接时插入句柄
+     */
+    void WSSERVER::on_open_tls(websocketpp::connection_hdl hdl)
+    {
+        lock_guard<mutex> guard(mtx);
+        airserver_tls::connection_ptr con = m_server_tls.get_con_from_hdl( hdl );      // 根据连接句柄获得连接对象
+        std::string path = con->get_resource();
+        IDLog("Successfully established connection with client path %s\n",path.c_str());
+        m_connections_tls.insert(hdl);
+        isConnectedTLS = true;
+        m_server_cond.notify_one();
+    }
+    
+    /*
+     * name: on_close_tls(websocketpp::connection_hdl hdl)
+     * @param hdl:WebSocket句柄
+     * describe: Clear data on server disconnection
+     * 描述：服务器断开连接时清空数据
+     */
+    void WSSERVER::on_close_tls(websocketpp::connection_hdl hdl)
+    {
+        lock_guard<mutex> guard(mtx);
+        IDLog("Disconnect from client\n");
+        m_connections_tls.erase(hdl);
+        isConnectedTLS = false;
+        m_server_cond.notify_one();
+    }
+
     /*
      * name: on_message(websocketpp::connection_hdl hdl,message_ptr msg)
      * @param hdl:WebSocket句柄
@@ -145,13 +184,114 @@ namespace AstroAir
     {
         std::string message = msg->get_payload();
         /*将接收到的信息写入文件*/
-        #if DEBUG_MODE == ON
+        #ifdef DEBUG_MODE
             IDLog_CMDL(message.c_str());
         #endif
         /*处理信息*/
         readJson(message);
     }
     
+    /*
+     * name: on_message_tls(websocketpp::connection_hdl hdl,message_ptr msg)
+     * @param hdl:WebSocket句柄
+     * @param msg：服务器信息
+     * describe: Processing information from clients
+     * 描述：处理来自客户端的信息
+     * calls: readJson(std::string message)
+     * note:This is the WSS server, please connect through the webpage of HTTPS
+     */
+    void WSSERVER::on_message_tls(websocketpp::connection_hdl hdl,message_ptr_tls msg)
+    {
+        std::string message = msg->get_payload();
+        /*将接收到的信息写入文件*/
+        #ifdef DEBUG_MODE
+            IDLog_CMDL(message.c_str());
+        #endif
+        /*处理信息*/
+        readJson(message);
+    }
+
+    void WSSERVER::on_http(websocketpp::connection_hdl hdl) 
+    {
+        lock_guard<mutex> guard(mtx_action);
+        airserver_tls::connection_ptr con = m_server_tls.get_con_from_hdl(hdl);
+        websocketpp::http::parser::request rt = con->get_request();
+		const std::string& strUri = rt.get_uri();
+		const std::string& strMethod = rt.get_method();
+		const std::string& strBody = rt.get_body();	//只针对post时有数据
+		const std::string& strHost = rt.get_header("host");
+		const std::string& strContentType = rt.get_header("Content-type");
+		const std::string& strVersion = rt.get_version();
+		websocketpp::http::parser::header_list listhtpp = rt.get_headers();
+        con->set_body("Hello World!");
+        con->set_status(websocketpp::http::status_code::ok);
+        m_server_action.notify_one();
+    }
+
+    std::string get_password() 
+    {
+        return "test";
+    }
+
+    /*
+     * name: on_tls_init(tls_mode mode, websocketpp::connection_hdl hdl)
+     * @param hdl:WebSocket句柄
+     * @param mode：加密类型
+     * describe: Initialize the WSS connection and authenticate
+     * 描述：初始化WSS连接，并进行身份验证
+     */
+    context_ptr_tls WSSERVER::on_tls_init(tls_mode mode, websocketpp::connection_hdl hdl)
+    {
+        lock_guard<mutex> guard(mtx_action);
+        namespace asio = websocketpp::lib::asio;
+        std::cout << "on_tls_init called with hdl: " << hdl.lock().get() << std::endl;
+        std::cout << "using TLS mode: " << (mode == MOZILLA_MODERN ? "Mozilla Modern" : "Mozilla Intermediate") << std::endl;
+        context_ptr_tls ctx = websocketpp::lib::make_shared<asio::ssl::context>(asio::ssl::context::sslv23);
+        try
+        {
+            if (mode == MOZILLA_MODERN)
+            {
+                ctx->set_options(asio::ssl::context::default_workarounds |
+                                asio::ssl::context::no_sslv2 |
+                                asio::ssl::context::no_sslv3 |
+                                asio::ssl::context::no_tlsv1 |
+                                asio::ssl::context::single_dh_use);
+            } 
+            else
+            {
+                ctx->set_options(asio::ssl::context::default_workarounds |
+                                asio::ssl::context::no_sslv2 |
+                                asio::ssl::context::no_sslv3 |
+                                asio::ssl::context::single_dh_use);
+            }
+            //ctx->set_password_callback(bind(&get_password));
+            ctx->use_certificate_chain_file("server.pem");
+            ctx->use_private_key_file("server.pem", asio::ssl::context::pem);
+            ctx->use_tmp_dh_file("client.pem");
+            std::string ciphers;
+            if (mode == MOZILLA_MODERN)
+                ciphers = "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!3DES:!MD5:!PSK";
+            else
+                ciphers = "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:AES:CAMELLIA:DES-CBC3-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA";
+            if (SSL_CTX_set_cipher_list(ctx->native_handle() , ciphers.c_str()) != 1)
+            {
+                std::cout << "Error setting cipher list" << std::endl;
+            }
+        } 
+        catch (websocketpp::exception const &e)
+        {
+            std::cerr << e.what() << std::endl;
+        }
+        catch (...)
+        {
+            std::cerr << "other exception" << std::endl;
+        }
+        m_server_action.notify_one();
+        return ctx;
+    }
+
+    
+
     /*以下三个函数均是用于switch支持string*/
 	constexpr hash_t hash_compile_time(char const* str, hash_t last_value = basis)  
     {  
@@ -234,8 +374,8 @@ namespace AstroAir
     /*
      * name: send(std::string payload)
      * @param message:需要发送的信息
-     * describe: Send information to client
-     * 描述：向客户端发送信息
+     * describe: Send information to client both ws and wss
+     * 描述：向ws和wss客户端发送信息
      * note: The message must be sent in the format of JSON
      */
     void WSSERVER::send(std::string message)
@@ -245,6 +385,21 @@ namespace AstroAir
             try
             {
                 m_server.send(it, message, websocketpp::frame::opcode::text);
+            }
+            catch (websocketpp::exception const &e)
+            {
+                std::cerr << e.what() << std::endl;
+            }
+            catch (...)
+            {
+                std::cerr << "other exception" << std::endl;
+            }
+        }
+        for (auto it : m_connections_tls)
+        {
+            try
+            {
+                m_server_tls.send(it, message, websocketpp::frame::opcode::text);
             }
             catch (websocketpp::exception const &e)
             {
@@ -266,10 +421,14 @@ namespace AstroAir
     void WSSERVER::stop()
     {
         for (auto it : m_connections)
+        {
             m_server.close(it, websocketpp::close::status::normal, "Switched off by user.");
+            m_server_tls.close(it, websocketpp::close::status::normal, "Switched off by user.");
+        }
         IDLog("Stop the server..\n");
         m_connections.clear();
         m_server.stop();
+        m_server_tls.stop();
         IDLog("Good bye\n");
     }
 
@@ -299,6 +458,9 @@ namespace AstroAir
             m_server.listen(port);
             m_server.start_accept();
             m_server.run();
+            m_server_tls.listen(port+1);
+            m_server_tls.start_accept();
+            m_server_tls.run();
         }
         catch (websocketpp::exception const & e)
         {   
@@ -335,36 +497,49 @@ namespace AstroAir
      * describe: Gets the specified suffix file name in the folder
 	 * 描述：获取文件夹中指定后缀文件名称
      * calls: send()
-	 * note:The suffix of get file should be .air or .json
+	 * note:The suffix of get file should be .air
      */
     void WSSERVER::GetAstroAirProfiles()
     {
         /*寻找当前文件夹下的所有文件*/
         struct dirent *ptr;      
 		DIR *dir;  
-		std::string PATH = "./";  
-		dir=opendir(PATH.c_str());   
-		std::vector<std::string> files;  
+		std::string PATH = "./";        //搜索目录，正式版本应该可以选择目录位置
+		dir=opendir(PATH.c_str());      //打开目录
+		std::vector<std::string> files;
+        /*搜索所有符合条件的文件*/
 		while((ptr = readdir(dir)) != NULL)  
 		{  
 			if(ptr->d_name[0] == '.' || strcmp(ptr->d_name,"..") == 0)  
-				continue; 
+				continue;
+            /*判断文件后缀是否为.air*/
             int size = strlen(ptr->d_name);
             if(strcmp( ( ptr->d_name + (size - 4) ) , ".air") != 0)
                 continue;
             files.push_back(ptr->d_name);
 		}  
-		for (int i = 0; i < files.size(); ++i)  
-		{  
-			std::cout << files[i] << std::endl;  
-		}  
-		closedir(dir);
+		closedir(dir);      //关闭目录
+        /*判断是否找到配置文件*/
+        if(files.begin() == files.end())
+        {
+            IDLog("Cound not found any configure files,please check it\n");
+            //Max:这里还缺少一个如果没有文件的错误处理函数
+            return;
+        }
         /*整合信息并发送至客户端*/
-        Json::Value Root,profile;
+        Json::Value Root;
 		Root["Event"] = Json::Value("RemoteActionResult");
         Root["UID"] = Json::Value("RemoteGetAstroAirProfiles");
         Root["ActionResultInt"] = Json::Value(4);
-        Root["ParamRet"]["list"]["name"] = Json::Value("config.air");
+        Root["ParamRet"]["list"]["name"] = Json::Value(files[0]);
+        Root["ParamRet"]["FileNumber"] = Json::Value(files.size()-1);
+        IDLog("Found configure file named %s\n",files[0].c_str());
+        files.erase(files.begin());
+        for (int i = 0; i < files.size(); i++)  
+		{
+            IDLog("Found configure file named %s\n",files[i].c_str());
+            Root["ParamRet"]["Files"][i]["name"] = Json::Value(files[i]);
+		}
         json_messenge = Root.toStyledString();
         send(json_messenge);
     }
@@ -418,33 +593,44 @@ namespace AstroAir
                 const char* a = Camera.c_str();
                 switch(hash_(a))
                 {
-                    #if HAS_ASI == ON
-                    case "ZWOASI"_hash:{
-						/*初始化ASI相机，并赋值CCD*/
-                        CCD = &ASICamera;
-                        camera_ok = CCD->Connect(Camera_name);
-                        break;
+                    #ifdef HAS_ASI
+                    {
+                        #if HAS_ASI==ON
+                            case "ZWOASI"_hash:{
+                                /*初始化ASI相机，并赋值CCD*/
+                                ASICCD *ASICamera = new ASICCD();
+                                CCD = ASICamera;
+                                camera_ok = CCD->Connect(Camera_name);
+                                break;
+                            }
+                        #endif
                     }
                     #endif
                     #ifdef HAS_QHY
                     {
-                        #if HAS_QHY == ON
-                        case "QHYCCD"_hash:{
-                            /*初始化QHY相机，并赋值CCD*/
-                            CCD = &QHYCamera;
-                            camera_ok = CCD->Connect(Camera_name);
-                            break;
-                        }
+                        #if HAS_QHY==ON
+                            case "QHYCCD"_hash:{
+                                /*初始化QHY相机，并赋值CCD*/
+                                QHYCCD *QHYCamera = new QHYCCD();
+                                CCD = QHYCamera;
+                                camera_ok = CCD->Connect(Camera_name);
+                                break;
+                            }
                         #endif
                     }
                     #endif
                     #ifdef HAS_INDI
-                    case "INDI"_hash:{
-						/*初始化INDI相机，并赋值CCD*/
-                        CCD = &INDIDevice;
-                        camera_ok = CCD->Connect(Camera_name);
-                        break;
-					}
+                    {
+                        #if HAS_INDI==ON
+                            case "INDI"_hash:{
+                                /*初始化INDI相机，并赋值CCD*/
+                                INDICCD *INDIDevice = new INDICCD();
+                                CCD = INDIDevice;
+                                camera_ok = CCD->Connect(Camera_name);
+                                break;
+                            }
+                        #endif
+                    }
                     #endif
                     default:
                         UnknownDevice(301,"Unknown camera");		//未知相机返回错误信息
@@ -506,7 +692,8 @@ namespace AstroAir
                     #ifdef HAS_INDI
                     case "INDIMount"_hash:{
 						/*初始化INDI赤道仪，并赋值MOUNT*/
-                        MOUNT = &INDIDevice;
+                        INDICCD *INDIDevice = new INDICCD();
+                        MOUNT = INDIDevice;
                         mount_ok = MOUNT->Connect(Mount_name);
                         break;
                     }
@@ -568,7 +755,8 @@ namespace AstroAir
                     #ifdef HAS_INDI
                     case "INDIFocus"_hash:{
 						/*初始化INDI电动调焦座，并赋FOCUS*/
-                        FOCUS = &INDIDevice;
+                        INDICCD *INDIDevice = new INDICCD();
+                        FOCUS = INDIDevice;
                         focus_ok = FOCUS->Connect(Focus_name);
                         break;
                     }
@@ -630,7 +818,8 @@ namespace AstroAir
                     #ifdef HAS_INDI
                     case "INDIFilter"_hash:{
 						/*初始化INDI滤镜轮，并赋FILTER*/
-                        FILTER = &INDIDevice;
+                        INDICCD *INDIDevice = new INDICCD();
+                        FILTER = INDIDevice;
                         filter_ok = FILTER->Connect(Filter_name);
                         break; 
                     }

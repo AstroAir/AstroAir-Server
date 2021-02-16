@@ -36,7 +36,6 @@ Description:OPENCV Library
 
 #include "logger.h"
 #include "opencv.h"
-#include "base64.h"
 
 namespace AstroAir::OPENCV
 {

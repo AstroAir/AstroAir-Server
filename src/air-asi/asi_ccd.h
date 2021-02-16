@@ -56,7 +56,7 @@ namespace AstroAir
 			/*构造函数，重置参数*/
 			explicit ASICCD();
 			/*析构函数*/
-			~ASICCD();
+			virtual ~ASICCD();
 			/*连接相机*/
 			virtual bool Connect(std::string Device_name) override;
 			/*断开连接*/
