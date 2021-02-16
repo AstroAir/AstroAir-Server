@@ -88,7 +88,7 @@ namespace AstroAir
 			virtual bool Disconnect();
 			virtual bool StartExposure(int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset);
 			virtual bool AbortExposure();
-			virtual bool Cooling();
+			virtual bool Cooling(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF);
 		protected:
 			/*转化Json信息*/
 			void readJson(std::string message);	

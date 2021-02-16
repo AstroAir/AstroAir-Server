@@ -837,7 +837,7 @@ namespace AstroAir
         return true;
     }
     
-    bool WSSERVER::Cooling()
+    bool WSSERVER::Cooling(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF)
     {
         return true;
     }

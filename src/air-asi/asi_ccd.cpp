@@ -219,6 +219,11 @@ namespace AstroAir
 		return true;
     }
     
+	bool ASICCD::Cooling(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF)
+	{
+		return true;
+	}
+	
     /*
      * name: SetTemperature(double temperature)
      * describe: Set camera cooling temperature
