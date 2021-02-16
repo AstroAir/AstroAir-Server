@@ -37,6 +37,8 @@ Using:JsonCpp<https://github.com/open-source-parsers/jsoncpp>
 
 #include "wsserver.h"
 #include "logger.h"
+#include "opencv.h"
+#include "base64.h"
 
 #ifdef HAS_ASI
 #include "air-asi/asi_ccd.h"
@@ -214,6 +216,11 @@ namespace AstroAir
             case "RemoteActionAbort"_hash:
 				AbortExposure();
 				break;
+            case "RemoteCooling"_hash:{
+                std::thread CoolingThread(&WSSERVER::Cooling,this,root["IsSetPoint"].asBool(),root["IsCoolDown"].asBool(),root["IsASync"].asBool(),root["IsWarmup"].asBool(),root["IsCoolerOFF"].asBool());
+                CoolingThread.detach();
+                break;
+            }
             /*轮询，保持连接*/
             case "Polling"_hash:
                 Polling();
@@ -770,10 +777,10 @@ namespace AstroAir
      */
     bool WSSERVER::StartExposure(int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset)
     {
-        std::string ImgData;
 		if(isCameraConnected == true)
 		{
 			bool camera_ok = false;
+            Image_Name = FitsName;
 			if ((camera_ok = CCD->StartExposure(exp, bin, IsSave, FitsName, Gain, Offset)) != true)
 			{
 				/*返回曝光错误的原因*/
@@ -785,20 +792,7 @@ namespace AstroAir
 			}
 			/*将拍摄成功的消息返回至客户端*/
 			StartExposureSuccess();
-            if(IsSave == true)
-            {
-                IDLog("Finished exposure and save image locally\n");
-                if((ImgData = CCD->SaveImage(FitsName)) == "false")
-                {
-                    IDLog("Could not save image correctly,please check the config\n");
-                    return false;
-                }
-                else
-                {
-                    IDLog("Saved Fits and JPG images %s successfully in locally\n",FitsName.c_str());
-                }
-            }
-            newJPGReadySend(ImgData);
+            newJPGReadySend();
 		}
 		else
 		{
@@ -843,13 +837,11 @@ namespace AstroAir
         return true;
     }
     
-    std::string WSSERVER::SaveImage(std::string FitsName)
+    bool WSSERVER::Cooling()
     {
-        /*默认情况下不应该执行这个函数*/
-        IDLog("Try to disconnect from %s,Should never get here.\n",Camera_name.c_str());
-        IDLog_DEBUG("Try to disconnect from %s,Should never get here.\n",Camera_name.c_str());
-        return "false";
+        return true;
     }
+
     /*
      * name: SetupConnectSuccess()
      * describe: Successfully connect device
@@ -970,16 +962,39 @@ namespace AstroAir
 		send(json_messenge);
     }
     
-    void WSSERVER::newJPGReadySend(std::string ImgData)
+    /*
+	 * name: newJPGReadySend()
+	 * describe: Send the message that the picture is ready to the client
+	 * 描述：将图片准备就绪的消息传给客户端
+	 * calls: send()
+     * calls: imread()
+	 */
+    void WSSERVER::newJPGReadySend()
     {
+        /*读取JPG文件并转化为Mat格式*/
+        const char* JPGName = strtok(const_cast<char *>(Image_Name.c_str()),".");
+		strcat(const_cast<char *>(JPGName), ".jpg");
+        cv::Mat ImageData = cv::imread(JPGName);
+        /*组合即将发送的json信息*/
         Json::Value Root;
-        Root["Event"] = Json::Value("newJPGReadyReceived");
+        Root["Event"] = Json::Value("NewJPGReady");
         Root["UID"] = Json::Value("RemoteCameraShot");
         Root["ActionResultInt"] = Json::Value(5);
-        Root["Base64Data"] = ImgData;
+        Root["Base64Data"] = Json::Value(JPGName);
+        Root["PixelDimX"] = Json::Value(ImageData.rows);
+        Root["PixelDimY"] = Json::Value(ImageData.cols);
+        Root["SequenceTarget"] = Json::Value("");
+        Root["Bin"] = Json::Value(1);
+        Root["StarIndex"] = Json::Value(5);
+        Root["HFD"] = Json::Value(1);
+        Root["Expo"] = Json::Value(5);
+        Root["TimeInfo"] = Json::Value(100);
+        Root["Filter"] = Json::Value("** BayerMatrix **");
         json_messenge = Root.toStyledString();
+        /*发送信息*/
 		send(json_messenge);
     }
+
     /*
      * name: UnknownMsg()
      * describe: Processing unknown information from clients

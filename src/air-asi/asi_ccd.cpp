@@ -351,7 +351,6 @@ namespace AstroAir
             }
         }
 		guard.unlock();
-		/*
         if(IsSave == true)
         {
 			IDLog("Finished exposure and save image locally\n");
@@ -365,7 +364,6 @@ namespace AstroAir
 				IDLog("Saved Fits and JPG images %s successfully in locally\n",FitsName.c_str());
 			}
 		}
-		*/
 		return true;
     }
     
@@ -437,9 +435,8 @@ namespace AstroAir
 	 * calls: SaveFitsImage()
 	 * calls: clacHistogram()
      */
-    std::string ASICCD::SaveImage(std::string FitsName)
+    bool ASICCD::SaveImage(std::string FitsName)
     {
-		std::string ImgData;
 		if(InExposure == false && InVideo == false)
 		{	
 			std::unique_lock<std::mutex> guard(ccdBufferLock);
@@ -460,13 +457,13 @@ namespace AstroAir
 				FITSIO::SaveFitsImage(imgBuf,FitsName,isColorCamera,Image_type,CamHeight,CamWidth,CamName[CamId],"ZWOASI");
 			#endif
 			#if HAS_OPENCV == ON
-				ImgData = OPENCV::SaveImage(imgBuf,FitsName,isColorCamera,CamHeight,CamWidth);
+				OPENCV::SaveImage(imgBuf,FitsName,isColorCamera,CamHeight,CamWidth);
 				OPENCV::clacHistogram(imgBuf,isColorCamera,CamHeight,CamWidth);
 			#endif
 			if(imgBuf)
 				delete[] imgBuf;		//删除图像缓存
 		}
-		return ImgData;
+		return true;
 	}
 }
 

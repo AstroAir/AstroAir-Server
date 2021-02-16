@@ -41,7 +41,7 @@ Description:OPENCV Library
 
 namespace AstroAir::OPENCV
 {
-	std::string SaveImage(unsigned char *imgBuf,std::string ImageName,bool isColor,int ImageHeight,int ImageWidth);
+	void SaveImage(unsigned char *imgBuf,std::string ImageName,bool isColor,int ImageHeight,int ImageWidth);
 	void clacHistogram(unsigned char *imgBuf,bool isColor,int ImageHeight,int ImageWidth);
 }
 

@@ -88,7 +88,7 @@ namespace AstroAir
 			virtual bool Disconnect();
 			virtual bool StartExposure(int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset);
 			virtual bool AbortExposure();
-			virtual std::string SaveImage(std::string FitsName);
+			virtual bool Cooling();
 		protected:
 			/*转化Json信息*/
 			void readJson(std::string message);	
@@ -100,7 +100,7 @@ namespace AstroAir
 			void SetupConnectSuccess();
 			void StartExposureSuccess();
 			void AbortExposureSuccess();
-			void newJPGReadySend(std::string ImgData);
+			void newJPGReadySend();
 			/*处理错误信息函数*/
 			void SetupConnectError(int id);
 			void StartExposureError();
@@ -113,7 +113,7 @@ namespace AstroAir
 			Json::Value root;
 			Json::String errs;
 			Json::CharReaderBuilder reader;
-			std::string method,json_messenge;
+			std::string method,json_messenge,Image_Name;
 			std::string Camera,Mount,Focus,Filter,Guide;
 			std::string Camera_name,Mount_name,Focus_name,Filter_name,Guide_name;
 			typedef std::set<websocketpp::connection_hdl, std::owner_less<websocketpp::connection_hdl>> con_list;

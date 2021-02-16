@@ -40,6 +40,7 @@ Description:INDI driver
 #include "indi_client.h"
 
 #include <atomic>
+#include <memory> 
 
 namespace AstroAir
 {
@@ -55,6 +56,7 @@ namespace AstroAir
             /*断开连接*/
 			virtual bool Disconnect() override;
         private:
+            INDIClient *indi_client;
             /*相机使用参数（使用原子变量）*/
 			std::atomic_bool isConnected;
 			std::atomic_bool InExposure;

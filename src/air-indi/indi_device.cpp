@@ -37,7 +37,7 @@ namespace AstroAir
 {
     INDICCD::INDICCD()
     {
-
+        
     }
 
     INDICCD::~INDICCD()
@@ -47,6 +47,9 @@ namespace AstroAir
 
     bool INDICCD::Connect(std::string Device_name)
     {
+        indi_client->setServer("localhost", 7624);
+        indi_client->watchDevice(Device_name.c_str());
+        indi_client->connectServer();
         return true;
     }
 

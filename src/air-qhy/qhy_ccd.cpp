@@ -207,8 +207,8 @@ namespace AstroAir
 		return true;
 	}
 
-	std::string QHYCCD::SaveImage(std::string FitsName)
+	bool QHYCCD::SaveImage(std::string FitsName)
 	{
-		return "true";
+		return true;
 	}
 }

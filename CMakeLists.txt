@@ -21,7 +21,8 @@ project(airserver VERSION 1.0)
 
 set(CMAKE_CXX_STANDARD 20)		#默认C++风格为20
 set(CMAKE_CXX_STANDARD_REQUIRED True)
-set(CMAKE_CXX_COMPILER /usr/bin/clang++-11)		#默认使用clang++-11,GCC 9.3.0亦可
+set(CMAKE_C_COMPILER /usr/bin/clang-11)
+set(CMAKE_CXX_COMPILER /usr/bin/clang++-11)		#默认使用clang++-11,G++ 9.3.0亦可
 
 configure_file(config.h.in ${PROJECT_SOURCE_DIR}/src/config.h)
 
@@ -124,6 +125,7 @@ if(HAS_INDI)
 		add_library(LIBINDI src/air-indi/indi_device.cpp)
 		target_link_libraries(airserver PUBLIC LIBINDI)
 		target_link_libraries(airserver PUBLIC libindiclient.a)
+		target_link_libraries(airserver PUBLIC libz.so)
 	else()
 		message("-- Could not found INDI library.Try to build it!")
 		add_custom_command(
