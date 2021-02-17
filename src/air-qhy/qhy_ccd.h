@@ -58,19 +58,35 @@ namespace AstroAir
 			virtual bool Disconnect() override;
 			/*更新相机配置信息*/
 			virtual bool UpdateCameraConfig();
+			/*开始曝光*/
+			virtual bool StartExposure(int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset) override;
+			/*停止曝光*/
+			virtual bool AbortExposure() override;
+			/*设置相机参数*/
+			virtual bool SetCameraConfig(double Bin,double Gain,double Offset);
 			/*存储图像*/
 			virtual bool SaveImage(std::string FitsName);
 		private:
 			int CamNumber = 0;
 			char *CamName[MAXDEVICENUM];
-			int CamId;
 			int CamBin;
 			char iCamId[32] = {0};
+			char CamId[32] = {0};
 			unsigned int retVal;
 
 			/*相机配置参数*/
-			int iMaxWidth = 0;		//最大高度
-			int iMaxHeight = 0;		//最大宽度
+			double chipWidth;
+			double chipHeight;
+			double pixelWidth;
+			double pixelHeight;
+
+			unsigned int iMaxWidth = 0;		//最大高度
+			unsigned int iMaxHeight = 0;		//最大宽度
+			unsigned int CamWidth = 0;
+			unsigned int CamHeight = 0;
+
+			unsigned int Image_type = 0;
+
 			bool isCoolCamera = false;
 			bool isColorCamera = false;
 			bool isGuideCamera = false;

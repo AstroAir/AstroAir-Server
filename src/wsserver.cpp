@@ -67,6 +67,9 @@ namespace AstroAir
         /*初始化服务器*/
         m_server.init_asio();
         m_server_tls.init_asio();
+        /*设置重新使用端口*/
+        m_server.set_reuse_addr(true);
+        m_server_tls.set_reuse_addr(true);
         /*设置打开事件*/
         m_server.set_open_handler(bind(&WSSERVER::on_open, this , ::_1));
         m_server_tls.set_open_handler(bind(&WSSERVER::on_open_tls, this , ::_1));
@@ -151,7 +154,7 @@ namespace AstroAir
         lock_guard<mutex> guard(mtx);
         airserver_tls::connection_ptr con = m_server_tls.get_con_from_hdl( hdl );      // 根据连接句柄获得连接对象
         std::string path = con->get_resource();
-        IDLog("Successfully established connection with client path %s\n",path.c_str());
+        IDLog("Successfully established wss connection with client path %s\n",path.c_str());
         m_connections_tls.insert(hdl);
         isConnectedTLS = true;
         m_server_cond.notify_one();
@@ -211,6 +214,15 @@ namespace AstroAir
         readJson(message);
     }
 
+    /*
+     * name: on_http(websocketpp::connection_hdl hdl) 
+     * @param hdl:WebSocket句柄
+     * describe: Get client information when client and server shake hands
+     * 描述：在客户端与服务器握手时获取客户端信息
+     * calls: set_body()
+     * calls: set_status()
+     * note:This is the WSS server, please connect through the webpage of HTTPS
+     */
     void WSSERVER::on_http(websocketpp::connection_hdl hdl) 
     {
         lock_guard<mutex> guard(mtx_action);
@@ -222,15 +234,32 @@ namespace AstroAir
 		const std::string& strHost = rt.get_header("host");
 		const std::string& strContentType = rt.get_header("Content-type");
 		const std::string& strVersion = rt.get_version();
+        IDLog("Connection URI is %s,method is %s,host is %s",strUri.c_str(),strMethod.c_str(),strHost.c_str());
 		websocketpp::http::parser::header_list listhtpp = rt.get_headers();
         con->set_body("Hello World!");
         con->set_status(websocketpp::http::status_code::ok);
         m_server_action.notify_one();
     }
 
-    std::string get_password() 
+    /*
+     * name: get_password()
+     * describe: Get password for client authentication
+     * 描述：获取密码用于客户端验证
+     * @return password:服务器密码
+     */
+    std::string WSSERVER::get_password() 
     {
-        return "test";
+        lock_guard<mutex> guard(mtx_action);
+        std::string password;
+        std::ifstream in("passwd.txt",std::ios::in);
+        if (! in.is_open())
+        {
+            IDLog("Error opening password file,use default password\n");
+            return "astroair";
+        }
+        in >> password;
+        in.close();
+        return password;
     }
 
     /*
@@ -265,7 +294,7 @@ namespace AstroAir
                                 asio::ssl::context::single_dh_use);
             }
             //ctx->set_password_callback(bind(&get_password));
-            ctx->use_certificate_chain_file("server.pem");
+            ctx->use_certificate_chain_file("server.crt");
             ctx->use_private_key_file("server.pem", asio::ssl::context::pem);
             ctx->use_tmp_dh_file("client.pem");
             std::string ciphers;
@@ -289,8 +318,6 @@ namespace AstroAir
         m_server_action.notify_one();
         return ctx;
     }
-
-    
 
     /*以下三个函数均是用于switch支持string*/
 	constexpr hash_t hash_compile_time(char const* str, hash_t last_value = basis)  
@@ -427,6 +454,7 @@ namespace AstroAir
         }
         IDLog("Stop the server..\n");
         m_connections.clear();
+        m_connections_tls.clear();
         m_server.stop();
         m_server_tls.stop();
         IDLog("Good bye\n");
@@ -454,11 +482,34 @@ namespace AstroAir
     {
         try
         {
-            IDLog("Start the server..\n");
-            m_server.listen(port);
+            IDLog("Start the server at port %d ...\n",port);
+            m_server.listen(websocketpp::lib::asio::ip::tcp::v4(),port);
             m_server.start_accept();
             m_server.run();
-            m_server_tls.listen(port+1);
+        }
+        catch (websocketpp::exception const & e)
+        {   
+			std::cerr << e.what() << std::endl;
+        }
+        catch (...)
+        {
+            std::cerr << "other exception" << std::endl;
+        }
+    }
+
+    /*
+     * name: run_tls(int port)
+     * @param port:服务器端口
+     * describe: This is used to start the wss websocket server
+     * 描述：启动WebSocket服务器
+	 * calls: IDLog(const char *fmt, ...)
+     */
+    void WSSERVER::run_tls(int port)
+    {
+        try
+        {
+            IDLog("Start the wss server at port %d ...\n",port);
+            m_server_tls.listen(websocketpp::lib::asio::ip::tcp::v4(),port);
             m_server_tls.start_accept();
             m_server_tls.run();
         }

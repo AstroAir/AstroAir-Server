@@ -43,6 +43,7 @@ using namespace AstroAir;
 #define AIRPORT 5950
 
 int port = AIRPORT;
+WSSERVER ws;
 
 /*
  * name: usage()
@@ -55,9 +56,24 @@ void usage(char *me)
     fprintf(stderr, "Usage: %s [options]\n", me);
     fprintf(stderr, "Purpose: Start or stop the server\n");
     fprintf(stderr, "Options:\n");
-    fprintf(stderr, " -v       : show key events, no traffic\n");
+    fprintf(stderr, " -v       : start server\n");
+	fprintf(stderr, " -s       : stop server\n");
     fprintf(stderr, " -p p     : alternate IP port, default %d\n", AIRPORT);
     exit(2);
+}
+
+/*
+ * name: PrintLogo()
+ * describe: Output Logo
+ * 描述：显示Logo
+ */
+void PrintLogo()
+{
+	std::cout << "    _        _               _    _          ____" << std::endl;
+	std::cout << "   / \\   ___| |_ _ __ ___   / \\  (_)_ __    / ___|  ___ _ ____   _____ _ __" << std::endl;
+	std::cout << "  / _ \\ / __| __| '__/ _ \\ / _ \\ | | '__|___\\___ \\ / _ \\ '__\\ \\ / / _ \\ '__|" << std::endl;
+    std::cout << " / ___ \\__ \\ |_| | | (_) / ___ \\| | | |_____|__) |  __/ |   \\ V /  __/ |" << std::endl;
+    std::cout << "/_/   \\_\\___/\\__|_|  \\___/_/   \\_\\_|_|      |____/ \\___|_|    \\_/ \\___|_|" << std::endl;
 }
 
 /*
@@ -67,8 +83,17 @@ void usage(char *me)
  */
 void start_server()
 {
-    WSSERVER ws;
     ws.run(port);
+}
+
+/*
+ * name: start_server_tls()
+ * describe: Start the server according to different ports
+ * 描述：依据不同端口启动服务器
+ */
+void start_server_tls()
+{
+    ws.run_tls(port+1);
 }
 
 /*
@@ -78,7 +103,6 @@ void start_server()
  */
 void stop_server()
 {
-    WSSERVER ws;
     ws.stop();
 }
 
@@ -93,12 +117,8 @@ void stop_server()
 int main(int argc, char *argv[])
 {
 	/*输出Logo*/
-	std::cout << "    _        _               _    _          ____" << std::endl;
-	std::cout << "   / \\   ___| |_ _ __ ___   / \\  (_)_ __    / ___|  ___ _ ____   _____ _ __" << std::endl;
-	std::cout << "  / _ \\ / __| __| '__/ _ \\ / _ \\ | | '__|___\\___ \\ / _ \\ '__\\ \\ / / _ \\ '__|" << std::endl;
-    std::cout << " / ___ \\__ \\ |_| | | (_) / ___ \\| | | |_____|__) |  __/ |   \\ V /  __/ |" << std::endl;
-    std::cout << "/_/   \\_\\___/\\__|_|  \\___/_/   \\_\\_|_|      |____/ \\___|_|    \\_/ \\___|_|" << std::endl;
-    char *optarg;
+	PrintLogo();
+	char *optarg;
     int optind, opterr, optopt;
     int verbose = 0;
     int opt = -1;
@@ -106,31 +126,23 @@ int main(int argc, char *argv[])
     {    
 		switch (opt) 
 		{    
-			case 'v':
-				verbose = 1;
+			case 'v':{
+				std::thread t1(start_server);
+				std::thread t2(start_server_tls);
+				t1.join();
+				sleep(1);
+				t2.join();
 				break;
+			}
 			case 'p':
 				port = atoi(optarg);
 				break;
 			case 's':
-				verbose = 2;
+				stop_server();
 				break;
 			default:
 				usage(argv[0]);
 		}
-    }
-    switch(verbose)
-    {
-		case 1:{
-			std::thread t1(start_server);
-			t1.join();
-			break;
-		}
-		case 2:
-			stop_server();
-			break;
-		default:
-			usage(argv[0]);
     }
     return 0;
 }

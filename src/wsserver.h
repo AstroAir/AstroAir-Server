@@ -99,6 +99,7 @@ namespace AstroAir
 			virtual bool is_running();
 			/*运行服务器*/
 			virtual void run(int port);
+			virtual void run_tls(int port);
 		public:
 			virtual bool Connect(std::string Device_name);
 			virtual bool Disconnect();
@@ -107,7 +108,9 @@ namespace AstroAir
 			virtual bool Cooling(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF);
 		protected:
 			/*转化Json信息*/
-			void readJson(std::string message);	
+			void readJson(std::string message);
+			/*获取密码*/
+			std::string get_password();
 			/*WebSocket服务器功能性函数*/
 			void SetDashBoardMode();
 			void GetAstroAirProfiles();

@@ -45,7 +45,6 @@ namespace AstroAir
 	QHYCCD::QHYCCD()
 	{
 		CamNumber = 0;
-		CamId = 0;
 		CamBin = 0;
 		isConnected = false;
 		InVideo = false;
@@ -86,6 +85,7 @@ namespace AstroAir
      */
 	bool QHYCCD::Connect(std::string Device_name)
 	{
+		/*初始化SDK*/
 		if((retVal = InitQHYCCDResource()) != QHYCCD_SUCCESS)
 		{
 			IDLog("Unable to initialize SDK settings,error code is %d please check system settings\n",retVal);
@@ -94,6 +94,7 @@ namespace AstroAir
 		else
 		{
 			IDLog("Init SDK successfully!\n");
+			/*搜索QHY相机数量*/
 			if((CamNumber = ScanQHYCCD()) <= 0)
 			{
 				IDLog("QHY camera not found, please check the power supply or make sure the camera is connected.\n");
@@ -101,45 +102,43 @@ namespace AstroAir
 			}
 			else
 			{
+				/*根据相机数量依次搜索*/
 				for(int i = 0;i < CamNumber;i++)
 				{
-					GetQHYCCDId(i, iCamId);
-					if(GetQHYCCDModel(iCamId,CamName[i]) != QHYCCD_SUCCESS)
+					/*获取相机ID*/
+					if((GetQHYCCDId(i, iCamId)) != QHYCCD_SUCCESS)
 					{
-						IDLog("Unable to get %s name, please check program permissions.\n",CamName[i]);
+						IDLog("Unable to get camera ID, please check connection\n");
 						return false;
 					}
-					else
+					strcpy(CamId,iCamId);
+					char *p = strtok(iCamId,"-");
+					/*判断当前相机是否为指定相机*/
+					if(p == Device_name)
 					{
-						if(CamName[i] == Device_name)
+						IDLog("Find %s.\n",iCamId);
+						/*打开相机*/
+						if((pCamHandle = OpenQHYCCD(CamId)) == NULL)
 						{
-							IDLog("Find %s.\n",CamName[i]);
-							CamId = i;
-							if((pCamHandle = OpenQHYCCD(iCamId)) == NULL)
+							IDLog("Unable to turn on the %s.\n",iCamId);
+							return false;
+						}
+						else
+						{
+							/*初始化相机*/
+							if(InitQHYCCD(pCamHandle) != QHYCCD_SUCCESS)
 							{
-								IDLog("Unable to turn on the %s.\n",CamName[CamId]);
+								IDLog("Unable to initialize connection to camera.\n");
 								return false;
 							}
 							else
 							{
-								if(InitQHYCCD(pCamHandle) != QHYCCD_SUCCESS)
-								{
-									IDLog("Unable to initialize connection to camera.\n");
-									return false;
-								}
-								else
-								{
-									isConnected = true;
-									IDLog("Camera turned on successfully\n");
-									/*获取连接相机配置信息，并存入参数*/
-									UpdateCameraConfig();
-									return true;
-								}
+								isConnected = true;
+								IDLog("Camera turned on successfully\n");
+								/*获取连接相机配置信息，并存入参数*/
+								UpdateCameraConfig();
+								return true;
 							}
-						}
-						else
-						{
-							IDLog("This is not a designated camera, try to find the next one.\n");
 						}
 					}
 				}
@@ -202,8 +201,75 @@ namespace AstroAir
 		return true;
     }
     
+	/*
+     * name: UpdateCameraConfig()
+     * describe: Get the required parameters of the camera
+     * 描述：获取相机所需参数
+     * @return ture: meaningless
+	 * calls: IsQHYCCDControlAvailable()
+	 * calls: IDLog()
+     * note: These parameters are very important and related to the following program
+     */
     bool QHYCCD::UpdateCameraConfig()
 	{
+		retVal = IsQHYCCDControlAvailable(pCamHandle, CAM_COLOR);
+  		if (retVal == BAYER_GB || retVal == BAYER_GR || retVal == BAYER_BG || retVal == BAYER_RG)
+			isColorCamera = true;
+		if((retVal = IsQHYCCDControlAvailable(pCamHandle, CONTROL_COOLER)) == QHYCCD_SUCCESS)
+			isCoolCamera = true;
+		if((retVal = IsQHYCCDControlAvailable(pCamHandle, CONTROL_ST4PORT)) == QHYCCD_SUCCESS)
+			isGuideCamera = true;
+		if((retVal = GetQHYCCDChipInfo(pCamHandle, &chipWidth, &chipHeight, &iMaxWidth, &iMaxHeight, &pixelWidth, &pixelHeight, &Image_type)) != QHYCCD_SUCCESS)
+		{
+			IDLog("Unable to get camera parameters, please check the connection\n");
+			return false;
+		}
+		CamWidth = iMaxWidth;
+		CamHeight = iMaxHeight;
+		IDLog("Camera information obtained successfully.\n");
+		return true;
+	}
+
+
+	bool QHYCCD::StartExposure(int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset)
+	{
+		
+	}	
+
+	bool QHYCCD::SetCameraConfig(double Bin,double Gain,double Offset)
+	{
+		retVal = IsQHYCCDControlAvailable(pCamHandle, CAM_SINGLEFRAMEMODE);
+		if (SetQHYCCDStreamMode(pCamHandle, 0) != QHYCCD_SUCCESS)
+		{
+			IDLog("This camera doesn't support single frame shooting\n");
+			return false;
+		}
+		retVal = IsQHYCCDControlAvailable(pCamHandle, CONTROL_USBTRAFFIC);
+  		if ((retVal = SetQHYCCDParam(pCamHandle, CONTROL_USBTRAFFIC, 50)) != QHYCCD_SUCCESS)
+  		{
+			IDLog("Unable to set camera USBTRAFFIC failure, error code is  %d\n", retVal);
+			return false;
+		}
+		/*设置相机增益*/
+		retVal = IsQHYCCDControlAvailable(pCamHandle, CONTROL_GAIN);
+		if ((retVal = SetQHYCCDParam(pCamHandle, CONTROL_GAIN, Gain)) != QHYCCD_SUCCESS)
+		{
+			IDLog("Unable to set camera GAIN failure, error code is  %d\n", retVal);
+			return false;
+		}
+		/*设置相机偏置*/
+		retVal = IsQHYCCDControlAvailable(pCamHandle, CONTROL_OFFSET);
+		if ((retVal = SetQHYCCDParam(pCamHandle, CONTROL_OFFSET, Offset)) != QHYCCD_SUCCESS)
+		{
+			IDLog("Unable to set camera OFFSET failure, error code is  %d\n", retVal);
+			return false;
+		}
+		/*设置像素合并模式*/
+		if ((retVal = SetQHYCCDResolution(pCamHandle, 0, 0, CamWidth, CamHeight)) != QHYCCD_SUCCESS)
+		{
+			IDLog("Unable to set camera BIN MODE failure, error code is  %d\n", retVal);
+			return false;
+		}
 		return true;
 	}
 
