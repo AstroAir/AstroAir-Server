@@ -186,10 +186,6 @@ namespace AstroAir
     void WSSERVER::on_message(websocketpp::connection_hdl hdl,message_ptr msg)
     {
         std::string message = msg->get_payload();
-        /*将接收到的信息写入文件*/
-        #ifdef DEBUG_MODE
-            IDLog_CMDL(message.c_str());
-        #endif
         /*处理信息*/
         readJson(message);
     }
@@ -206,10 +202,6 @@ namespace AstroAir
     void WSSERVER::on_message_tls(websocketpp::connection_hdl hdl,message_ptr_tls msg)
     {
         std::string message = msg->get_payload();
-        /*将接收到的信息写入文件*/
-        #ifdef DEBUG_MODE
-            IDLog_CMDL(message.c_str());
-        #endif
         /*处理信息*/
         readJson(message);
     }
@@ -356,6 +348,12 @@ namespace AstroAir
         /*将string格式转化为const char*/
         method = root["method"].asString();
         const char* road = method.c_str();
+        /*将接收到的信息写入文件
+        #ifdef DEBUG_MODE
+            if(method != "Polling")
+                IDLog_CMDL(message.c_str());
+        #endif
+        */
         /*判断客户端需要执行的命令*/
         switch(hash_(road))
         {
@@ -962,7 +960,10 @@ namespace AstroAir
             return;
         }
         /*判断设备是否完全连接成功*/
-        SetupConnectSuccess();		//将连接上的设备列表发送给客户端
+        if(connect_ok == true)
+            SetupConnectSuccess();		//将连接上的设备列表发送给客户端
+        else
+            SetupConnectError(5);
         return;
     }
     

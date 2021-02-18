@@ -306,6 +306,7 @@ namespace AstroAir
      * @param Gain:相机增益
      * @param Offset:相机偏置
      * calls: ASISetControlValue()
+	 * calls: SetCameraConfig()
      * calls: IDLog()
      * calls: ASIStartExposure()
      * calls: ASIGetExpStatus()
@@ -454,7 +455,7 @@ namespace AstroAir
 			{
 				/*获取图像失败*/
 				IDLog("ASIGetDataAfterExp error (%d)\n",errCode);
-				return "false";
+				return false;
 			}
 			guard.unlock();
 			IDLog("Download complete.\n");

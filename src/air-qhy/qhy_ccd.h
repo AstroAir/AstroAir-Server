@@ -74,6 +74,9 @@ namespace AstroAir
 			char CamId[32] = {0};
 			unsigned int retVal;
 
+			std::mutex condMutex;
+			std::mutex ccdBufferLock;
+
 			/*相机配置参数*/
 			double chipWidth;
 			double chipHeight;
@@ -84,7 +87,7 @@ namespace AstroAir
 			unsigned int iMaxHeight = 0;		//最大宽度
 			unsigned int CamWidth = 0;
 			unsigned int CamHeight = 0;
-
+			unsigned int channels = 1; 		//通道，默认为黑白相机
 			unsigned int Image_type = 0;
 
 			bool isCoolCamera = false;

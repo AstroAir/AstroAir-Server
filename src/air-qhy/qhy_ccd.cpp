@@ -34,6 +34,7 @@ Description:QHY camera driver
 #include "qhy_ccd.h"
 #include "../logger.h"
 #include "../opencv.h"
+#include "../cfitsio.h"
 
 namespace AstroAir
 {
@@ -207,6 +208,7 @@ namespace AstroAir
      * 描述：获取相机所需参数
      * @return ture: meaningless
 	 * calls: IsQHYCCDControlAvailable()
+	 * calls: GetQHYCCDChipInfo()
 	 * calls: IDLog()
      * note: These parameters are very important and related to the following program
      */
@@ -214,7 +216,10 @@ namespace AstroAir
 	{
 		retVal = IsQHYCCDControlAvailable(pCamHandle, CAM_COLOR);
   		if (retVal == BAYER_GB || retVal == BAYER_GR || retVal == BAYER_BG || retVal == BAYER_RG)
+		{
 			isColorCamera = true;
+			channels = 3;
+		}
 		if((retVal = IsQHYCCDControlAvailable(pCamHandle, CONTROL_COOLER)) == QHYCCD_SUCCESS)
 			isCoolCamera = true;
 		if((retVal = IsQHYCCDControlAvailable(pCamHandle, CONTROL_ST4PORT)) == QHYCCD_SUCCESS)
@@ -230,12 +235,106 @@ namespace AstroAir
 		return true;
 	}
 
-
+	/*
+     * name: StartExposure(int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset)
+     * describe: Start camera exposure
+     * 描述：相机开始曝光
+     * @param exp: 曝光时间
+     * @param bin:像素合并模式
+     * @param IsSave:是否保存图像
+     * @param FitsName:图像名称
+     * @param Gain:相机增益
+     * @param Offset:相机偏置
+     * calls: IsQHYCCDControlAvailable()
+	 * calls: SetQHYCCDParam()
+	 * calls: SetCameraConfig()
+	 * calls: ExpQHYCCDSingleFrame()
+     * calls: IDLog()
+     * calls: AnortExposure()
+     * calls: SaveImage()
+     */
 	bool QHYCCD::StartExposure(int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset)
 	{
-		
+		std::unique_lock<std::mutex> guard(condMutex);
+		double blink_duration = exp * 1000000;
+		CamBin = bin;
+		IDLog("Blinking %ld time(s) before exposure\n", blink_duration);
+		if((retVal = IsQHYCCDControlAvailable(pCamHandle,CONTROL_EXPOSURE)) != QHYCCD_SUCCESS || (retVal = SetQHYCCDParam(pCamHandle,CONTROL_EXPOSURE,blink_duration)) != QHYCCD_SUCCESS)
+		{
+			IDLog("Failed to set blink exposure to %ldus, error %d\n", blink_duration, retVal);
+			return false;
+		}
+		else
+		{
+			if(SetCameraConfig(bin,Gain,Offset) != true)
+			{
+				IDLog("Failed to set camera configure\n");
+				return false;
+			}
+			else
+			{
+				InExposure = true;
+				if((retVal = ExpQHYCCDSingleFrame(pCamHandle)) != QHYCCD_ERROR && QHYCCD_READ_DIRECTLY != retVal)
+				{
+					sleep(1);
+				}
+				else
+				{
+					IDLog("Blink exposure failed, error code is %d\n", retVal);
+					AbortExposure();
+					return false;
+                }
+				InExposure = false;
+            }
+        }
+		guard.unlock();
+        if(IsSave == true)
+        {
+			IDLog("Finished exposure and save image locally\n");
+			if(SaveImage(FitsName) != true)
+			{
+				IDLog("Could not save image correctly,please check the config\n");
+				return false;
+			}
+			else
+			{
+				IDLog("Saved Fits and JPG images %s successfully in locally\n",FitsName.c_str());
+			}
+		}
+		return true;
 	}	
 
+	/*
+     * name: AbortExposure()
+     * describe: Stop camera exposure
+     * 描述：停止相机曝光
+     * @return ture: 成功停止曝光
+     * @return false：无法停止曝光
+     * calls: CancelQHYCCDExposingAndReadout()
+     * calls: IDLog()
+     */
+	bool QHYCCD::AbortExposure()
+	{
+		IDLog("Aborting camera exposure...");
+		if((retVal = CancelQHYCCDExposingAndReadout(pCamHandle)) != QHYCCD_SUCCESS)
+		{
+			IDLog("Unable to stop camera exposure,error id is %d,please try again.\n",retVal);
+			return false;
+		}
+		InExposure = false;
+		return true;
+	}
+	
+	/*
+     * name: SetCameraConfig(double Bin,double Gain,double Offset)
+     * describe: set camera cinfig
+     * 描述：设置相机参数
+     * calls: IDLog()
+     * calls: IsQHYCCDControlAvailable()
+     * calls: SetQHYCCDStreamMode()
+	 * calls: SetQHYCCDParam()
+	 * calls: SetQHYCCDResolution()
+     */
 	bool QHYCCD::SetCameraConfig(double Bin,double Gain,double Offset)
 	{
 		retVal = IsQHYCCDControlAvailable(pCamHandle, CAM_SINGLEFRAMEMODE);
@@ -273,8 +372,50 @@ namespace AstroAir
 		return true;
 	}
 
-	bool QHYCCD::SaveImage(std::string FitsName)
-	{
+	/*
+     * name: SaveImage(std::string FitsName)
+     * describe: Save images
+     * 描述：存储图像
+     * calls: GetQHYCCDMemLength()
+	 * calls: GetQHYCCDSingleFrame()
+     * calls: fits_create_file()
+     * calls: fits_create_img()
+     * calls: fits_update_key()
+     * calls: fits_write_img()
+     * calls: fits_close_file()
+     * calls: fits_report_error()
+	 * calls: SaveImage()
+	 * calls: SaveFitsImage()
+	 * calls: clacHistogram()
+     */
+    bool QHYCCD::SaveImage(std::string FitsName)
+    {
+		if(InExposure == false && InVideo == false)
+		{	
+			std::unique_lock<std::mutex> guard(ccdBufferLock);
+			uint32_t imgSize = GetQHYCCDMemLength(pCamHandle);		//设置图像大小
+			unsigned char * imgBuf = new unsigned char[imgSize];		//图像缓冲区大小
+			long naxis = 2;
+			/*曝光后获取图像信息*/
+			if ((retVal = GetQHYCCDSingleFrame(pCamHandle, &CamWidth, &CamHeight, &Image_type, &channels, imgBuf)) != QHYCCD_SUCCESS)
+			{
+				/*获取图像失败*/
+				IDLog("GetQHYCCDSingleFrame error (%d)\n",retVal);
+				return false;
+			}
+			guard.unlock();
+			IDLog("Download complete.\n");
+			/*将图像写入本地文件*/
+			#if(HAS_FITSIO==ON)
+				FITSIO::SaveFitsImage(imgBuf,FitsName,isColorCamera,Image_type,CamHeight,CamWidth,iCamId,"QHYCCD");
+			#endif
+			#if(HAS_OPENCV==ON)
+				OPENCV::SaveImage(imgBuf,FitsName,isColorCamera,CamHeight,CamWidth);
+				OPENCV::clacHistogram(imgBuf,isColorCamera,CamHeight,CamWidth);
+			#endif
+			if(imgBuf)
+				delete[] imgBuf;		//删除图像缓存
+		}
 		return true;
 	}
 }
