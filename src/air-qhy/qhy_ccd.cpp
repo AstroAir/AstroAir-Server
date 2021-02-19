@@ -127,6 +127,12 @@ namespace AstroAir
 						}
 						else
 						{
+							retVal = IsQHYCCDControlAvailable(pCamHandle, CAM_SINGLEFRAMEMODE);
+							if (SetQHYCCDStreamMode(pCamHandle, 0) != QHYCCD_SUCCESS)
+							{
+								IDLog("This camera doesn't support single frame shooting\n");
+								return false;
+							}
 							/*初始化相机*/
 							if(InitQHYCCD(pCamHandle) != QHYCCD_SUCCESS)
 							{
@@ -338,12 +344,7 @@ namespace AstroAir
      */
 	bool QHYCCD::SetCameraConfig(double Bin,double Gain,double Offset)
 	{
-		retVal = IsQHYCCDControlAvailable(pCamHandle, CAM_SINGLEFRAMEMODE);
-		if (SetQHYCCDStreamMode(pCamHandle, 0) != QHYCCD_SUCCESS)
-		{
-			IDLog("This camera doesn't support single frame shooting\n");
-			return false;
-		}
+		
 		retVal = IsQHYCCDControlAvailable(pCamHandle, CONTROL_USBTRAFFIC);
   		if ((retVal = SetQHYCCDParam(pCamHandle, CONTROL_USBTRAFFIC, 50)) != QHYCCD_SUCCESS)
   		{
@@ -359,16 +360,57 @@ namespace AstroAir
 		}
 		/*设置相机偏置*/
 		retVal = IsQHYCCDControlAvailable(pCamHandle, CONTROL_OFFSET);
-		if ((retVal = SetQHYCCDParam(pCamHandle, CONTROL_OFFSET, Offset)) != QHYCCD_SUCCESS)
+		if((retVal = SetQHYCCDParam(pCamHandle, CONTROL_OFFSET, Offset)) != QHYCCD_SUCCESS)
 		{
 			IDLog("Unable to set camera OFFSET failure, error code is  %d\n", retVal);
 			return false;
 		}
 		/*设置像素合并模式*/
-		if ((retVal = SetQHYCCDResolution(pCamHandle, 0, 0, CamWidth, CamHeight)) != QHYCCD_SUCCESS)
+		if((retVal = SetQHYCCDBinMode(pCamHandle,Bin,Bin)) != QHYCCD_SUCCESS)
 		{
 			IDLog("Unable to set camera BIN MODE failure, error code is  %d\n", retVal);
 			return false;
+		}
+		else
+		{
+			if((retVal = SetQHYCCDResolution(pCamHandle, 0, 0, CamWidth/Bin, CamHeight/Bin)) != QHYCCD_SUCCESS)
+			{
+				IDLog("Unable to set camera frame size failure, error code is  %d\n", retVal);
+				return false;
+			}
+			CamBin = Bin;
+		}
+		/*设置相机USB速度
+		retVal = IsQHYCCDControlAvailable(pCamHandle, CONTROL_SPEED);
+		if((retVal = SetQHYCCDParam(pCamHandle, CONTROL_SPEED,1)) != QHYCCD_SUCCESS)
+		{
+			IDLog("Unable to set camera speed failure, error code is  %d\n", retVal);
+			return false;
+		}
+		*/
+		retVal = SetQHYCCDParam(pCamHandle, CONTROL_DDR, 1.0);
+		retVal = IsQHYCCDControlAvailable(pCamHandle, CONTROL_USBTRAFFIC);
+		if((retVal = SetQHYCCDParam(pCamHandle, CONTROL_USBTRAFFIC,50)) != QHYCCD_SUCCESS)
+		{
+			IDLog("Unable to set camera speed failure, error code is  %d\n", retVal);
+			return false;
+		}
+		/*设置相机图像深度*/
+		if((retVal = IsQHYCCDControlAvailable(pCamHandle, CAM_16BITS)) == QHYCCD_SUCCESS)
+		{
+			if ((retVal = SetQHYCCDParam(pCamHandle, CONTROL_TRANSFERBIT, 16)) != QHYCCD_SUCCESS)
+			{
+				IDLog("Unable to set camera 16 bits mode failure, error code is  %d\n", retVal);
+				return false;
+			}
+		}
+		else
+		{
+			if ((retVal = SetQHYCCDParam(pCamHandle, CONTROL_TRANSFERBIT,8)) != QHYCCD_SUCCESS)
+			{
+				IDLog("Unable to set camera 8 bits mode failure, error code is  %d\n", retVal);
+				return false;
+			}
 		}
 		return true;
 	}
@@ -393,18 +435,21 @@ namespace AstroAir
     {
 		if(InExposure == false && InVideo == false)
 		{	
-			std::unique_lock<std::mutex> guard(ccdBufferLock);
+			//std::unique_lock<std::mutex> guard(ccdBufferLock);
 			uint32_t imgSize = GetQHYCCDMemLength(pCamHandle);		//设置图像大小
-			unsigned char * imgBuf = new unsigned char[imgSize];		//图像缓冲区大小
+			//long imgSize = CamWidth*CamHeight*(1 + (Image_type==16));
+			unsigned char * imgBuf = new unsigned char [imgSize];		//图像缓冲区大小
 			long naxis = 2;
+			CamWidth /= CamBin;
+			CamHeight /= CamBin;
 			/*曝光后获取图像信息*/
-			if ((retVal = GetQHYCCDSingleFrame(pCamHandle, &CamWidth, &CamHeight, &Image_type, &channels, imgBuf)) != QHYCCD_SUCCESS)
+			if ((retVal = GetQHYCCDLiveFrame(pCamHandle, &CamWidth, &CamHeight, &Image_type, &channels, imgBuf)) != QHYCCD_SUCCESS)
 			{
 				/*获取图像失败*/
 				IDLog("GetQHYCCDSingleFrame error (%d)\n",retVal);
 				return false;
 			}
-			guard.unlock();
+			//guard.unlock();
 			IDLog("Download complete.\n");
 			/*将图像写入本地文件*/
 			#if(HAS_FITSIO==ON)

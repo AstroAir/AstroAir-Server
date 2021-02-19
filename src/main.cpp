@@ -41,8 +41,9 @@ Description:Main program of astroair server
 using namespace AstroAir;
 
 #define AIRPORT 5950
-
+#define AIRPORT_TLS 5951
 int port = AIRPORT;
+int port_tls = AIRPORT_TLS;
 WSSERVER ws;
 
 /*
@@ -59,6 +60,7 @@ void usage(char *me)
     fprintf(stderr, " -v       : start server\n");
 	fprintf(stderr, " -s       : stop server\n");
     fprintf(stderr, " -p p     : alternate IP port, default %d\n", AIRPORT);
+	fprintf(stderr, " -c       : write a configure file for server\n");
     exit(2);
 }
 
@@ -93,7 +95,7 @@ void start_server()
  */
 void start_server_tls()
 {
-    ws.run_tls(port+1);
+    ws.run_tls(port_tls);
 }
 
 /*
@@ -104,6 +106,87 @@ void start_server_tls()
 void stop_server()
 {
     ws.stop();
+}
+
+/*
+ * name: configure()
+ * describe: Write config file
+ * 描述：编写配置文件
+ */
+void configure()
+{
+	std::string name,name_camera,name_mount,name_focus,name_filter,name_guide,name_guide_camera;
+	std::string brand_camera,brand_mount,brand_focus,brand_filter;
+	std::cout << "Please input the name of the configure file:";
+	std::cin >> name;
+	std::cout << "Please input the brand of the camera:";
+	std::cin >> brand_camera;
+	std::cout << "Please input the name of camera:";
+	std::cin >> name_camera;
+	std::cout << "Please input the brand of the mount:";
+	std::cin >> brand_mount;
+	std::cout << "Please input the name of mount:";
+	std::cin >> name_mount;
+	std::cout << "Please input the brand of the focus:";
+	std::cin >> brand_focus;
+	std::cout << "Please input the name of focus:";
+	std::cin >> name_focus;
+	std::cout << "Please input the brand of the filter:";
+	std::cin >> brand_filter;
+	std::cout << "Please input the name of filter:";
+	std::cin >> name_filter;
+	std::cout << "Please input the name of guide software:";
+	std::cin >> name_guide;
+	std::cout << "Please input the name of guide camera name:";
+	std::cin >> name_guide_camera;
+	Json::Value Root;
+	Root["camera"]["brand"] = Json::Value(brand_camera);
+	Root["camera"]["name"] = Json::Value(name_camera);
+	Root["mount"]["brand"] = Json::Value(brand_mount);
+	Root["mount"]["name"] = Json::Value(name_mount);
+	Root["focus"]["brand"] = Json::Value(brand_focus);
+	Root["focus"]["name"] = Json::Value(name_focus);
+	Root["filter"]["brand"] = Json::Value(brand_filter);
+	Root["filter"]["name"] = Json::Value(name_filter);
+	Root["guide"]["brand"] = Json::Value(name_guide);
+	Root["guide"]["name"] = Json::Value(name_guide_camera);
+	std::string file = Root.toStyledString();
+	std::string ok;
+	if(access( name.c_str(), F_OK ) != -1)
+	{
+		std::cout << "Do you want cover the old file with the new one?[Y/n]";
+		std::cin >> ok;
+		if(ok == "Y")
+		{
+			std::string command = "sudo rm ";
+			command += name;
+			system(command.c_str());
+		}
+		else
+		{
+			std::cout << "Please input a new file name:";
+			std::cin >> name;
+		}
+	}
+	std::ofstream out;
+	out.open(name,std::ios::out);
+	out << file;
+	out.close();
+	std::cout << "Write new config file named " << name << "successfully" << std::endl;
+	std::cout << "Do you want to start server right now?[Y/n]";
+	std::cin >> ok;
+	if(ok == "Y")
+	{
+		std::thread t1(start_server);
+		std::thread t2(start_server_tls);
+		t1.join();
+		sleep(1);
+		t2.join();
+	}
+	else
+	{
+		exit(1);
+	}
 }
 
 /*
@@ -122,7 +205,7 @@ int main(int argc, char *argv[])
     int optind, opterr, optopt;
     int verbose = 0;
     int opt = -1;
-    while ((opt = getopt(argc, argv, "vp:s")) != -1) 
+    while ((opt = getopt(argc, argv, "vp:sc")) != -1) 
     {    
 		switch (opt) 
 		{    
@@ -139,6 +222,9 @@ int main(int argc, char *argv[])
 				break;
 			case 's':
 				stop_server();
+				break;
+			case 'c':
+				configure();
 				break;
 			default:
 				usage(argv[0]);

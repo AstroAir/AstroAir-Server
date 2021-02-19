@@ -265,8 +265,6 @@ namespace AstroAir
     {
         lock_guard<mutex> guard(mtx_action);
         namespace asio = websocketpp::lib::asio;
-        std::cout << "on_tls_init called with hdl: " << hdl.lock().get() << std::endl;
-        std::cout << "using TLS mode: " << (mode == MOZILLA_MODERN ? "Mozilla Modern" : "Mozilla Intermediate") << std::endl;
         context_ptr_tls ctx = websocketpp::lib::make_shared<asio::ssl::context>(asio::ssl::context::sslv23);
         try
         {
