@@ -460,7 +460,7 @@ namespace AstroAir
 			guard.unlock();
 			IDLog("Download complete.\n");
 			/*将图像写入本地文件*/
-			#if(HAS_FITSIO==ON)
+			#ifdef HAS_FITSIO
 				char datatype[40];		//相机品牌
 				char keywords[40];		//相机品牌
 				char value[20];		//相机名称
@@ -492,7 +492,7 @@ namespace AstroAir
 				fits_close_file(fptr, &FitsStatus);		//关闭Fits图像
 				fits_report_error(stderr, FitsStatus);		//如果有错则返回错误信息
 			#endif
-			#if(HAS_OPENCV==ON)
+			#ifdef HAS_OPENCV
 				OPENCV::SaveImage(imgBuf,FitsName,isColorCamera,CamHeight,CamWidth);
 				OPENCV::clacHistogram(imgBuf,isColorCamera,CamHeight,CamWidth);
 			#endif

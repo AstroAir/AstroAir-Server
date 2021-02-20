@@ -106,11 +106,18 @@ namespace AstroAir
 			virtual bool StartExposure(int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset);
 			virtual bool AbortExposure();
 			virtual bool Cooling(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF);
+		public:
+			int CameraBin = 0;
+			int CameraExpo = 0;
+			int CameraExpoUsed = 0;
+			std::string CameraImageName;
 		protected:
 			/*转化Json信息*/
 			void readJson(std::string message);
 			/*获取密码*/
 			std::string get_password();
+			/*相机拍摄计数*/
+			void ImagineThread();
 			/*WebSocket服务器功能性函数*/
 			void SetDashBoardMode();
 			void GetAstroAirProfiles();
@@ -119,6 +126,7 @@ namespace AstroAir
 			void SetupConnectSuccess();
 			void StartExposureSuccess();
 			void AbortExposureSuccess();
+			void ShotRunningSend(int ElapsedPerc,int id);
 			void newJPGReadySend();
 			/*处理错误信息函数*/
 			void SetupConnectError(int id);
@@ -153,6 +161,7 @@ namespace AstroAir
 			std::atomic_bool isFocusConnected;
 			std::atomic_bool isFilterConnected;
 			std::atomic_bool isGuideConnected;
+			std::atomic_bool InExposure;
 	};
 }
 

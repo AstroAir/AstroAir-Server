@@ -119,4 +119,72 @@ namespace AstroAir::OPENCV
 			outfile.close();
 		}
 	}
+
+	/*
+     * name: drop_noise(cv::Mat &img)
+     * @param img:图像缓冲区
+     * describe: noise reduction
+     * 描述： 降噪
+     */
+	void drop_noise(cv::Mat &img)
+	{
+		for (int i = 0; i < img.rows; i++)
+		{
+			for (int j = 0; j < img.cols; j++)
+			{
+				if (img.at<unsigned char>(i, j) >= 69)//图像中有些盐噪声，通过设置阈值滤除掉
+				{
+					img.at<unsigned char>(i, j) = 0;
+				}
+			}
+		}
+	}
+
+	cv::Mat matrixWiseMulti(cv::Mat &m1, cv::Mat &m2)
+	{
+		cv::Mat dst = m1.mul(m2);
+		return dst;
+	}
+
+	cv::Mat ACE(cv::Mat &src)
+	{
+		int rows = src.rows;
+		int cols = src.cols;
+		int C = 3,n = 3;
+		float MaxCG = 7.5;
+		cv::Mat meanLocal; //图像局部均值  
+		cv::Mat varLocal;  //图像局部方差  
+		cv::Mat meanGlobal;//全局均值
+		cv::Mat varGlobal; //全局标准差  
+
+		blur(src.clone(), meanLocal, cv::Size(n, n));
+		cv::Mat highFreq = src - meanLocal;//高频成分 
+		varLocal = matrixWiseMulti(highFreq, highFreq);
+		blur(varLocal, varLocal, cv::Size(n, n));
+		//换算成局部标准差  
+		varLocal.convertTo(varLocal, CV_32F);
+		for (int i = 0; i < rows; i++)
+		{
+			for (int j = 0; j < cols; j++)
+			{
+				varLocal.at<float>(i, j) = (float)sqrt(varLocal.at<float>(i, j));
+			}
+		}
+		cv::meanStdDev(src, meanGlobal, varGlobal);
+		cv::Mat gainArr = 0.5 * meanGlobal / varLocal;//增益系数矩阵  
+		//对增益矩阵进行截止  
+		for (int i = 0; i < rows; i++)
+		{
+			for (int j = 0; j < cols; j++){
+				if (gainArr.at<float>(i, j) > MaxCG)
+				{
+					gainArr.at<float>(i, j) = MaxCG;
+				}
+			}
+		}
+		gainArr.convertTo(gainArr, CV_8U);
+		gainArr = matrixWiseMulti(gainArr, highFreq);
+		cv::Mat dst2 = meanLocal + C*highFreq;
+		return dst2;
+	}
 }

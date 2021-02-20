@@ -44,7 +44,6 @@ Description:ZWO camera driver
 #include <atomic>
 #include <vector>
 #include <string.h>
-//#include <fitsio.h>
 
 #define MAXDEVICENUM 5
 

@@ -41,8 +41,16 @@ Description:OPENCV Library
 
 namespace AstroAir::OPENCV
 {
+	/*保存图像*/
 	void SaveImage(unsigned char *imgBuf,std::string ImageName,bool isColor,int ImageHeight,int ImageWidth);
+	/*计算直方图*/
 	void clacHistogram(unsigned char *imgBuf,bool isColor,int ImageHeight,int ImageWidth);
+	/*简单的降噪*/
+	void drop_noise(cv::Mat &img);
+	/*拼合两幅图像*/
+	cv::Mat matrixWiseMulti(cv::Mat &m1, cv::Mat &m2);
+	/*图像增强算法*/
+	cv::Mat ACE(cv::Mat &src);
 }
 
 #endif

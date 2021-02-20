@@ -89,6 +89,7 @@ namespace AstroAir
         isFocusConnected = false;       //电动调焦座连接状态
         isFilterConnected = false;      //滤镜轮连接状态
         isGuideConnected = false;       //导星软件连接状态
+        InExposure = false;             //相机曝光状态
     }
     
     /*
@@ -642,41 +643,35 @@ namespace AstroAir
                 {
                     #ifdef HAS_ASI
                     {
-                        #if HAS_ASI==ON
-                            case "ZWOASI"_hash:{
-                                /*初始化ASI相机，并赋值CCD*/
-                                ASICCD *ASICamera = new ASICCD();
-                                CCD = ASICamera;
-                                camera_ok = CCD->Connect(Camera_name);
-                                break;
-                            }
-                        #endif
+                        case "ZWOASI"_hash:{
+                            /*初始化ASI相机，并赋值CCD*/
+                            ASICCD *ASICamera = new ASICCD();
+                            CCD = ASICamera;
+                            camera_ok = CCD->Connect(Camera_name);
+                            break;
+                        }
                     }
                     #endif
                     #ifdef HAS_QHY
                     {
-                        #if HAS_QHY==ON
-                            case "QHYCCD"_hash:{
-                                /*初始化QHY相机，并赋值CCD*/
-                                QHYCCD *QHYCamera = new QHYCCD();
-                                CCD = QHYCamera;
-                                camera_ok = CCD->Connect(Camera_name);
-                                break;
-                            }
-                        #endif
+                        case "QHYCCD"_hash:{
+                            /*初始化QHY相机，并赋值CCD*/
+                            QHYCCD *QHYCamera = new QHYCCD();
+                            CCD = QHYCamera;
+                            camera_ok = CCD->Connect(Camera_name);
+                            break;
+                        }
                     }
                     #endif
                     #ifdef HAS_INDI
                     {
-                        #if HAS_INDI==ON
-                            case "INDI"_hash:{
-                                /*初始化INDI相机，并赋值CCD*/
-                                INDICCD *INDIDevice = new INDICCD();
-                                CCD = INDIDevice;
-                                camera_ok = CCD->Connect(Camera_name);
-                                break;
-                            }
-                        #endif
+                        case "INDI"_hash:{
+                            /*初始化INDI相机，并赋值CCD*/
+                            INDICCD *INDIDevice = new INDICCD();
+                            CCD = INDIDevice;
+                            camera_ok = CCD->Connect(Camera_name);
+                            break;
+                        }
                     }
                     #endif
                     default:
@@ -1008,6 +1003,7 @@ namespace AstroAir
      * @param Offset:相机偏置
      * describe: Start exposure
      * 描述：开始曝光
+     * calls: ImagineThread()
 	 * calls: StartExposure(int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset)
      * calls: IDLog(const char *fmt, ...)
      * calls: IDLog_DEBUG(const char *fmt, ...)
@@ -1020,15 +1016,24 @@ namespace AstroAir
 		{
 			bool camera_ok = false;
             Image_Name = FitsName;
+            CameraBin = bin;
+            CameraExpo = exp;
+            CameraImageName = FitsName;
+            InExposure = true;
+            std::thread CameraCountThread(&WSSERVER::ImagineThread,this);
+            CameraCountThread.detach();
 			if ((camera_ok = CCD->StartExposure(exp, bin, IsSave, FitsName, Gain, Offset)) != true)
 			{
 				/*返回曝光错误的原因*/
 				StartExposureError();
 				IDLog("Unable to stop the exposure of the camera. Please check the connection of the camera. If you have any problems, please contact the developer\n");
 				IDLog_DEBUG("Unable to stop the exposure of the camera. Please check the connection of the camera. If you have any problems, please contact the developer\n");
-				/*如果函数执行不成功返回false*/
+				InExposure = false;
+                /*如果函数执行不成功返回false*/
 				return false;
 			}
+            InExposure = false;
+            sleep(1);
 			/*将拍摄成功的消息返回至客户端*/
 			StartExposureSuccess();
             newJPGReadySend();
@@ -1042,6 +1047,26 @@ namespace AstroAir
         return true;
     }
     
+    /*
+     * name: ImagineThread()
+     * describe: Calculate the remaining exposure time
+     * 描述：计算曝光剩余时间
+     * calls: ShotRunningSend()
+     * note: This thread is orphan. Please note
+     */
+    void WSSERVER::ImagineThread()
+    {
+        while(CameraExpoUsed <= CameraExpo && InExposure == true)
+        {
+            double a = CameraExpoUsed,b = CameraExpo;
+            sleep(1);
+            CameraExpoUsed++;
+            float Used = (a/b)*100;
+            ShotRunningSend(Used,1);
+        }
+        CameraExpoUsed = 0;
+    }
+
     /*
      * name: AbortExposure()
      * describe: Abort exposure
@@ -1201,6 +1226,19 @@ namespace AstroAir
 		send(json_messenge);
     }
     
+    void WSSERVER::ShotRunningSend(int ElapsedPerc,int id)
+    {
+        Json::Value Root;
+        Root["Event"] = Json::Value("ShotRunning");
+        Root["ElapsedPerc"] = Json::Value(ElapsedPerc);
+        Root["Status"] = Json::Value(id);
+        Root["File"] = Json::Value(CameraImageName);
+        Root["Expo"] = Json::Value(CameraExpo);
+        Root["Elapsed"] = Json::Value(CameraExpoUsed);
+        json_messenge = Root.toStyledString();
+		send(json_messenge);
+    }
+
     /*
 	 * name: newJPGReadySend()
 	 * describe: Send the message that the picture is ready to the client
@@ -1223,11 +1261,11 @@ namespace AstroAir
         Root["PixelDimX"] = Json::Value(ImageData.rows);
         Root["PixelDimY"] = Json::Value(ImageData.cols);
         Root["SequenceTarget"] = Json::Value("");
-        Root["Bin"] = Json::Value(1);
+        Root["Bin"] = Json::Value(CameraBin);
         Root["StarIndex"] = Json::Value(5);
         Root["HFD"] = Json::Value(1);
-        Root["Expo"] = Json::Value(5);
-        Root["TimeInfo"] = Json::Value(100);
+        Root["Expo"] = Json::Value(CameraExpo);
+        Root["TimeInfo"] = Json::Value(getSystemLocalTime());
         Root["Filter"] = Json::Value("** BayerMatrix **");
         json_messenge = Root.toStyledString();
         /*发送信息*/

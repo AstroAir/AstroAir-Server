@@ -21,7 +21,6 @@ project(airserver VERSION 1.0)
 
 set(CMAKE_CXX_STANDARD 20)		#默认C++风格为20
 set(CMAKE_CXX_STANDARD_REQUIRED True)
-set(CMAKE_C_COMPILER /usr/bin/clang-11)
 set(CMAKE_CXX_COMPILER /usr/bin/clang++-11)		#默认使用clang++-11,G++ 9.3.0亦可
 
 configure_file(config.h.in ${PROJECT_SOURCE_DIR}/src/config.h)
