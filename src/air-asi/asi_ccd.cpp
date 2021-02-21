@@ -220,11 +220,23 @@ namespace AstroAir
 		return true;
     }
     
+	/*
+     * name: Cooling(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF,int CamTemp)
+     * describe: Start or stop cooling
+     * 描述：开始或停止制冷
+     * @return ture: refrigeration successful
+     */
 	bool ASICCD::Cooling(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF,int CamTemp)
 	{
+		bool camera_ok = false;
 		if(isCoolCamera == true)
 		{
-
+			if((camera_ok = SetTemperature(CamTemp)) != true)
+				return false;
+			if(CoolerOFF == true)
+				ActiveCool(false);
+			else
+				ActiveCool(true);
 		}
 		else
 		{

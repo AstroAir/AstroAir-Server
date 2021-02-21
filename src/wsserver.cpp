@@ -39,11 +39,13 @@ Using:JsonCpp<https://github.com/open-source-parsers/jsoncpp>
 #include "logger.h"
 #include "opencv.h"
 #include "base64.h"
+#include "libxls.h"
 
 #include "air-asi/asi_ccd.h"
 #include "air-qhy/qhy_ccd.h"
-#include "air-indi/indi_device.h"
+//#include "air-indi/indi_device.h"
 #include "air-gphoto2/gphoto2_ccd.h"
+
 
 namespace AstroAir
 {
@@ -75,6 +77,7 @@ namespace AstroAir
         m_server.set_message_handler(bind(&WSSERVER::on_message, this ,::_1,::_2));
         m_server_tls.set_message_handler(bind(&WSSERVER::on_message_tls,this,::_1,::_2));
         /*SSL设置*/
+        //m_server_tls.set_socket_init_handler(bind(&WSSERVER::on_socket_init,this,::_1,::_2));
         m_server_tls.set_http_handler(bind(&WSSERVER::on_http,this,::_1));
         m_server_tls.set_tls_init_handler(bind(&WSSERVER::on_tls_init,this,MOZILLA_INTERMEDIATE,::_1));
         /*重置参数*/
@@ -200,6 +203,18 @@ namespace AstroAir
         std::string message = msg->get_payload();
         /*处理信息*/
         readJson(message);
+    }
+
+    /*
+     * name: on_socket_init(websocketpp::connection_hdl, boost::asio::ip::tcp::socket & s) 
+     * @param hdl:WebSocket句柄
+     * describe: Handling socket events
+     * 描述：处理Socket事件
+     */
+    void WSSERVER::on_socket_init(websocketpp::connection_hdl hdl, boost::asio::ip::tcp::socket & s)
+    {
+        boost::asio::ip::tcp::no_delay option(true);
+        s.set_option(option);
     }
 
     /*
@@ -359,6 +374,12 @@ namespace AstroAir
             case "RemoteGetAstroAirProfiles"_hash:
                 GetAstroAirProfiles();
                 break;
+            /*设置新的配置文件*/
+            case "RemoteSetProfile"_hash:{
+                std::thread ProfileThread(&WSSERVER::SetProfile,this,root["params"]["FileName"].asString());
+                ProfileThread.detach();
+                break;
+            }
             /*连接设备*/
             case "RemoteSetupConnect"_hash:{
                 std::thread ConnectThread(&WSSERVER::SetupConnect,this,root["params"]["TimeoutConnect"].asInt());
@@ -381,6 +402,12 @@ namespace AstroAir
                 CoolingThread.detach();
                 break;
             }
+            /*搜索天体*/
+            case "RemoteSearchTarget"_hash:{
+                std::thread SearchThread(&WSSERVER::SearchTarget,this,root["params"]["Name"].asString());
+                SearchThread.detach();
+                break;
+            }
             /*轮询，保持连接*/
             case "Polling"_hash:
                 Polling();
@@ -400,38 +427,45 @@ namespace AstroAir
      */
     void WSSERVER::send(std::string message)
     {
-        /*向WS客户端发送信息*/
-        for (auto it : m_connections)
+        if(isConnected == true)
         {
-            try
+            /*向WS客户端发送信息*/
+            for (auto it : m_connections)
             {
-                m_server.send(it, message, websocketpp::frame::opcode::text);
-            }
-            catch (websocketpp::exception const &e)
-            {
-                std::cerr << e.what() << std::endl;
-            }
-            catch (...)
-            {
-                std::cerr << "other exception" << std::endl;
+                try
+                {
+                    m_server.send(it, message, websocketpp::frame::opcode::text);
+                }
+                catch (websocketpp::exception const &e)
+                {
+                    std::cerr << e.what() << std::endl;
+                }
+                catch (...)
+                {
+                    std::cerr << "other exception" << std::endl;
+                }
             }
         }
         /*向WSS客户端发送信息*/
-        for (auto it : m_connections_tls)
+        if(isConnectedTLS == true)
         {
-            try
+            for (auto it : m_connections_tls)
             {
-                m_server_tls.send(it, message, websocketpp::frame::opcode::text);
-            }
-            catch (websocketpp::exception const &e)
-            {
-                std::cerr << e.what() << std::endl;
-            }
-            catch (...)
-            {
-                std::cerr << "other exception" << std::endl;
+                try
+                {
+                    m_server_tls.send(it, message, websocketpp::frame::opcode::text);
+                }
+                catch (websocketpp::exception const &e)
+                {
+                    std::cerr << e.what() << std::endl;
+                }
+                catch (...)
+                {
+                    std::cerr << "other exception" << std::endl;
+                }
             }
         }
+        
     }
     
     /*
@@ -543,8 +577,6 @@ namespace AstroAir
 
     /*
      * name: GetAstroAirProfiles()
-     * describe: Get the local file name and upload it to the client
-     * 描述：获取本地文件名称并上传至客户端
      * describe: Gets the specified suffix file name in the folder
 	 * 描述：获取文件夹中指定后缀文件名称
      * calls: send()
@@ -552,12 +584,13 @@ namespace AstroAir
      */
     void WSSERVER::GetAstroAirProfiles()
     {
+        lock_guard<mutex> guard(mtx);
         /*寻找当前文件夹下的所有文件*/
         struct dirent *ptr;      
 		DIR *dir;  
 		std::string PATH = "./";        //搜索目录，正式版本应该可以选择目录位置
 		dir=opendir(PATH.c_str());      //打开目录
-		std::vector<std::string> files;
+        std::vector<std::string> files;
         /*搜索所有符合条件的文件*/
 		while((ptr = readdir(dir)) != NULL)  
 		{  
@@ -578,23 +611,56 @@ namespace AstroAir
             return;
         }
         /*整合信息并发送至客户端*/
-        Json::Value Root;
+        Json::Value Root,profile;
 		Root["Event"] = Json::Value("RemoteActionResult");
         Root["UID"] = Json::Value("RemoteGetAstroAirProfiles");
         Root["ActionResultInt"] = Json::Value(4);
-        Root["ParamRet"]["list"]["name"] = Json::Value(files[0]);
-        Root["ParamRet"]["FileNumber"] = Json::Value(files.size()-1);
+        Root["ParamRet"]["name"] = Json::Value(files[0]);
+        FileName = files[0];
+        FileBuf[0] = files[0];
         IDLog("Found configure file named %s\n",files[0].c_str());
         files.erase(files.begin());
         for (int i = 0; i < files.size(); i++)  
 		{
+            FileBuf[i+1] = files[i];
+            profile["name"] = Json::Value(files[i].c_str());
+            Root["ParamRet"]["list"].append(profile);
             IDLog("Found configure file named %s\n",files[i].c_str());
-            Root["ParamRet"]["Files"][i]["name"] = Json::Value(files[i]);
 		}
         json_messenge = Root.toStyledString();
         send(json_messenge);
     }
-    
+
+    /*
+     * name: SetProfile(std::string File_Name)
+     * @param File_Name:Specify the file name
+     * describe: Set up a new profile
+     * 描述：设置新的配置文件
+     * calls: send()
+	 * note:The suffix of get file should be .air
+     */
+    void WSSERVER::SetProfile(std::string File_Name)
+    {
+        lock_guard<mutex> guard(mtx);
+        IDLog("Change the configuration file to %s\n",File_Name.c_str());
+        FileName = File_Name;
+        /*整合信息并发送至客户端*/
+        Json::Value Root,profile;
+		Root["Event"] = Json::Value("RemoteActionResult");
+        Root["UID"] = Json::Value("RemoteGetAstroAirProfilesstartup");
+        Root["ActionResultInt"] = Json::Value(4);
+        Root["ParamRet"]["name"] = Json::Value(FileName);
+        int i = 0;
+        while(!FileBuf[i].empty())
+        {
+            i++;
+            profile["name"] = Json::Value(FileBuf[i]);
+            Root["ParamRet"]["list"].append(profile);
+        }
+        json_messenge = Root.toStyledString();
+        send(json_messenge);
+    }
+
     /*
      * name: SetupConnect(int timeout)
      * @param timeout:连接相机最长时间
@@ -611,7 +677,7 @@ namespace AstroAir
     {
         /*读取config.air配置文件，并且存入参数中*/
         std::string line,jsonStr;
-        std::ifstream in("config.air", std::ios::binary);
+        std::ifstream in(FileName.c_str(), std::ios::binary);
         /*打开文件*/
         if (!in.is_open())
         {
@@ -1006,7 +1072,9 @@ namespace AstroAir
         IDLog_DEBUG("Try to disconnect from %s,Should never get here.\n",Camera_name.c_str());
         return true;
     }
-    
+
+//----------------------------------------相机----------------------------------------
+
     /*
      * name: StartExposure(int exp,int bin,bool is_roi,int roi_type,int roi_x,int roi_y,bool IsSave,std::string FitsName,int Gain,int Offset)
      * @param exp:相机曝光时间
@@ -1026,6 +1094,11 @@ namespace AstroAir
      */
     bool WSSERVER::StartExposure(int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset)
     {
+        if(exp <= 0)
+        {
+            IDLog("Exposure time is less than 0, please input a reasonable data");
+            return false;
+        }
 		if(isCameraConnected == true)
 		{
 			bool camera_ok = false;
@@ -1042,7 +1115,6 @@ namespace AstroAir
 				StartExposureError();
                 ShotRunningSend(0,4);
 				IDLog("Unable to stop the exposure of the camera. Please check the connection of the camera. If you have any problems, please contact the developer\n");
-				IDLog_DEBUG("Unable to stop the exposure of the camera. Please check the connection of the camera. If you have any problems, please contact the developer\n");
 				InExposure = false;
                 /*如果函数执行不成功返回false*/
 				return false;
@@ -1057,7 +1129,6 @@ namespace AstroAir
 		else
 		{
 			IDLog("There seems to be some unknown mistakes here.Maybe you need to check the camera connection\n");
-			IDLog_DEBUG("There seems to be some unknown mistakes here.Maybe you need to check the camera connection\n");
 			return false;
         }
         return true;
@@ -1100,7 +1171,6 @@ namespace AstroAir
 				/*返回曝光错误的原因*/
 				AbortExposureError();
 				IDLog("Unable to stop the exposure of the camera. Please check the connection of the camera. If you have any problems, please contact the developer\n");
-				IDLog_DEBUG("Unable to stop the exposure of the camera. Please check the connection of the camera. If you have any problems, please contact the developer\n");
 				/*如果函数执行不成功返回false*/
 				return false;
 			}
@@ -1110,7 +1180,6 @@ namespace AstroAir
 		else
 		{
 			IDLog("Try to stop exposure,Should never get here.\n");
-			IDLog_DEBUG("Try to stop exposure,Should never get here.\n");
 			return false;
         }
         return true;
@@ -1283,6 +1352,14 @@ namespace AstroAir
 		send(json_messenge);
     }
     
+    /*
+	 * name: ShotRunningSend(int ElapsedPerc,int id)
+     * @param ElapsedPerc:已完成进度
+     * @param id:状态
+	 * describe: Send exposure information
+	 * 描述：发送曝光信息
+	 * calls: send()
+	 */
     void WSSERVER::ShotRunningSend(int ElapsedPerc,int id)
     {
         Json::Value Root;
@@ -1326,6 +1403,120 @@ namespace AstroAir
         Root["Filter"] = Json::Value("** BayerMatrix **");
         json_messenge = Root.toStyledString();
         /*发送信息*/
+		send(json_messenge);
+    }
+
+//----------------------------------------赤道仪----------------------------------------
+
+    /*
+	 * name: SearchTarget(std::string TargetName)
+     * @param TargerName:目标名称
+	 * describe: Search for celestial bodies
+	 * 描述：搜索天体
+	 * calls: SearchTargetSuccess()
+     * calls: SearchTargetError()
+	 */
+    void WSSERVER::SearchTarget(std::string TargetName)
+    {
+        /*检查星体数据库是否存在*/
+        if(access( "starbase.xls", F_OK ) == -1)
+            SearchTargetError(2);
+        // 工作簿
+        xls::WorkBook base("starbase.xls");
+        int line = 2;
+        while(true)
+        {
+			xls::cellContent info = base.GetCell(0,line,1);
+			if(info.type == xls::cellBlank) 
+                break;
+            std::string name = info.str;
+            /*去除所有空格*/
+            if( !name.empty() )
+            {
+                name.erase(0,name.find_first_not_of(" "));
+                name.erase(name.find_last_not_of(" ") + 1);
+                int index = 0;
+                while( (index = name.find(' ',index)) != std::string::npos)
+                    name.erase(index,1);
+            }
+            /*找到制定目标*/
+            if(name == TargetName)
+            {
+                std::string ra,dec,oname,type,mag;
+                ra = base.GetCell(0,line,5).str;
+                dec = base.GetCell(0,line,6).str;
+                oname = base.GetCell(0,line,2).str;
+                type = base.GetCell(0,line,3).str;
+                mag = base.GetCell(0,line,7).str;
+                SearchTargetSuccess(ra,dec,name,oname,type,mag);
+                return;
+            }
+            line++;
+		}
+        /*未找到制定目标*/
+        SearchTargetError(0);
+        return;
+    }
+
+    /*
+	 * name: SearchTargetSuccess(std::string RA,std::string DEC,std::string Name,std::string OtherName,std::string Type)
+     * @param RA:天体RA轴坐标
+     * @param DEC:天体DEC轴坐标
+     * @param Name:天体名称
+     * @param OtherName:天体别名
+     * @param Type:天体类型
+	 * describe: Search for celestial bodies successfully
+	 * 描述：搜索天体成功
+	 * calls: send()
+	 */
+    void WSSERVER::SearchTargetSuccess(std::string RA,std::string DEC,std::string Name,std::string OtherName,std::string Type,std::string MAG)
+    {
+        Json::Value Root,info;
+        Root["Event"] = Json::Value("RemoteActionResult");
+        Root["UID"] = Json::Value("RemoteSearchTarget");
+        Root["ActionResultInt"] = Json::Value(4);
+        Root["ParamRet"]["Result"] = Json::Value(1);
+        Root["ParamRet"]["Name"] = Json::Value(Name);
+        /*天体坐标信息*/
+        Root["ParamRet"]["RAJ2000"] = Json::Value(RA);
+        Root["ParamRet"]["DECJ2000"] = Json::Value(DEC);
+        /*天体基础信息*/
+        info["Key"] = Json::Value("别称");     //天体别名
+        info["Value"] = Json::Value(OtherName);
+        Root["ParamRet"]["Info"].append(info);
+        info["Key"] = Json::Value("类型");      //天体类型
+        info["Value"] = Json::Value(Type);
+        Root["ParamRet"]["Info"].append(info);
+        info["Key"] = Json::Value("星等");      //天体星等
+        info["Value"] = Json::Value(MAG);
+        Root["ParamRet"]["Info"].append(info);
+        json_messenge = Root.toStyledString();
+		send(json_messenge);
+    }
+
+    /*
+	 * name: SearchTargetError(int id)
+     * @param id:错误信息ID
+	 * describe: Search for celestial bodies error
+	 * 描述：搜索天体失败
+	 * calls: send()
+	 */
+    void WSSERVER::SearchTargetError(int id)
+    {
+        Json::Value Root;
+        Root["Event"] = Json::Value("RemoteActionResult");
+        Root["UID"] = Json::Value("RemoteSearchTarget");
+        if(id == 0)     //目标未找到
+        {
+            Root["ActionResultInt"] = Json::Value(4);
+            Root["ParamRet"]["Result"] = Json::Value(0);
+        }
+        else        //星体数据库无法打开
+        {
+            Root["ActionResultInt"] = Json::Value(5);
+            Root["Motivo"] = Json::Value("Could not open starbase.xls");
+        }
+        json_messenge = Root.toStyledString();
 		send(json_messenge);
     }
 

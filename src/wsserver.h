@@ -92,6 +92,7 @@ namespace AstroAir
 			virtual void on_close_tls(websocketpp::connection_hdl hdl);
 			virtual void on_message(websocketpp::connection_hdl hdl,message_ptr msg);
 			virtual void on_message_tls(websocketpp::connection_hdl hdl,message_ptr_tls msg);
+			virtual void on_socket_init(websocketpp::connection_hdl hdl, boost::asio::ip::tcp::socket & s);
 			virtual void on_http(websocketpp::connection_hdl hdl);
 			virtual context_ptr_tls on_tls_init(tls_mode mode, websocketpp::connection_hdl hdl);
 			virtual void send(std::string payload);
@@ -117,11 +118,14 @@ namespace AstroAir
 			void readJson(std::string message);
 			/*获取密码*/
 			std::string get_password();
+			/*搜索目标*/
+			void SearchTarget(std::string TargetName);
 			/*相机拍摄计数*/
 			void ImagineThread();
 			/*WebSocket服务器功能性函数*/
 			void SetDashBoardMode();
 			void GetAstroAirProfiles();
+			void SetProfile(std::string File_Name);
 			void SetupConnect(int timeout);
 			/*处理正确返回信息*/
 			void SetupConnectSuccess();
@@ -129,10 +133,12 @@ namespace AstroAir
 			void AbortExposureSuccess();
 			void ShotRunningSend(int ElapsedPerc,int id);
 			void newJPGReadySend();
+			void SearchTargetSuccess(std::string RA,std::string DEC,std::string Name,std::string OtherName,std::string Type,std::string MAG);
 			/*处理错误信息函数*/
 			void SetupConnectError(int id);
 			void StartExposureError();
 			void AbortExposureError();
+			void SearchTargetError(int id);
 			void UnknownMsg();
 			void UnknownDevice(int id,std::string message);
 			void ErrorCode();
@@ -153,6 +159,8 @@ namespace AstroAir
 			condition_variable m_server_cond,m_server_action;
 			/*定义服务器设备参数*/
 			WSSERVER *CCD,*MOUNT,*FOCUS,*FILTER,*GUIDE;
+			std::string FileName;
+			std::string FileBuf[10];
 
 			/*服务器设备连接状态参数*/
 			std::atomic_bool isConnected;

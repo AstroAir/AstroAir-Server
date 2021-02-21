@@ -92,16 +92,14 @@ namespace AstroAir
             else
             {
                 const char * model, *port;
-                int cameraIndex = 0;
                 for(int i = 0;i < CamNumber;i++)
                 {
-                    gp_list_get_name(list, cameraIndex, &model);
-                    gp_list_get_value(list, cameraIndex, &port);
+                    gp_list_get_name(list, i, &model);
+                    gp_list_get_value(list, i, &port);
                     if(Device_name.c_str() == model)
                     {
-                        IDLog("Detected camera model %s on port %s\n", model, port);
+                        IDLog("Find %s on port %s\n", model, port);
                     }
-                    cameraIndex++;
                 }
                 IDLog("The specified camera was not found. Please check the camera connection");
                 return false;

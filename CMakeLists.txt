@@ -265,14 +265,14 @@ if(HAS_JSONCPP)
 	find_path(PATH_JSONCPP json.h /usr/include/json)
 	find_path(PATH_JSONCPP json.h /usr/local/include/json)
 	find_library(PATH_JSONCPP_LIB libjsoncpp.so /usr/lib)
-	find_library(PATH_JSONCPP_LIB libopencv_core.so /usr/local/lib)
+	find_library(PATH_JSONCPP_LIB libjsoncpp.so /usr/local/lib)
 	if(PATH_JSONCPP AND PATH_JSONCPP_LIB)
 		message("-- Found JsonCpp header file in ${PATH_JSONCPP} and library in ${PATH_JSONCPP_LIB}")
 		target_link_libraries(airserver PUBLIC libjsoncpp.so)
 	else()
 		message("-- Could not found JsonCpp library.Try to build it!")
 		add_custom_command(
-			TARGET LIBOPENCV
+			TARGET airserver
 			PRE_BUILD
 			COMMAND sudo apt install libjsoncpp-dev -y
 			COMMENT "Downloaded and Building JSONCPP Library"
@@ -282,7 +282,28 @@ else()
 	message("Please check setting,jsoncpp is one of the main library!")
 endif()
 
+#设置LIBXLS库
+option(HAS_LIBXLS "Using LibXLS Library" ON)
+if(HAS_LIBXLS)
+	find_path(PATH_LIBXLS xls.h /usr/include)
+	find_path(PATH_LIBXLS xls.h /usr/local/include)
+	find_library(PATH_LIBXLS_LIB libxlsreader.so /usr/lib)
+	find_library(PATH_LIBXLS_LIB libxlsreader.so /usr/local/lib)
+	if(PATH_LIBXLS AND PATH_LIBXLS_LIB)
+		message("-- Found LibXLS header file in ${PATH_LIBXLS} and library in ${PATH_LIBXLS_LIB}")
+		add_library(LIBXLS src/libxls.cpp)
+		target_link_libraries(airserver PUBLIC LIBXLS)
+		target_link_libraries(airserver PUBLIC libxlsreader.so)
+	else()
+		message("-- Could not found LibXLS library.Please build it before install!")
+	endif()
+else()
+	message("Please check setting,libxls is one of the main library!")
+endif()
+
 set(LINK_DIR /usr/lib)
+link_directories(${LINK_DIR})
+set(LINK_DIR /usr/local/lib)
 link_directories(${LINK_DIR})
 
 #头文件
