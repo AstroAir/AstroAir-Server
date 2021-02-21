@@ -11,3 +11,4 @@
 #define HAS_QHY @HAS_QHY@
 #define HAS_ASI @HAS_ASI@
 #define HAS_INDI @HAS_INDI@
+#define HAS_GPhoto2 @HAS_GPhoto2@

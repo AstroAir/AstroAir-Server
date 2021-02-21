@@ -40,15 +40,10 @@ Using:JsonCpp<https://github.com/open-source-parsers/jsoncpp>
 #include "opencv.h"
 #include "base64.h"
 
-#ifdef HAS_ASI
-    #include "air-asi/asi_ccd.h"
-#endif
-#ifdef HAS_QHY
-    #include "air-qhy/qhy_ccd.h"
-#endif
-#ifdef HAS_INDI
-    #include "air-indi/indi_device.h"
-#endif
+#include "air-asi/asi_ccd.h"
+#include "air-qhy/qhy_ccd.h"
+#include "air-indi/indi_device.h"
+#include "air-gphoto2/gphoto2_ccd.h"
 
 namespace AstroAir
 {
@@ -380,8 +375,9 @@ namespace AstroAir
             case "RemoteActionAbort"_hash:
 				AbortExposure();
 				break;
+            /*相机制冷*/
             case "RemoteCooling"_hash:{
-                std::thread CoolingThread(&WSSERVER::Cooling,this,root["IsSetPoint"].asBool(),root["IsCoolDown"].asBool(),root["IsASync"].asBool(),root["IsWarmup"].asBool(),root["IsCoolerOFF"].asBool());
+                std::thread CoolingThread(&WSSERVER::Cooling,this,root["params"]["IsSetPoint"].asBool(),root["params"]["IsCoolDown"].asBool(),root["params"]["IsASync"].asBool(),root["params"]["IsWarmup"].asBool(),root["params"]["IsCoolerOFF"].asBool(),root["params"]["Temperature"].asInt());
                 CoolingThread.detach();
                 break;
             }
@@ -404,6 +400,7 @@ namespace AstroAir
      */
     void WSSERVER::send(std::string message)
     {
+        /*向WS客户端发送信息*/
         for (auto it : m_connections)
         {
             try
@@ -419,6 +416,7 @@ namespace AstroAir
                 std::cerr << "other exception" << std::endl;
             }
         }
+        /*向WSS客户端发送信息*/
         for (auto it : m_connections_tls)
         {
             try
@@ -450,8 +448,10 @@ namespace AstroAir
             m_server_tls.close(it, websocketpp::close::status::normal, "Switched off by user.");
         }
         IDLog("Stop the server..\n");
+        /*清除服务器句柄*/
         m_connections.clear();
         m_connections_tls.clear();
+        /*停止服务器*/
         m_server.stop();
         m_server_tls.stop();
         IDLog("Good bye\n");
@@ -462,6 +462,7 @@ namespace AstroAir
      * @return Boolean function:服务器运行状态
      *  -false: server is not running||服务器不在运行
      *  -true: server is running||服务器正在运行
+     * note: This function seems useless,Maybe you will never use it
      */
     bool WSSERVER:: is_running()
     {
@@ -480,6 +481,7 @@ namespace AstroAir
         try
         {
             IDLog("Start the server at port %d ...\n",port);
+            /*设置端口为IPv4模式并指定端口*/
             m_server.listen(websocketpp::lib::asio::ip::tcp::v4(),port);
             m_server.start_accept();
             m_server.run();
@@ -506,6 +508,7 @@ namespace AstroAir
         try
         {
             IDLog("Start the wss server at port %d ...\n",port);
+            /*设置端口为IPv4模式并指定端口*/
             m_server_tls.listen(websocketpp::lib::asio::ip::tcp::v4(),port);
             m_server_tls.start_accept();
             m_server_tls.run();
@@ -669,6 +672,17 @@ namespace AstroAir
                             /*初始化INDI相机，并赋值CCD*/
                             INDICCD *INDIDevice = new INDICCD();
                             CCD = INDIDevice;
+                            camera_ok = CCD->Connect(Camera_name);
+                            break;
+                        }
+                    }
+                    #endif
+                    #ifdef HAS_GPhoto2
+                    {
+                        case "GPhoto2"_hash:{
+                            /*初始化GPhoto2相机，并赋值CCD*/
+                            GPhotoCCD *GPhotoCamera = new GPhotoCCD();
+                            CCD = GPhotoCamera;
                             camera_ok = CCD->Connect(Camera_name);
                             break;
                         }
@@ -1026,6 +1040,7 @@ namespace AstroAir
 			{
 				/*返回曝光错误的原因*/
 				StartExposureError();
+                ShotRunningSend(0,4);
 				IDLog("Unable to stop the exposure of the camera. Please check the connection of the camera. If you have any problems, please contact the developer\n");
 				IDLog_DEBUG("Unable to stop the exposure of the camera. Please check the connection of the camera. If you have any problems, please contact the developer\n");
 				InExposure = false;
@@ -1036,6 +1051,7 @@ namespace AstroAir
             sleep(1);
 			/*将拍摄成功的消息返回至客户端*/
 			StartExposureSuccess();
+            ShotRunningSend(100,2);
             newJPGReadySend();
 		}
 		else
@@ -1061,8 +1077,7 @@ namespace AstroAir
             double a = CameraExpoUsed,b = CameraExpo;
             sleep(1);
             CameraExpoUsed++;
-            float Used = (a/b)*100;
-            ShotRunningSend(Used,1);
+            ShotRunningSend((a/b)*100,1);
         }
         CameraExpoUsed = 0;
     }
@@ -1101,8 +1116,50 @@ namespace AstroAir
         return true;
     }
     
-    bool WSSERVER::Cooling(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF)
+    /*
+     * name: Cooling(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF,int CamTemp)
+     * describe: Camera Cooling Settings
+     * 描述：相机制冷设置
+     * calls: IDLog(const char *fmt, ...)
+     * calls: Cooling()
+     */
+    bool WSSERVER::Cooling(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF,int CamTemp)
     {
+        bool camera_ok = false;
+        CameraTemp = CamTemp;
+        if(CoolerOFF == true)
+        {
+            if((camera_ok = CCD->Cooling(false,false,false,false,true,CamTemp)) != true)
+            {
+                IDLog("Unable to turn off the camera cooling mode, please check the condition of the device\n");
+                return false;
+            }
+        }
+        if(CoolerOFF == false)
+        {
+            if((camera_ok = CCD->Cooling(true,false,false,false,false,CamTemp)) != true)
+            {
+                IDLog("Unable to turn on the camera cooling mode, please check the condition of the device\n");
+                return false;
+            }
+        }
+		if(CoolDown == true)
+		{
+			if((camera_ok = CCD->Cooling(false,true,false,false,false,CamTemp)) != true)
+			{
+				IDLog("The camera can't cool down normally, please check the condition of the equipment\n");
+				return false;
+			}
+		}
+		if(Warmup == true)
+		{
+			if((camera_ok = CCD->Cooling(false,false,false,true,false,CamTemp)) != true)
+			{
+				IDLog("The camera can't warm up normally, please check the condition of the equipment\n");
+				return false;
+			}
+		}
+        IDLog("Camera cooling set successfully\n");
         return true;
     }
 

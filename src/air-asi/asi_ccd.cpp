@@ -220,8 +220,17 @@ namespace AstroAir
 		return true;
     }
     
-	bool ASICCD::Cooling(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF)
+	bool ASICCD::Cooling(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF,int CamTemp)
 	{
+		if(isCoolCamera == true)
+		{
+
+		}
+		else
+		{
+			IDLog("This is not a cooling camera. The cooling mode cannot be turned on. Please choose another camera\n");
+			return false;
+		}
 		return true;
 	}
 	

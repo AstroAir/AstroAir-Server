@@ -11,3 +11,4 @@
 #define HAS_QHY ON
 #define HAS_ASI ON
 #define HAS_INDI ON
+#define HAS_GPhoto2 ON

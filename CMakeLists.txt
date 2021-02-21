@@ -21,8 +21,10 @@ project(airserver VERSION 1.0)
 
 set(CMAKE_CXX_STANDARD 20)		#默认C++风格为20
 set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(CMAKE_C_COMPILER /usr/bin/clang-11)
 set(CMAKE_CXX_COMPILER /usr/bin/clang++-11)		#默认使用clang++-11,G++ 9.3.0亦可
 
+#输出配置文件用于后续编译
 configure_file(config.h.in ${PROJECT_SOURCE_DIR}/src/config.h)
 
 add_executable(airserver src/main.cpp)
@@ -47,6 +49,7 @@ if(HAS_WEBSOCKET)
 		target_link_libraries(airserver PUBLIC libpthread.so)
 		target_link_libraries(airserver PUBLIC libboost_system.so)
 		target_link_libraries(airserver PUBLIC libboost_thread.so)
+		#SSL支持
 		target_link_libraries(airserver PUBLIC libssl.so)
 		target_link_libraries(airserver PUBLIC libcrypto.so)
 	else()
@@ -139,6 +142,32 @@ if(HAS_INDI)
 	endif()
 else()
 	message("-- Not built INDI library")
+endif()
+
+#设置GPhoto2相机库
+option(HAS_GPhoto2 "Using GPhoto2 camera Library" ON)
+if(HAS_GPhoto2)
+	find_path(PATH_GPhoto2 gphoto2.h /usr/include/gphoto2)
+	find_path(PATH_GPhoto2 qhyccd.h /usr/local/include/gphoto2)
+	find_library(PATH_GPhoto2_LIB libgphoto2.so /usr/lib)
+	find_library(PATH_GPhoto2_LIB libgphoto2.so /usr/local/lib)
+	if(PATH_GPhoto2 AND PATH_GPhoto2_LIB)
+		message("-- Found GPhoto2 camera header file in ${PATH_GPhoto2} and library in ${PATH_GPhoto2_LIB}")
+		add_library(LIBGPhoto2 src/air-gphoto2/gphoto2_ccd.cpp)
+		target_link_libraries(airserver PUBLIC LIBGPhoto2)
+		target_link_libraries(airserver PUBLIC libgphoto2.so)		#GPhoto2相机
+		target_link_libraries(airserver PUBLIC libgphoto2_port.so)
+	else()
+		message("-- Could not found GPhoto2 camera library.Please build it before intall!")
+		add_custom_command(
+			TARGET LIBGPhoto2
+			PRE_BUILD 
+			COMMAND sudo apt install libgphoto2-dev -y
+			COMMENT "Downloaded and Building GPhoto2 Library"
+		)
+	endif()
+else()
+	message("-- Not built GPhoto2 camera library")
 endif()
 
 #设置日志系统库

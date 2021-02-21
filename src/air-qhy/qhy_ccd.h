@@ -66,6 +66,8 @@ namespace AstroAir
 			virtual bool SetCameraConfig(double Bin,double Gain,double Offset);
 			/*存储图像*/
 			virtual bool SaveImage(std::string FitsName);
+			/*相机制冷*/
+			virtual bool Cooling(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF,int CamTemp) override;
 		private:
 			int CamNumber = 0;
 			char *CamName[MAXDEVICENUM];

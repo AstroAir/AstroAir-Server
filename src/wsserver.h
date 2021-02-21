@@ -105,11 +105,12 @@ namespace AstroAir
 			virtual bool Disconnect();
 			virtual bool StartExposure(int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset);
 			virtual bool AbortExposure();
-			virtual bool Cooling(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF);
+			virtual bool Cooling(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF,int CamTemp);
 		public:
 			int CameraBin = 0;
 			int CameraExpo = 0;
 			int CameraExpoUsed = 0;
+			int CameraTemp = 0;
 			std::string CameraImageName;
 		protected:
 			/*转化Json信息*/

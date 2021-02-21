@@ -1,5 +1,5 @@
 /*
- * asi_ccd.h
+ * gphoto2_ccd.h
  * 
  * Copyright (C) 2020-2021 Max Qian
  * 
@@ -18,44 +18,39 @@
  */
 
 /************************************************* 
- 
+
 Copyright: 2020-2021 Max Qian. All rights reserved
- 
+
 Author:Max Qian
 
 E-mail:astro_air@126.com
- 
-Date:2021-1-4
- 
-Description:ZWO camera driver
- 
+
+Date:2021-2-21
+
+Description:DSLR driver
+
 **************************************************/
 
 #pragma once
 
-#ifndef _ASICCD_H_
-#define _ASICCD_H_
+#ifndef _GPHOTO2_H_
+#define _GPHOTO2_H_
 
 #include "../wsserver.h"
-#include "../libasi/ASICamera2.h"
 
-#include <mutex>
-#include <thread>
-#include <atomic>
-#include <vector>
-#include <string.h>
+#include <gphoto2/gphoto2.h>
 
 #define MAXDEVICENUM 5
 
 namespace AstroAir
 {
-	class ASICCD: public WSSERVER
-	{
-		public:
-			/*构造函数，重置参数*/
-			explicit ASICCD();
+    class GPhotoCCD: public WSSERVER
+    {
+        public:
+            /*构造函数，重置参数*/
+			explicit GPhotoCCD();
 			/*析构函数*/
-			virtual ~ASICCD();
+			virtual ~GPhotoCCD();
 			/*连接相机*/
 			virtual bool Connect(std::string Device_name) override;
 			/*断开连接*/
@@ -74,51 +69,18 @@ namespace AstroAir
 			virtual bool SaveImage(std::string FitsName);
 			/*制冷*/
 			virtual bool Cooling(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF,int CamTemp) override;
-		private:
-			/*打开制冷*/
-			virtual bool ActiveCool(bool enable);
-
-			std::mutex condMutex;
-			std::mutex ccdBufferLock;
-			/*基础参数*/
-			int CamNumber;
+        private:
+            int CamNumber;
 			int CamId;
 			char *CamName[MAXDEVICENUM];
 			int CamBin;
-			
-			double ExposureRequest;
-			double TemperatureRequest;
-			/*相机配置参数*/
-			int Image_type = 0;
-			int CamWidth = 0;
-			int CamHeight = 0;
-			int iMaxWidth = 0;		//最大高度
-			int iMaxHeight = 0;		//最大宽度
-			bool isCoolCamera = false;
-			bool isColorCamera = false;
-			bool isGuideCamera = false;
-			/*FitsIO*/
-			//fitsfile *fptr;		//cFitsIO定义
-			long nelements;
-			long fpixel = 1;
-			char datatype[40];		//数据格式
-			char keywords[40];		//相机品牌
-			char value[20];		//相机名称
-			char description[40];		//相机描述
-			/*相机使用参数（使用原子变量）*/
+
+            /*相机使用参数（使用原子变量）*/
 			std::atomic_bool isConnected;
 			std::atomic_bool InExposure;
 			std::atomic_bool InVideo;
 			std::atomic_bool InCooling;
-			
-			/*ASI相机参数*/
-			ASI_CAMERA_INFO ASICameraInfo;
-			ASI_ERROR_CODE errCode;
-			ASI_EXPOSURE_STATUS expStatus;
-	};
+    };
 }
 
 #endif
-
-
-
