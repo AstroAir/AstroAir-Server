@@ -38,9 +38,23 @@ Using:libnova<https://github.com/JohannesBuchner/libnova>
 #include <libnova/precession.h>
 #include <libnova/aberration.h>
 #include <libnova/nutation.h>
+#include <libnova/julian_day.h>
+#include <libnova/sidereal_time.h>
+#include <libnova/ln_types.h>
+#include <libnova/transform.h>
 
 namespace AstroAir
 {
+    double range24(double r)
+    {
+        double res = r;
+        while (res < 0.0)
+            res += 24.0;
+        while (res > 24.0)
+            res -= 24.0;
+        return res;
+    }
+
     void LibAstro::ObservedToJ2000(ln_equ_posn * observed, double jd, ln_equ_posn * J2000pos)
     {
         ln_equ_posn tempPos;
@@ -80,5 +94,45 @@ namespace AstroAir
         }
         posn->ra += delta_ra;
         posn->dec += delta_dec;
+    }
+
+    int extractISOTime(const char *timestr, struct ln_date *iso_date)
+    {
+        struct tm utm;
+        if (strptime(timestr, "%Y/%m/%dT%H:%M:%S", &utm))
+        {
+            ln_get_date_from_tm(&utm, iso_date);
+            return (0);
+        }
+        if (strptime(timestr, "%Y-%m-%dT%H:%M:%S", &utm))
+        {
+            ln_get_date_from_tm(&utm, iso_date);
+            return (0);
+        }
+        return (-1);
+    }
+
+    double get_local_sidereal_time(double longitude)
+    {
+        double SD = ln_get_apparent_sidereal_time(ln_get_julian_from_sys()) - (360.0 - longitude) / 15.0;
+        return range24(SD);
+    }
+
+    void get_hrz_from_equ(struct ln_equ_posn *object, struct ln_lnlat_posn *observer, double JD, struct ln_hrz_posn *position)
+    {
+        ln_get_hrz_from_equ(object, observer, JD, position);
+        position->az -= 180;
+        if (position->az < 0)
+            position->az += 360;
+    }
+
+    void get_equ_from_hrz(struct ln_hrz_posn *object, struct ln_lnlat_posn *observer, double JD, struct ln_equ_posn *position)
+    {
+        struct ln_hrz_posn libnova_object;
+        libnova_object.az = object->az + 180;
+        if (libnova_object.az > 360)
+            libnova_object.az -= 360;
+        libnova_object.alt = object->alt;
+        ln_get_equ_from_hrz(&libnova_object, observer, JD, position);
     }
 }

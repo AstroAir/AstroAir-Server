@@ -211,7 +211,11 @@ if(HAS_FITSIO)
 	find_library(PATH_FITSIO_LIB libcfitsio.so /usr/local/lib)
 	if(PATH_FITSIO AND PATH_FITSIO_LIB)
 		message("-- Found FITSIO header file in ${PATH_FITSIO} and library in ${PATH_FITSIO_LIB}")
+		add_library(LIBCCFITS src/ccfits.cpp)
+		target_link_libraries(airserver PUBLIC LIBCCFITS)
 		target_link_libraries(airserver PUBLIC libcfitsio.so)		#CFitsIO
+		target_link_libraries(airserver PUBLIC libCCfits.so)		#CCFits
+		target_link_libraries(airserver PUBLIC libX11.so)
 	else()
 		message("-- Could not found CFitsIO library.Try to build it!")
 		add_custom_command(

@@ -103,6 +103,7 @@ namespace AstroAir
 			virtual void run_tls(int port);
 		public:
 			virtual bool Connect(std::string Device_name);
+			virtual std::string ReturnDeviceName();
 			virtual bool Disconnect();
 			virtual bool StartExposure(int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset);
 			virtual bool AbortExposure();
@@ -113,6 +114,7 @@ namespace AstroAir
 			int CameraExpoUsed = 0;
 			int CameraTemp = 0;
 			std::string CameraImageName;
+			std::string TargetRA,TargetDEC,MountAngle;
 		protected:
 			/*转化Json信息*/
 			void readJson(std::string message);
@@ -120,25 +122,33 @@ namespace AstroAir
 			std::string get_password();
 			/*搜索目标*/
 			void SearchTarget(std::string TargetName);
+			/*解析*/
+			void SolveActualPosition(bool IsBlind,bool IsSync);
 			/*相机拍摄计数*/
 			void ImagineThread();
 			/*WebSocket服务器功能性函数*/
 			void SetDashBoardMode();
+			/*获取配置文件*/
 			void GetAstroAirProfiles();
+			/*设置配置文件*/
 			void SetProfile(std::string File_Name);
 			void SetupConnect(int timeout);
+			void GetFilterConfiguration();
 			/*处理正确返回信息*/
 			void SetupConnectSuccess();
+			void EnvironmentDataSend();
 			void StartExposureSuccess();
 			void AbortExposureSuccess();
 			void ShotRunningSend(int ElapsedPerc,int id);
 			void newJPGReadySend();
 			void SearchTargetSuccess(std::string RA,std::string DEC,std::string Name,std::string OtherName,std::string Type,std::string MAG);
+			void SolveActualPositionSuccess();
 			/*处理错误信息函数*/
 			void SetupConnectError(int id);
 			void StartExposureError();
 			void AbortExposureError();
 			void SearchTargetError(int id);
+			void SolveActualPositionError();
 			void UnknownMsg();
 			void UnknownDevice(int id,std::string message);
 			void ErrorCode();
@@ -159,9 +169,10 @@ namespace AstroAir
 			condition_variable m_server_cond,m_server_action;
 			/*定义服务器设备参数*/
 			WSSERVER *CCD,*MOUNT,*FOCUS,*FILTER,*GUIDE;
-			std::string FileName;
+			std::string FileName,SequenceTarget;
 			std::string FileBuf[10];
-
+			int DeviceNum = 0;
+			std::string DeviceBuf[5];
 			/*服务器设备连接状态参数*/
 			std::atomic_bool isConnected;
 			std::atomic_bool isConnectedTLS;
@@ -171,6 +182,10 @@ namespace AstroAir
 			std::atomic_bool isFilterConnected;
 			std::atomic_bool isGuideConnected;
 			std::atomic_bool InExposure;
+			/*服务器配置参数*/
+			bool UseSSL = false;		//是否使用SSL
+			int MaxUsedTime = 0;		//解析最长时间
+			int MaxThreadNumber = 0;		//最多能同时处理的事件数量
 	};
 }
 

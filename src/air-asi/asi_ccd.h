@@ -60,6 +60,8 @@ namespace AstroAir
 			virtual bool Connect(std::string Device_name) override;
 			/*断开连接*/
 			virtual bool Disconnect() override;
+			/*返回相机名称*/
+			virtual std::string ReturnDeviceName() override;
 			/*更新相机配置信息*/
 			virtual bool UpdateCameraConfig();
 			/*设置相机制冷温度*/

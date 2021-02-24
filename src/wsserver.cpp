@@ -40,6 +40,7 @@ Using:JsonCpp<https://github.com/open-source-parsers/jsoncpp>
 #include "opencv.h"
 #include "base64.h"
 #include "libxls.h"
+#include "ccfits.h"
 
 #include "air-asi/asi_ccd.h"
 #include "air-qhy/qhy_ccd.h"
@@ -139,6 +140,9 @@ namespace AstroAir
         IDLog("Disconnect from client\n");
         m_connections.erase(hdl);
         isConnected = false;
+         /*防止多次连接导致错误*/
+        memset(DeviceBuf,0,5);
+        DeviceNum = 0;
         m_server_cond.notify_one();
     }
     
@@ -171,6 +175,9 @@ namespace AstroAir
         IDLog("Disconnect from client\n");
         m_connections_tls.erase(hdl);
         isConnectedTLS = false;
+        /*防止多次连接导致错误*/
+        memset(DeviceBuf,0,5);
+        DeviceNum = 0;
         m_server_cond.notify_one();
     }
 
@@ -406,6 +413,19 @@ namespace AstroAir
             case "RemoteSearchTarget"_hash:{
                 std::thread SearchThread(&WSSERVER::SearchTarget,this,root["params"]["Name"].asString());
                 SearchThread.detach();
+                break;
+            }
+            case "RemoteGetFilterConfiguration"_hash:{
+                GetFilterConfiguration();
+                break;
+            }
+            case "RemoteGetEnvironmentData"_hash:{
+                EnvironmentDataSend();
+                break;
+            }
+            case "RemoteSolveActualPosition"_hash:{
+                std::thread SolveThread(&WSSERVER::SolveActualPosition,this,root["params"]["IsBlind"].asBool(),root["params"]["IsSync"].asBool());
+                SolveThread.detach();
                 break;
             }
             /*轮询，保持连接*/
@@ -760,25 +780,20 @@ namespace AstroAir
                 if(camera_ok == true)
                 {
                     isCameraConnected = true;
+                    DeviceBuf[DeviceNum] = CCD->ReturnDeviceName();
+                    DeviceNum++;
+                    connect_ok = true;
                     break;
                 }
                 if(i == 3&& camera_ok == false)
                 {
 					/*相机未连接成功，返回错误信息*/
                     SetupConnectError(5);
+                    connect_ok = false;
                     break;
                 }
                 sleep(4);
             }
-        }
-        /*判断相机是否连接成功*/
-        if(Has_Camera == true)
-        {
-			/*Max：这一段的使用逻辑尚需优化，关于如何判断是否所有设备都连接成功*/
-            if(camera_ok == true)
-                connect_ok = true;
-            else
-                connect_ok = false;
         }
         /*连接指定品牌的指定型号赤道仪*/
         bool mount_ok = false;		//赤道仪连接状态
@@ -826,24 +841,20 @@ namespace AstroAir
                 if(mount_ok == true)
                 {
                     isMountConnected = true;
+                    DeviceBuf[DeviceNum] = a;
+                    DeviceNum++;
+                    connect_ok = true;
                     break;
                 }
                 if(i == 3&& mount_ok == false)
                 {
 					/*赤道仪未连接成功，返回错误信息*/
                     SetupConnectError(5);
+                    connect_ok = false;
                     break;
                 }
                 sleep(4);
             }
-        }
-        /*判断赤道仪是否连接成功*/
-        if(Has_Mount == true)
-        {
-            if(mount_ok == true)
-                connect_ok = true;
-            else
-                connect_ok = false;
         }
         /*连接指定品牌的指定型号电动调焦座*/
         bool focus_ok = false;
@@ -889,24 +900,20 @@ namespace AstroAir
                 if(focus_ok == true)
                 {
                     isFocusConnected = true;
+                    DeviceBuf[DeviceNum] = a;
+                    DeviceNum++;
+                    connect_ok = true;
                     break;
                 }
                 if(i == 3&& focus_ok == false)
                 {
 					/*电动调焦座未连接成功，返回错误信息*/
                     SetupConnectError(5);
+                    connect_ok = false;
                     break;
                 }
                 sleep(4);
             }
-        }
-        /*判断电动调焦座是否连接成功*/
-        if(Has_Focus == true)
-        {
-            if(focus_ok == true)
-                connect_ok = true;
-            else
-                connect_ok = false;
         }
         /*连接指定品牌的指定型号滤镜轮*/
         bool filter_ok = false;
@@ -952,24 +959,20 @@ namespace AstroAir
                 if(filter_ok == true)
                 {
                     isFilterConnected = true;
+                    DeviceBuf[DeviceNum] = a;
+                    DeviceNum++;
+                    connect_ok = true;
                     break;
                 }
                 if(i == 3&& filter_ok == false)
                 {
 					/*滤镜轮未连接成功，返回错误信息*/
                     SetupConnectError(5);
+                    connect_ok = false;
                     break;
                 }
                 sleep(4);
             }
-        }
-        /*判断滤镜轮是否连接成功*/
-        if(Has_Filter == true)
-        {
-            if(filter_ok == true)
-                connect_ok = true;
-            else
-                connect_ok = false;
         }
         /*连接指定品牌的指定型号导星软件*/
         bool guide_ok = false;
@@ -1005,24 +1008,20 @@ namespace AstroAir
                 if(guide_ok == true)
                 {
                     isGuideConnected = true;
+                    DeviceBuf[DeviceNum] = a;
+                    DeviceNum++;
+                    connect_ok = true;
                     break;
                 }
                 if(i == 3&& guide_ok == false)
                 {
 					/*导星软件未连接成功，返回错误信息*/
                     SetupConnectError(5);
+                    connect_ok = false;
                     break;
                 }
                 sleep(4);
             }
-        }
-        /*判断导星软件是否连接成功*/
-        if(Has_Guide == true)
-        {
-            if(guide_ok == true)
-                connect_ok = true;
-            else
-                connect_ok = false;
         }
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> diff = end - start;
@@ -1034,12 +1033,40 @@ namespace AstroAir
         }
         /*判断设备是否完全连接成功*/
         if(connect_ok == true)
+        {
             SetupConnectSuccess();		//将连接上的设备列表发送给客户端
+            EnvironmentDataSend();
+        }
         else
             SetupConnectError(5);
         return;
     }
     
+    void WSSERVER::GetFilterConfiguration()
+    {
+        /*整合信息并发送至客户端*/
+        Json::Value Root;
+        Root["Event"] = Json::Value("RemoteActionResult");
+        Root["UID"] = Json::Value("RemoteGetFilterConfiguration");
+        Root["ActionResultInt"] = Json::Value(4);
+        json_messenge = Root.toStyledString();
+        send(json_messenge);
+    }
+
+    void WSSERVER::EnvironmentDataSend()
+    {
+        /*整合信息并发送至客户端*/
+        Json::Value Root,profile;
+        Root["Event"] = Json::Value("RemoteActionResult");
+        Root["UID"] = Json::Value("RemoteGetEnvironmentData");
+        Root["ActionResultInt"] = Json::Value(4);
+        for(int i = 0;i<DeviceNum;i++)
+            Root["ParamRet"].append(DeviceBuf[i]);
+        json_messenge = Root.toStyledString();
+        send(json_messenge);
+
+    }
+
     /*
      * name: Connect(std::string Device_name)
      * @param Device_name:连接相机名称
@@ -1071,6 +1098,22 @@ namespace AstroAir
         IDLog("Try to disconnect from %s,Should never get here.\n",Camera_name.c_str());
         IDLog_DEBUG("Try to disconnect from %s,Should never get here.\n",Camera_name.c_str());
         return true;
+    }
+
+    /*
+     * name: ReturnDeviceName()
+     * describe: Get device name
+     * 描述：获取设备名称
+     * calls: IDLog(const char *fmt, ...)
+     * calls: IDLog_DEBUG(const char *fmt, ...)
+     * note: This function should not be executed normally
+     */
+    std::string WSSERVER::ReturnDeviceName()
+    {
+		/*默认情况下不应该执行这个函数*/
+        IDLog("Try to disconnect from %s,Should never get here.\n",Camera_name.c_str());
+        IDLog_DEBUG("Try to disconnect from %s,Should never get here.\n",Camera_name.c_str());
+        return "False";
     }
 
 //----------------------------------------相机----------------------------------------
@@ -1392,12 +1435,12 @@ namespace AstroAir
         Root["UID"] = Json::Value("RemoteCameraShot");
         Root["ActionResultInt"] = Json::Value(5);
         Root["Base64Data"] = Json::Value(JPGName);
-        Root["PixelDimX"] = Json::Value(ImageData.rows);
-        Root["PixelDimY"] = Json::Value(ImageData.cols);
-        Root["SequenceTarget"] = Json::Value("");
+        Root["PixelDimX"] = Json::Value(ImageData.cols);
+        Root["PixelDimY"] = Json::Value(ImageData.rows);
+        Root["SequenceTarget"] = Json::Value(SequenceTarget);
         Root["Bin"] = Json::Value(CameraBin);
         Root["StarIndex"] = Json::Value(5);
-        Root["HFD"] = Json::Value(1);
+        Root["HFD"] = Json::Value((int)CalcHFD(CameraImageName));
         Root["Expo"] = Json::Value(CameraExpo);
         Root["TimeInfo"] = Json::Value(getSystemLocalTime());
         Root["Filter"] = Json::Value("** BayerMatrix **");
@@ -1478,6 +1521,8 @@ namespace AstroAir
         Root["ParamRet"]["Result"] = Json::Value(1);
         Root["ParamRet"]["Name"] = Json::Value(Name);
         /*天体坐标信息*/
+        TargetRA = RA;
+        TargetDEC = DEC;
         Root["ParamRet"]["RAJ2000"] = Json::Value(RA);
         Root["ParamRet"]["DECJ2000"] = Json::Value(DEC);
         /*天体基础信息*/
@@ -1518,6 +1563,98 @@ namespace AstroAir
         }
         json_messenge = Root.toStyledString();
 		send(json_messenge);
+    }
+
+//----------------------------------------解析----------------------------------------
+
+    /*
+	 * name: SolveActualPosition(bool IsBlind,bool IsSync)
+     * @param isBlind:是否为盲解析
+     * @param IsSync：是否同步
+	 * describe: Start the parser
+	 * 描述：启动解析器
+     * calls: IDLog()
+     * calls: SolveActualPositionSuccess()
+	 * calls: SolveActualPositionError()
+	 */
+    void WSSERVER::SolveActualPosition(bool IsBlind,bool IsSync)
+    {
+        char cmd[2048] = {0},line[256]={0},parity_str[8]={0};
+        int UsedTime = 0;
+        float ra = -1000, dec = -1000, angle = -1000, pixscale = -1000, parity = 0;
+        snprintf(cmd,2048,"solve-field %s --guess-scale --downsample 2 --ra %s --dec %s --radius 5 ",CameraImageName.c_str(),TargetRA.c_str(),TargetDEC.c_str());
+        IDLog("Run:%s",cmd);
+        FILE *handle = popen(cmd, "r");
+        if (handle == nullptr)
+        {
+            IDLog("Could not solve this image,the error code is %s\n",strerror(errno));
+            return;
+        }
+        while (fgets(line, sizeof(line), handle) != nullptr && UsedTime <= MaxUsedTime)
+        {
+            UsedTime++;
+            IDLog("%s", line);
+            sscanf(line, "Field rotation angle: up is %f", &angle);
+            sscanf(line, "Field center: (RA,Dec) = (%f,%f)", &ra, &dec);
+            sscanf(line, "Field parity: %s", parity_str);
+            sscanf(line, "%*[^p]pixel scale %f", &pixscale);
+            if (strcmp(parity_str, "pos") == 0)
+                parity = 1;
+            else if (strcmp(parity_str, "neg") == 0)
+                parity = -1;
+            if (ra != -1000 && dec != -1000 && angle != -1000 && pixscale != -1000)
+            {
+                // Astrometry.net angle, E of N
+                MountAngle = angle;
+                // Astrometry.net J2000 RA in degrees
+                TargetRA = ra;
+                // Astrometry.net J2000 DEC in degrees
+                TargetDEC = dec;
+                fclose(handle);
+                IDLog("Solver complete.");
+                SolveActualPositionSuccess();
+                return;
+            }
+        }
+        fclose(handle);
+        SolveActualPositionError();
+    }
+
+    /*
+     * name: SolveActualPositionSuccess()
+     * describe: Return parsing information to client
+     * 描述：向客户端返回解析信息
+     * calls: send()
+     */
+    void WSSERVER::SolveActualPositionSuccess()
+    {
+        Json::Value Root;
+        Root["Event"] = Json::Value("RemoteActionResult");
+        Root["UID"] = Json::Value("sendRemoteSolveNoSync");
+        Root["ActionResultInt"] = Json::Value(4);
+        Root["ParamRet"]["RA"] = Json::Value(TargetRA);
+        Root["ParamRet"]["DEC"] = Json::Value(TargetDEC);
+        Root["ParamRet"]["PA"] = Json::Value(MountAngle);
+        Root["ParamRet"]["IsSolved"] = Json::Value("Completed");
+        json_messenge = Root.toStyledString();
+        send(json_messenge);
+    }
+
+    /*
+     * name:SolveActualPositionError()
+     * describe: Return parsing information to client
+     * 描述：向客户端返回解析信息
+     * calls: send()
+     */
+    void WSSERVER::SolveActualPositionError()
+    {
+        Json::Value Root;
+        Root["Event"] = Json::Value("RemoteActionResult");
+        Root["UID"] = Json::Value("sendRemoteSolveNoSync");
+        Root["ActionResultInt"] = Json::Value(5);
+        Root["Motivo"] = Json::Value("Could not solve image!");
+        json_messenge = Root.toStyledString();
+        send(json_messenge);
     }
 
     /*

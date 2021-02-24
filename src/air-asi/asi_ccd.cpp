@@ -191,6 +191,11 @@ namespace AstroAir
 		return true;
     }
     
+	std::string ASICCD::ReturnDeviceName()
+	{
+		return CamName[CamId];
+	}
+	
     /*
      * name: UpdateCameraConfig()
      * describe: Get the required parameters of the camera

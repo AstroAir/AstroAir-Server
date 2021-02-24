@@ -30,6 +30,12 @@ Description:Base64 Library
  
 **************************************************/
 
+#include <openssl/md5.h>
+#include <openssl/sha.h>
+#include <openssl/des.h>
+#include <openssl/rsa.h>
+#include <openssl/pem.h>
+
 #include "base64.h"
 
 namespace AstroAir
@@ -174,4 +180,59 @@ namespace AstroAir
         img = cv::imdecode(base64_img, cv::IMREAD_COLOR);
         return img;
     }
+
+    /*
+     * name: rsa_pub_encrypt(const std::string &clearText, const std::string &pubKey)
+     * @param clearText:未编码的信息
+     * @param pubKey:公钥
+     * describe: Using RSA encryption
+     * 描述： 使用RSA加密
+     * @return strRet:已加密信息
+     */
+    std::string rsa_pub_encrypt(const std::string &clearText, const std::string &pubKey)
+    {
+        std::string strRet;
+        RSA *rsa = NULL;
+        BIO *keybio = BIO_new_mem_buf((unsigned char *)pubKey.c_str(), -1);
+        RSA* pRSAPublicKey = RSA_new();
+        rsa = PEM_read_bio_RSAPublicKey(keybio, &rsa, NULL, NULL);
+        int len = RSA_size(rsa);
+        char *encryptedText = (char *)malloc(len + 1);
+        memset(encryptedText, 0, len + 1);
+        int ret = RSA_public_encrypt(clearText.length(), (const unsigned char*)clearText.c_str(), (unsigned char*)encryptedText, rsa, RSA_PKCS1_PADDING);
+        if (ret >= 0)
+            strRet = std::string(encryptedText, ret);
+        free(encryptedText);
+        BIO_free_all(keybio);
+        RSA_free(rsa);
+        return strRet;
+    }
+    
+    /*
+     * name: rsa_pri_decrypt(const std::string &cipherText, const std::string &priKey)
+     * @param clearText:未编码的信息
+     * @param priKey:私钥
+     * describe: Decryption using RSA
+     * 描述： 使用RSA解密
+     * @return strRet:已加密信息
+     */
+    std::string rsa_pri_decrypt(const std::string &cipherText, const std::string &priKey)
+    {
+        std::string strRet;
+        RSA *rsa = RSA_new();
+        BIO *keybio;
+        keybio = BIO_new_mem_buf((unsigned char *)priKey.c_str(), -1);
+        rsa = PEM_read_bio_RSAPrivateKey(keybio, &rsa, NULL, NULL);
+        int len = RSA_size(rsa);
+        char *decryptedText = (char *)malloc(len + 1);
+        memset(decryptedText, 0, len + 1);
+        int ret = RSA_private_decrypt(cipherText.length(), (const unsigned char*)cipherText.c_str(), (unsigned char*)decryptedText, rsa, RSA_PKCS1_PADDING);
+        if (ret >= 0)
+            strRet = std::string(decryptedText, ret);
+        free(decryptedText);
+        BIO_free_all(keybio);
+        RSA_free(rsa);
+        return strRet;
+    }
+
 }

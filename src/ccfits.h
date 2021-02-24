@@ -1,5 +1,5 @@
 /*
- * base64.h
+ * ccfits.h
  * 
  * Copyright (C) 2020-2021 Max Qian
  * 
@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
+ 
 /************************************************* 
  
 Copyright: 2020-2021 Max Qian. All rights reserved
@@ -27,32 +27,24 @@ E-mail:astro_air@126.com
  
 Date:2021-2-24
  
-Description:Base64 Library
+Description:CCFits Lib
  
 **************************************************/
 
 #pragma once
 
-#ifndef _BASE64_H_
-#define _BASE64_H_
+#ifndef _CCFITS_H_
+#define _CCFITS_H_
 
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/opencv.hpp>
+#include <CImg.h>
+#include <CCfits/CCfits>
 
 namespace AstroAir
 {
-    /*Base64编码*/
-    std::string base64Encode(const unsigned char* Data, int DataByte);
-    /*Mat格式转化为Base64格式*/
-	std::string Mat2Base64(const cv::Mat &img, std::string imgType);
-    /*Base64解码*/
-    std::string base64Decode(const char* Data, int DataByte);
-    /*Base64格式转化为Mat*/
-    cv::Mat Base2Mat(std::string &base64_data);
-    /*RSA加密*/
-    std::string rsa_pub_encrypt(const std::string &clearText, const std::string &pubKey);
-    /*RSA解密*/
-    std::string rsa_pri_decrypt(const std::string &cipherText, const std::string &priKey);
+    void readFile(cimg_library::CImg<float> & inImg, const string & inFilename);
+    bool insideCircle(float inX /*pos of x*/, float inY /*pos of y*/, float inCenterX, float inCenterY, float inRadius);
+    float calcHfd(const cimg_library::CImg<float> & inImage, unsigned int inOuterDiameter);
+    float CalcHFD(std::string ImageName);
 }
 
 #endif

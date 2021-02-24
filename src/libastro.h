@@ -45,4 +45,8 @@ namespace AstroAir
         protected:
             static void ln_get_equ_nut(ln_equ_posn *posn, double jd, bool reverse = false);
     };
+    int extractISOTime(const char *timestr, struct ln_date *iso_date);
+    double get_local_sidereal_time(double longitude);
+    void get_hrz_from_equ(struct ln_equ_posn *object, struct ln_lnlat_posn *observer, double JD, struct ln_hrz_posn *position);
+    void get_equ_from_hrz(struct ln_hrz_posn *object, struct ln_lnlat_posn *observer, double JD, struct ln_equ_posn *position);
 }

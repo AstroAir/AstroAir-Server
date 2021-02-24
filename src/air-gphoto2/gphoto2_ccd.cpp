@@ -114,6 +114,11 @@ namespace AstroAir
         return true;
     }
 
+    std::string GPhotoCCD::ReturnDeviceName()
+    {
+        return "test";
+    }
+    
     bool GPhotoCCD::UpdateCameraConfig()
     {
         return true;

@@ -209,6 +209,11 @@ namespace AstroAir
 		return true;
     }
     
+	std::string QHYCCD::ReturnDeviceName()
+	{
+		return iCamId;
+	}
+
 	/*
      * name: UpdateCameraConfig()
      * describe: Get the required parameters of the camera
