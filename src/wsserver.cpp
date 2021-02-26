@@ -83,6 +83,7 @@ namespace AstroAir
         m_server_tls.set_tls_init_handler(bind(&WSSERVER::on_tls_init,this,MOZILLA_INTERMEDIATE,::_1));
         /*重置参数*/
         isConnected = false;            //客户端连接状态
+        isConnectedTLS = false;         //WSS客户端连接状态
         isCameraConnected = false;      //相机连接状态
         isMountConnected = false;       //赤道仪连接状态
         isFocusConnected = false;       //电动调焦座连接状态
@@ -140,7 +141,7 @@ namespace AstroAir
         IDLog("Disconnect from client\n");
         m_connections.erase(hdl);
         isConnected = false;
-         /*防止多次连接导致错误*/
+        /*防止多次连接导致错误*/
         memset(DeviceBuf,0,5);
         DeviceNum = 0;
         m_server_cond.notify_one();
@@ -364,12 +365,11 @@ namespace AstroAir
         /*将string格式转化为const char*/
         method = root["method"].asString();
         const char* road = method.c_str();
-        /*将接收到的信息写入文件
+        /*将接收到的信息写入文件*/
         #ifdef DEBUG_MODE
             if(method != "Polling")
                 IDLog_CMDL(message.c_str());
         #endif
-        */
         /*判断客户端需要执行的命令*/
         switch(hash_(road))
         {
@@ -391,6 +391,12 @@ namespace AstroAir
             case "RemoteSetupConnect"_hash:{
                 std::thread ConnectThread(&WSSERVER::SetupConnect,this,root["params"]["TimeoutConnect"].asInt());
                 ConnectThread.detach();
+                break;
+            }
+            /*断开连接*/
+            case "RemoteSetupDisconnect"_hash:{
+                std::thread DisconnectThread(&WSSERVER::SetupDisconnect,this,root["params"]["TimeoutConnect"].asInt());
+                DisconnectThread.detach();
                 break;
             }
             /*相机开始拍摄*/
@@ -415,14 +421,17 @@ namespace AstroAir
                 SearchThread.detach();
                 break;
             }
+            /*获取滤镜轮设置*/
             case "RemoteGetFilterConfiguration"_hash:{
                 GetFilterConfiguration();
                 break;
             }
+            /*获取已连接设备信息*/
             case "RemoteGetEnvironmentData"_hash:{
                 EnvironmentDataSend();
                 break;
             }
+            /*解析*/
             case "RemoteSolveActualPosition"_hash:{
                 std::thread SolveThread(&WSSERVER::SolveActualPosition,this,root["params"]["IsBlind"].asBool(),root["params"]["IsSync"].asBool());
                 SolveThread.detach();
@@ -508,7 +517,6 @@ namespace AstroAir
         /*停止服务器*/
         m_server.stop();
         m_server_tls.stop();
-        IDLog("Good bye\n");
     }
 
     /*
@@ -716,314 +724,359 @@ namespace AstroAir
         std::unique_ptr<Json::CharReader>const json_read(reader.newCharReader());
         json_read->parse(jsonStr.c_str(), jsonStr.c_str() + jsonStr.length(), &root,&errs);
         bool connect_ok = false;
-        auto start = std::chrono::high_resolution_clock::now();
+        auto start = std::chrono::high_resolution_clock::now();     //开始计时
         /*连接指定品牌的指定型号相机*/
-        bool camera_ok = false;
-        bool Has_Camera = false;
-        Camera = root["camera"]["brand"].asString();
-        Camera_name = root["camera"]["name"].asString();
-        if(!Camera.empty() && !Camera_name.empty())
+        if(isCameraConnected == false)
         {
-            Has_Camera = true;
-            for(int i=1;i<=3;i++)
+            bool camera_ok = false;
+            bool Has_Camera = false;
+            Camera = root["camera"]["brand"].asString();
+            Camera_name = root["camera"]["name"].asString();
+            if(!Camera.empty() && !Camera_name.empty())
             {
-                const char* a = Camera.c_str();
-                switch(hash_(a))
+                Has_Camera = true;
+                for(int i=1;i<=3;i++)
                 {
-                    #ifdef HAS_ASI
+                    const char* a = Camera.c_str();
+                    switch(hash_(a))
                     {
-                        case "ZWOASI"_hash:{
-                            /*初始化ASI相机，并赋值CCD*/
-                            ASICCD *ASICamera = new ASICCD();
-                            CCD = ASICamera;
-                            camera_ok = CCD->Connect(Camera_name);
-                            break;
+                        #ifdef HAS_ASI
+                        {
+                            case "ZWOASI"_hash:{
+                                /*初始化ASI相机，并赋值CCD*/
+                                ASICCD *ASICamera = new ASICCD();
+                                CCD = ASICamera;
+                                camera_ok = CCD->Connect(Camera_name);
+                                break;
+                            }
                         }
+                        #endif
+                        #ifdef HAS_QHY
+                        {
+                            case "QHYCCD"_hash:{
+                                /*初始化QHY相机，并赋值CCD*/
+                                QHYCCD *QHYCamera = new QHYCCD();
+                                CCD = QHYCamera;
+                                camera_ok = CCD->Connect(Camera_name);
+                                break;
+                            }
+                        }
+                        #endif
+                        #ifdef HAS_INDI
+                        {
+                            case "INDI"_hash:{
+                                /*初始化INDI相机，并赋值CCD*/
+                                INDICCD *INDIDevice = new INDICCD();
+                                CCD = INDIDevice;
+                                camera_ok = CCD->Connect(Camera_name);
+                                break;
+                            }
+                        }
+                        #endif
+                        #ifdef HAS_GPhoto2
+                        {
+                            case "GPhoto2"_hash:{
+                                /*初始化GPhoto2相机，并赋值CCD*/
+                                GPhotoCCD *GPhotoCamera = new GPhotoCCD();
+                                CCD = GPhotoCamera;
+                                camera_ok = CCD->Connect(Camera_name);
+                                break;
+                            }
+                        }
+                        #endif
+                        default:
+                            UnknownDevice(301,"Unknown camera");		//未知相机返回错误信息
                     }
-                    #endif
-                    #ifdef HAS_QHY
+                    if(camera_ok == true)
                     {
-                        case "QHYCCD"_hash:{
-                            /*初始化QHY相机，并赋值CCD*/
-                            QHYCCD *QHYCamera = new QHYCCD();
-                            CCD = QHYCamera;
-                            camera_ok = CCD->Connect(Camera_name);
-                            break;
-                        }
+                        isCameraConnected = true;
+                        DeviceBuf[DeviceNum] = CCD->ReturnDeviceName();
+                        WebLog("Connect to "+DeviceBuf[DeviceNum]+" successfully",2);
+                        DeviceNum++;
+                        connect_ok = true;
+                        break;
                     }
-                    #endif
-                    #ifdef HAS_INDI
+                    if(i == 3&& camera_ok == false)
                     {
-                        case "INDI"_hash:{
-                            /*初始化INDI相机，并赋值CCD*/
-                            INDICCD *INDIDevice = new INDICCD();
-                            CCD = INDIDevice;
-                            camera_ok = CCD->Connect(Camera_name);
-                            break;
-                        }
+                        /*相机未连接成功，返回错误信息*/
+                        SetupConnectError(5);
+                        WebLog("Could not connect to "+Camera_name,3);
+                        connect_ok = false;
+                        break;
                     }
-                    #endif
-                    #ifdef HAS_GPhoto2
-                    {
-                        case "GPhoto2"_hash:{
-                            /*初始化GPhoto2相机，并赋值CCD*/
-                            GPhotoCCD *GPhotoCamera = new GPhotoCCD();
-                            CCD = GPhotoCamera;
-                            camera_ok = CCD->Connect(Camera_name);
-                            break;
-                        }
-                    }
-                    #endif
-                    default:
-                        UnknownDevice(301,"Unknown camera");		//未知相机返回错误信息
+                    sleep(4);
                 }
-                if(camera_ok == true)
-                {
-                    isCameraConnected = true;
-                    DeviceBuf[DeviceNum] = CCD->ReturnDeviceName();
-                    DeviceNum++;
-                    connect_ok = true;
-                    break;
-                }
-                if(i == 3&& camera_ok == false)
-                {
-					/*相机未连接成功，返回错误信息*/
-                    SetupConnectError(5);
-                    connect_ok = false;
-                    break;
-                }
-                sleep(4);
             }
+        }
+        else
+        {
+            WebLog(Camera_name+" had already connected",3);
         }
         /*连接指定品牌的指定型号赤道仪*/
-        bool mount_ok = false;		//赤道仪连接状态
-        bool Has_Mount = false;		//是否拥有赤道仪
-        Mount = root["mount"]["brand"].asString();
-        Mount_name = root["mount"]["name"].asString();
-        if(!Mount.empty() && !Mount_name.empty())
+        if(isMountConnected == false)
         {
-            Has_Mount = true;
-            for(int i=1;i<=3;i++)
+            bool mount_ok = false;		//赤道仪连接状态
+            bool Has_Mount = false;		//是否拥有赤道仪
+            Mount = root["mount"]["brand"].asString();
+            Mount_name = root["mount"]["name"].asString();
+            if(!Mount.empty() && !Mount_name.empty())
             {
-                const char* a = Mount.c_str();
-                switch(hash_(a))
+                Has_Mount = true;
+                for(int i=1;i<=3;i++)
                 {
-					/*初始化iOptron赤道仪，并赋值MOUNT*/
-                    #ifdef HAS_IOPTRON
-                    case "iOptron"_hash:{
-                        iOptron iOptronMount;
-                        MOUNT = &iOptronMount;
-                        monut_ok = MOUNT->Connect(Mount_name);
+                    const char* a = Mount.c_str();
+                    switch(hash_(a))
+                    {
+                        /*初始化iOptron赤道仪，并赋值MOUNT*/
+                        #ifdef HAS_IOPTRON
+                        case "iOptron"_hash:{
+                            iOptron iOptronMount;
+                            MOUNT = &iOptronMount;
+                            monut_ok = MOUNT->Connect(Mount_name);
+                            break;
+                        }
+                        #endif
+                        #ifdef HAS_SKYWATCHER
+                        case "SkyWatcher"_hash:{
+                            /*初始化SkyWatcher赤道仪，并赋值MOUNT*/
+                            SkyWatcher SkyWatcherMount;
+                            MOUNT = &SkyWatcherMount;
+                            mount_ok = MOUNT->Connect(Mount_name);
+                            break;
+                        }
+                        #endif
+                        #ifdef HAS_INDI
+                        case "INDIMount"_hash:{
+                            /*初始化INDI赤道仪，并赋值MOUNT*/
+                            INDICCD *INDIDevice = new INDICCD();
+                            MOUNT = INDIDevice;
+                            mount_ok = MOUNT->Connect(Mount_name);
+                            break;
+                        }
+                        #endif
+                        default:
+                            UnknownDevice(302,"Unknown mount");		//未知赤道仪返回错误信息
+                    }
+                    if(mount_ok == true)
+                    {
+                        isMountConnected = true;
+                        DeviceBuf[DeviceNum] = MOUNT->ReturnDeviceName();
+                        WebLog("Connect to "+DeviceBuf[DeviceNum]+" successfully",2);
+                        DeviceNum++;
+                        connect_ok = true;
                         break;
                     }
-                    #endif
-                    #ifdef HAS_SKYWATCHER
-                    case "SkyWatcher"_hash:{
-						/*初始化SkyWatcher赤道仪，并赋值MOUNT*/
-                        SkyWatcher SkyWatcherMount;
-                        MOUNT = &SkyWatcherMount;
-                        mount_ok = MOUNT->Connect(Mount_name);
+                    if(i == 3&& mount_ok == false)
+                    {
+                        /*赤道仪未连接成功，返回错误信息*/
+                        SetupConnectError(5);
+                        WebLog("Could not connect to "+Mount_name,3);
+                        connect_ok = false;
                         break;
                     }
-                    #endif
-                    #ifdef HAS_INDI
-                    case "INDIMount"_hash:{
-						/*初始化INDI赤道仪，并赋值MOUNT*/
-                        INDICCD *INDIDevice = new INDICCD();
-                        MOUNT = INDIDevice;
-                        mount_ok = MOUNT->Connect(Mount_name);
-                        break;
-                    }
-                    #endif
-                    default:
-                        UnknownDevice(302,"Unknown mount");		//未知赤道仪返回错误信息
+                    sleep(4);
                 }
-                if(mount_ok == true)
-                {
-                    isMountConnected = true;
-                    DeviceBuf[DeviceNum] = a;
-                    DeviceNum++;
-                    connect_ok = true;
-                    break;
-                }
-                if(i == 3&& mount_ok == false)
-                {
-					/*赤道仪未连接成功，返回错误信息*/
-                    SetupConnectError(5);
-                    connect_ok = false;
-                    break;
-                }
-                sleep(4);
             }
+        }
+        else
+        {
+            WebLog(Mount_name+" had already connected",3);
         }
         /*连接指定品牌的指定型号电动调焦座*/
-        bool focus_ok = false;
-        bool Has_Focus = false;
-        Focus = root["focus"]["brand"].asString();
-        Focus_name = root["focus"]["name"].asString();
-        if(!Focus.empty() && !Focus_name.empty())
+        if(isFocusConnected == false)
         {
-            Has_Focus = true;
-            for(int i = 0;i<=3;i++)
+            bool focus_ok = false;
+            bool Has_Focus = false;
+            Focus = root["focus"]["brand"].asString();
+            Focus_name = root["focus"]["name"].asString();
+            if(!Focus.empty() && !Focus_name.empty())
             {
-                const char* a = Focus.c_str();
-                switch(hash_(a))
+                Has_Focus = true;
+                for(int i = 0;i<=3;i++)
                 {
-                    #ifdef HAS_ASIEAF
-                    case "ASIEAF"_hash:{
-						/*初始化EAF电动调焦座，并赋FOCUS*/
-                        FOCUS = &EAFFocus;
-                        focus_ok = FOCUS->Connect(Focus_name);
+                    const char* a = Focus.c_str();
+                    switch(hash_(a))
+                    {
+                        #ifdef HAS_ASIEAF
+                        case "ASIEAF"_hash:{
+                            /*初始化EAF电动调焦座，并赋FOCUS*/
+                            FOCUS = &EAFFocus;
+                            focus_ok = FOCUS->Connect(Focus_name);
+                            break;
+                        }
+                        #endif
+                        #ifdef HAS_GRUS
+                        case "Grus"_hash:{
+                            /*初始化Grus电动调焦座，并赋FOCUS*/
+                            FOCUS = &GRUSFocus;
+                            focus_ok = FOCUS->Connect(Focus_name);
+                            break;
+                        }
+                        #endif
+                        #ifdef HAS_INDI
+                        case "INDIFocus"_hash:{
+                            /*初始化INDI电动调焦座，并赋FOCUS*/
+                            INDICCD *INDIDevice = new INDICCD();
+                            FOCUS = INDIDevice;
+                            focus_ok = FOCUS->Connect(Focus_name);
+                            break;
+                        }
+                        #endif
+                        default:
+                            UnknownDevice(303,"Unknown focus");		//未知电动调焦座返回错误信息
+                    }
+                    if(focus_ok == true)
+                    {
+                        isFocusConnected = true;
+                        DeviceBuf[DeviceNum] = FOCUS->ReturnDeviceName();
+                        WebLog("Connect to "+DeviceBuf[DeviceNum]+" successfully",2);
+                        DeviceNum++;
+                        connect_ok = true;
                         break;
                     }
-                    #endif
-                    #ifdef HAS_GRUS
-                    case "Grus"_hash:{
-						/*初始化Grus电动调焦座，并赋FOCUS*/
-                        FOCUS = &GRUSFocus;
-                        focus_ok = FOCUS->Connect(Focus_name);
+                    if(i == 3&& focus_ok == false)
+                    {
+                        /*电动调焦座未连接成功，返回错误信息*/
+                        SetupConnectError(5);
+                        WebLog("Could not connect to "+Focus_name,3);
+                        connect_ok = false;
                         break;
                     }
-                    #endif
-                    #ifdef HAS_INDI
-                    case "INDIFocus"_hash:{
-						/*初始化INDI电动调焦座，并赋FOCUS*/
-                        INDICCD *INDIDevice = new INDICCD();
-                        FOCUS = INDIDevice;
-                        focus_ok = FOCUS->Connect(Focus_name);
-                        break;
-                    }
-                    #endif
-                    default:
-                        UnknownDevice(303,"Unknown focus");		//未知电动调焦座返回错误信息
+                    sleep(4);
                 }
-                if(focus_ok == true)
-                {
-                    isFocusConnected = true;
-                    DeviceBuf[DeviceNum] = a;
-                    DeviceNum++;
-                    connect_ok = true;
-                    break;
-                }
-                if(i == 3&& focus_ok == false)
-                {
-					/*电动调焦座未连接成功，返回错误信息*/
-                    SetupConnectError(5);
-                    connect_ok = false;
-                    break;
-                }
-                sleep(4);
             }
+        }
+        else
+        {
+            WebLog(Focus_name+" had already connected",3);
         }
         /*连接指定品牌的指定型号滤镜轮*/
-        bool filter_ok = false;
-        bool Has_Filter = false;
-        Filter = root["filter"]["brand"].asString();
-        Filter_name = root["filter"]["name"].asString();
-        if(!Filter.empty() && !Filter_name.empty())
+        if(isFilterConnected == false)
         {
-            Has_Filter = true;
-            for(int i = 1;i<=3;i++)
+            bool filter_ok = false;
+            bool Has_Filter = false;
+            Filter = root["filter"]["brand"].asString();
+            Filter_name = root["filter"]["name"].asString();
+            if(!Filter.empty() && !Filter_name.empty())
             {
-                const char* a = Filter.c_str();
-                switch(hash_(a))
+                Has_Filter = true;
+                for(int i = 1;i<=3;i++)
                 {
-                    #ifdef HAS_ASIEFW
-                    case "ASIEFW"_hash:{
-						/*初始化EFW滤镜轮，并赋FILTER*/
-                        FILTER = &ASIFilter;
-                        filter_ok = FILTER->Connect(Filter_name);
+                    const char* a = Filter.c_str();
+                    switch(hash_(a))
+                    {
+                        #ifdef HAS_ASIEFW
+                        case "ASIEFW"_hash:{
+                            /*初始化EFW滤镜轮，并赋FILTER*/
+                            FILTER = &ASIFilter;
+                            filter_ok = FILTER->Connect(Filter_name);
+                            break;
+                        }
+                        #endif
+                        #ifdef HAS_QHYCFW
+                        case "QHYCFW"_hash:{
+                            /*初始化QHY滤镜轮，并赋FILTER*/
+                            FILTER = &QHYFilter
+                            filter_ok = FILTER->Connect(Filter_name);
+                            break;
+                        }
+                        #endif
+                        #ifdef HAS_INDI
+                        case "INDIFilter"_hash:{
+                            /*初始化INDI滤镜轮，并赋FILTER*/
+                            INDICCD *INDIDevice = new INDICCD();
+                            FILTER = INDIDevice;
+                            filter_ok = FILTER->Connect(Filter_name);
+                            break; 
+                        }
+                        #endif
+                        default:
+                            UnknownDevice(304,"Unknown filter");		//未知滤镜轮返回错误信息
+                    }
+                    if(filter_ok == true)
+                    {
+                        isFilterConnected = true;
+                        DeviceBuf[DeviceNum] = FILTER->ReturnDeviceName();
+                        WebLog("Connect to "+DeviceBuf[DeviceNum]+" successfully",2);
+                        DeviceNum++;
+                        connect_ok = true;
                         break;
                     }
-                    #endif
-                    #ifdef HAS_QHYCFW
-                    case "QHYCFW"_hash:{
-						/*初始化QHY滤镜轮，并赋FILTER*/
-                        FILTER = &QHYFilter
-                        filter_ok = FILTER->Connect(Filter_name);
+                    if(i == 3&& filter_ok == false)
+                    {
+                        /*滤镜轮未连接成功，返回错误信息*/
+                        SetupConnectError(5);
+                        WebLog("Could not connect to "+Filter_name,3);
+                        connect_ok = false;
                         break;
                     }
-                    #endif
-                    #ifdef HAS_INDI
-                    case "INDIFilter"_hash:{
-						/*初始化INDI滤镜轮，并赋FILTER*/
-                        INDICCD *INDIDevice = new INDICCD();
-                        FILTER = INDIDevice;
-                        filter_ok = FILTER->Connect(Filter_name);
-                        break; 
-                    }
-                    #endif
-                    default:
-                        UnknownDevice(304,"Unknown filter");		//未知滤镜轮返回错误信息
+                    sleep(4);
                 }
-                if(filter_ok == true)
-                {
-                    isFilterConnected = true;
-                    DeviceBuf[DeviceNum] = a;
-                    DeviceNum++;
-                    connect_ok = true;
-                    break;
-                }
-                if(i == 3&& filter_ok == false)
-                {
-					/*滤镜轮未连接成功，返回错误信息*/
-                    SetupConnectError(5);
-                    connect_ok = false;
-                    break;
-                }
-                sleep(4);
             }
+        }
+        else
+        {
+            WebLog(Filter_name+" had already connected",3);
         }
         /*连接指定品牌的指定型号导星软件*/
-        bool guide_ok = false;
-        bool Has_Guide = false;
-        Guide = root["Guide"]["brand"].asString();
-        Guide_name = root["Guide"]["name"].asString();
-        if(!Guide.empty() && !Guide_name.empty())
+        if(isGuideConnected == false)
         {
-            Has_Guide = true;
-            for(int i = 1;i<=3;i++)
+            bool guide_ok = false;
+            bool Has_Guide = false;
+            Guide = root["Guide"]["brand"].asString();
+            Guide_name = root["Guide"]["name"].asString();
+            if(!Guide.empty() && !Guide_name.empty())
             {
-                const char* a = Guide.c_str();
-                switch(hash_(a))
+                Has_Guide = true;
+                for(int i = 1;i<=3;i++)
                 {
-					/*Max：事实上我们一般只会使用PHD2，所以LinGuider可以等其他做好以后再做*/
-                    #ifdef HAS_PHD2
-                    case "PHD2"_hash:{
-                        GUIDE = &PHD2;
-                        guide_ok = GUIDE->Connect(Guide_name);
+                    const char* a = Guide.c_str();
+                    switch(hash_(a))
+                    {
+                        /*Max：事实上我们一般只会使用PHD2，所以LinGuider可以等其他做好以后再做*/
+                        #ifdef HAS_PHD2
+                        case "PHD2"_hash:{
+                            GUIDE = &PHD2;
+                            guide_ok = GUIDE->Connect(Guide_name);
+                            break;
+                        }
+                        #endif
+                        #ifdef HAS_LINGUIDER
+                        case "LinGuider"_hash:{
+                            GUIDE = &LinGuider
+                            guide_ok = GUIDE->Connect(Guide_name);
+                            break;
+                        }
+                        #endif
+                        default:
+                            UnknownDevice(305,"Unknown guide server");		//未知导星软件返回错误信息
+                    }
+                    if(guide_ok == true)
+                    {
+                        isGuideConnected = true;
+                        DeviceBuf[DeviceNum] = GUIDE->ReturnDeviceName();
+                        WebLog("Connect to "+DeviceBuf[DeviceNum]+" successfully",2);
+                        DeviceNum++;
+                        connect_ok = true;
                         break;
                     }
-                    #endif
-                    #ifdef HAS_LINGUIDER
-                    case "LinGuider"_hash:{
-                        GUIDE = &LinGuider
-                        guide_ok = GUIDE->Connect(Guide_name);
+                    if(i == 3&& guide_ok == false)
+                    {
+                        /*导星软件未连接成功，返回错误信息*/
+                        SetupConnectError(5);
+                        WebLog("Could not connect to "+Guide_name,3);
+                        connect_ok = false;
                         break;
                     }
-                    #endif
-                    default:
-                        UnknownDevice(305,"Unknown guide server");		//未知导星软件返回错误信息
+                    sleep(4);
                 }
-                if(guide_ok == true)
-                {
-                    isGuideConnected = true;
-                    DeviceBuf[DeviceNum] = a;
-                    DeviceNum++;
-                    connect_ok = true;
-                    break;
-                }
-                if(i == 3&& guide_ok == false)
-                {
-					/*导星软件未连接成功，返回错误信息*/
-                    SetupConnectError(5);
-                    connect_ok = false;
-                    break;
-                }
-                sleep(4);
             }
         }
-        auto end = std::chrono::high_resolution_clock::now();
+        else
+        {
+            WebLog(Guide_name+" had already connected",3);
+        }
+        auto end = std::chrono::high_resolution_clock::now();       //停止计时
         std::chrono::duration<double> diff = end - start;
         IDLog("Connecting to device took %g seconds\n", diff.count());
         if(diff.count() >= 20)
@@ -1036,12 +1089,72 @@ namespace AstroAir
         {
             SetupConnectSuccess();		//将连接上的设备列表发送给客户端
             EnvironmentDataSend();
+            WebLog("All devices connected successfully",2);
         }
         else
+        {
             SetupConnectError(5);
+            WebLog("There were some errors in connecting the device",3);
+        }
         return;
     }
     
+    void WSSERVER::SetupDisconnect(int timeout)
+    {
+        bool disconnect_ok = false;
+        if(isCameraConnected == true)
+        {
+            if((disconnect_ok = CCD->Disconnect()) == true)
+                WebLog("Disconnect from"+Camera_name,2);
+            else
+                WebLog("Could not Disconnect from"+Camera_name,3);
+            isCameraConnected = false;
+        }
+        if(isMountConnected == true)
+        {
+            if((disconnect_ok = MOUNT->Disconnect()) == true)
+                WebLog("Disconnect from"+Mount_name,2);
+            else
+                WebLog("Could not Disconnect from"+Mount_name,3);
+                isMountConnected = false;
+        }
+        if(isFocusConnected == true)
+        {
+            if((disconnect_ok = FOCUS->Disconnect()) == true)
+                WebLog("Disconnect from"+Focus_name,2);
+            else
+                WebLog("Could not Disconnect from"+Focus_name,3);
+            isFocusConnected = false;
+        }
+        if(isFilterConnected == true)
+        {
+            if((disconnect_ok = FILTER->Disconnect()) == true)
+                WebLog("Disconnect from"+Filter_name,2);
+            else
+                WebLog("Could not Disconnect from"+Filter_name,3);
+            isFilterConnected = false;
+        }
+        if(isGuideConnected == true)
+        {
+            if((disconnect_ok = GUIDE->Disconnect()) == true)
+                WebLog("Disconnect from"+Guide_name,2);
+            else
+                WebLog("Could not Disconnect from"+Guide_name,3);
+            isGuideConnected = false;
+        }
+        if(disconnect_ok == true)
+        {
+            WebLog("Successfully disconnected from all devices",2);
+            SetupDisconnectSuccess();
+        }
+    }
+
+    /*
+     * name: GetFilterConfiguration()
+     * describe: Get filter wheel list
+     * 描述： 获取滤镜轮列表
+     * calls: send()
+     */
     void WSSERVER::GetFilterConfiguration()
     {
         /*整合信息并发送至客户端*/
@@ -1053,6 +1166,12 @@ namespace AstroAir
         send(json_messenge);
     }
 
+    /*
+     * name: EnvironmentDataSend()
+     * describe: Return to the list of connected devices
+     * 描述： 返回已连接设备列表
+     * calls: send()
+     */
     void WSSERVER::EnvironmentDataSend()
     {
         /*整合信息并发送至客户端*/
@@ -1064,7 +1183,6 @@ namespace AstroAir
             Root["ParamRet"].append(DeviceBuf[i]);
         json_messenge = Root.toStyledString();
         send(json_messenge);
-
     }
 
     /*
@@ -1116,6 +1234,68 @@ namespace AstroAir
         return "False";
     }
 
+    /*
+     * name: SetupConnectSuccess()
+     * describe: Successfully connect device
+     * 描述：成功连接设备
+     * calls: IDLog(const char *fmt, ...)
+     * calls: send()
+     */
+    void WSSERVER::SetupConnectSuccess()
+    {
+        IDLog("Successfully connect device\n");
+        /*整合信息并发送至客户端*/
+        Json::Value Root;
+        Root["Event"] = Json::Value("RemoteActionResult");
+        Root["UID"] = Json::Value("RemoteSetupConnect");
+        Root["ActionResultInt"] = Json::Value(4);
+        json_messenge = Root.toStyledString();
+        send(json_messenge);
+    }
+    
+    /*
+     * name: SetupConnectError(int id)
+     * describe: Error handling connection to device
+     * 描述：处理连接设备时的错误
+     * calls: IDLog(const char *fmt, ...)
+     * calls: IDLog_DEBUG(const char *fmt, ...)
+     * calls: send()
+     */
+    void WSSERVER::SetupConnectError(int id)
+    {
+        IDLog("Unable to connect device\n");
+        IDLog_DEBUG("Unable to connect device\n");
+        /*整合信息并发送至客户端*/
+        Json::Value Root;
+        Root["Event"] = Json::Value("RemoteActionResult");
+        Root["UID"] = Json::Value("RemoteSetupConnect");
+        Root["ActionResultInt"] = Json::Value(id);
+        json_messenge = Root.toStyledString();
+        send(json_messenge);
+    }
+
+    /*
+     * name: SetupDisconnectSuccess()
+     * describe: Successfully disconnect from device
+     * 描述：与设备断开连接
+     * calls: IDLog(const char *fmt, ...)
+     * calls: send()
+     */
+    void WSSERVER::SetupDisconnectSuccess()
+    {
+        /*防止多次连接导致错误*/
+        memset(DeviceBuf,0,5);
+        DeviceNum = 0;
+        IDLog("Successfully disconnect from devices\n");
+        /*整合信息并发送至客户端*/
+        Json::Value Root;
+        Root["Event"] = Json::Value("RemoteActionResult");
+        Root["UID"] = Json::Value("RemoteSetupDisconnect");
+        Root["ActionResultInt"] = Json::Value(4);
+        json_messenge = Root.toStyledString();
+        send(json_messenge);
+    }
+
 //----------------------------------------相机----------------------------------------
 
     /*
@@ -1139,7 +1319,10 @@ namespace AstroAir
     {
         if(exp <= 0)
         {
-            IDLog("Exposure time is less than 0, please input a reasonable data");
+            IDLog("Exposure time is less than 0, please input a reasonable data\n");
+            WebLog("Exposure time is less than 0, please input a reasonable data",3);
+            StartExposureError();
+            ShotRunningSend(0,4);
             return false;
         }
 		if(isCameraConnected == true)
@@ -1152,12 +1335,14 @@ namespace AstroAir
             InExposure = true;
             std::thread CameraCountThread(&WSSERVER::ImagineThread,this);
             CameraCountThread.detach();
-			if ((camera_ok = CCD->StartExposure(exp, bin, IsSave, FitsName, Gain, Offset)) != true)
+            WebLog("Start exposure",2);
+			if((camera_ok = CCD->StartExposure(exp, bin, IsSave, FitsName, Gain, Offset)) != true)
 			{
 				/*返回曝光错误的原因*/
 				StartExposureError();
                 ShotRunningSend(0,4);
-				IDLog("Unable to stop the exposure of the camera. Please check the connection of the camera. If you have any problems, please contact the developer\n");
+				IDLog("Unable to start the exposure of the camera. Please check the connection of the camera. If you have any problems, please contact the developer\n");
+                WebLog("Unable to start the exposure of the camera",3);
 				InExposure = false;
                 /*如果函数执行不成功返回false*/
 				return false;
@@ -1166,6 +1351,7 @@ namespace AstroAir
             sleep(1);
 			/*将拍摄成功的消息返回至客户端*/
 			StartExposureSuccess();
+            WebLog("Successfully exposure",2);
             ShotRunningSend(100,2);
             newJPGReadySend();
 		}
@@ -1186,7 +1372,7 @@ namespace AstroAir
      */
     void WSSERVER::ImagineThread()
     {
-        while(CameraExpoUsed <= CameraExpo && InExposure == true)
+        while(CameraExpoUsed < CameraExpo && InExposure == true)
         {
             double a = CameraExpoUsed,b = CameraExpo;
             sleep(1);
@@ -1213,15 +1399,18 @@ namespace AstroAir
 			{
 				/*返回曝光错误的原因*/
 				AbortExposureError();
+                WebLog("Unable to stop the exposure of the camera",3);
 				IDLog("Unable to stop the exposure of the camera. Please check the connection of the camera. If you have any problems, please contact the developer\n");
 				/*如果函数执行不成功返回false*/
 				return false;
 			}
 			/*将拍摄成功的消息返回至客户端*/
 			AbortExposureSuccess();
+            WebLog("Abort exposure successfully",2);
 		}
 		else
 		{
+            WebLog("Unable to stop the exposure of the camera",3);
 			IDLog("Try to stop exposure,Should never get here.\n");
 			return false;
         }
@@ -1275,46 +1464,6 @@ namespace AstroAir
         return true;
     }
 
-    /*
-     * name: SetupConnectSuccess()
-     * describe: Successfully connect device
-     * 描述：成功连接设备
-     * calls: IDLog(const char *fmt, ...)
-     * calls: send()
-     */
-    void WSSERVER::SetupConnectSuccess()
-    {
-        IDLog("Successfully connect device\n");
-        /*整合信息并发送至客户端*/
-        Json::Value Root;
-        Root["Event"] = Json::Value("RemoteActionResult");
-        Root["UID"] = Json::Value("RemoteSetupConnect");
-        Root["ActionResultInt"] = Json::Value(4);
-        json_messenge = Root.toStyledString();
-        send(json_messenge);
-    }
-    
-    /*
-     * name: SetupConnectError(int id)
-     * describe: Error handling connection to device
-     * 描述：处理连接设备时的错误
-     * calls: IDLog(const char *fmt, ...)
-     * calls: IDLog_DEBUG(const char *fmt, ...)
-     * calls: send()
-     */
-    void WSSERVER::SetupConnectError(int id)
-    {
-        IDLog("Unable to connect device\n");
-        IDLog_DEBUG("Unable to connect device\n");
-        /*整合信息并发送至客户端*/
-        Json::Value Root;
-        Root["Event"] = Json::Value("RemoteActionResult");
-        Root["UID"] = Json::Value("RemoteSetupConnect");
-        Root["ActionResultInt"] = Json::Value(id);
-        json_messenge = Root.toStyledString();
-        send(json_messenge);
-    }
-    
     /*
      * name: StartExposureSuccess()
      * describe: Successfully exposure
@@ -1425,28 +1574,34 @@ namespace AstroAir
 	 */
     void WSSERVER::newJPGReadySend()
     {
+        auto start = std::chrono::high_resolution_clock::now();
         /*读取JPG文件并转化为Mat格式*/
         const char* JPGName = strtok(const_cast<char *>(Image_Name.c_str()),".");
 		strcat(const_cast<char *>(JPGName), ".jpg");
-        cv::Mat ImageData = cv::imread(JPGName);
+        int hfd,starIndex,width,height;
+        ClacStarInfo(CameraImageName,hfd,starIndex,width,height);
         /*组合即将发送的json信息*/
         Json::Value Root;
         Root["Event"] = Json::Value("NewJPGReady");
         Root["UID"] = Json::Value("RemoteCameraShot");
         Root["ActionResultInt"] = Json::Value(5);
         Root["Base64Data"] = Json::Value(JPGName);
-        Root["PixelDimX"] = Json::Value(ImageData.cols);
-        Root["PixelDimY"] = Json::Value(ImageData.rows);
+        Root["PixelDimX"] = Json::Value(width);
+        Root["PixelDimY"] = Json::Value(height);
         Root["SequenceTarget"] = Json::Value(SequenceTarget);
         Root["Bin"] = Json::Value(CameraBin);
-        Root["StarIndex"] = Json::Value(5);
-        Root["HFD"] = Json::Value((int)CalcHFD(CameraImageName));
+        Root["StarIndex"] = Json::Value(starIndex);
+        Root["HFD"] = Json::Value(hfd);
         Root["Expo"] = Json::Value(CameraExpo);
-        Root["TimeInfo"] = Json::Value(getSystemLocalTime());
+        Root["TimeInfo"] = Json::Value(timestampW());
+        Root["File"] = Json::Value(CameraImageName);
         Root["Filter"] = Json::Value("** BayerMatrix **");
         json_messenge = Root.toStyledString();
         /*发送信息*/
 		send(json_messenge);
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> diff = end - start;
+        IDLog("Progress image took %g seconds\n", diff.count());
     }
 
 //----------------------------------------赤道仪----------------------------------------
@@ -1656,6 +1811,29 @@ namespace AstroAir
         json_messenge = Root.toStyledString();
         send(json_messenge);
     }
+
+//----------------------------------------日志----------------------------------------
+
+    /*
+	 * name: WebLog(std::string message,int type)
+     * @param message:发送的信息
+     * @param type：信息类型
+	 * describe: Send message and display on client
+	 * 描述：发送日志信息并在客户端显示
+     * calls: send()
+	 */
+    void WSSERVER::WebLog(std::string message,int type)
+    {
+        Json::Value Root;
+        Root["Event"] = Json::Value("LogEvent");
+        Root["Type"] = Json::Value(type);
+        Root["Text"] = Json::Value(message);
+        Root["TimeInfo"] = Json::Value(timestamp());
+        json_messenge = Root.toStyledString();
+        send(json_messenge);
+    }
+
+//----------------------------------------错误代码----------------------------------------
 
     /*
      * name: UnknownMsg()

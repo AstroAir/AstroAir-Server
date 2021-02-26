@@ -44,7 +44,7 @@ namespace AstroAir
     void readFile(cimg_library::CImg<float> & inImg, const string & inFilename);
     bool insideCircle(float inX /*pos of x*/, float inY /*pos of y*/, float inCenterX, float inCenterY, float inRadius);
     float calcHfd(const cimg_library::CImg<float> & inImage, unsigned int inOuterDiameter);
-    float CalcHFD(std::string ImageName);
+    void ClacStarInfo(std::string ImageName,int &HFD,int &StarIndex,int &ImageWidth,int &ImageHeight);
 }
 
 #endif

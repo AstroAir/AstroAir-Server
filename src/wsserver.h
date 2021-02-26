@@ -133,9 +133,11 @@ namespace AstroAir
 			/*设置配置文件*/
 			void SetProfile(std::string File_Name);
 			void SetupConnect(int timeout);
+			void SetupDisconnect(int timeout);
 			void GetFilterConfiguration();
 			/*处理正确返回信息*/
 			void SetupConnectSuccess();
+			void SetupDisconnectSuccess();
 			void EnvironmentDataSend();
 			void StartExposureSuccess();
 			void AbortExposureSuccess();
@@ -149,6 +151,8 @@ namespace AstroAir
 			void AbortExposureError();
 			void SearchTargetError(int id);
 			void SolveActualPositionError();
+			/*网页日志*/
+			void WebLog(std::string message,int type);
 			void UnknownMsg();
 			void UnknownDevice(int id,std::string message);
 			void ErrorCode();

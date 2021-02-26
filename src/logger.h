@@ -70,12 +70,11 @@ namespace AstroAir
 	void IDLog_CMDL(std::string message);
 	/*功能性函数*/
 	const char *timestamp();		//获取时间戳
+	const char *timestampW();		//获取时间戳
 	/*获取CPU核心个数*/
 	int GetCPUCores();
 	/*设置本地系统时间*/
 	bool setSystemTime(TIME *_time);
-	/*获取本地系统时间*/
-	TIME* getSystemLocalTime();
 }
 
 #endif

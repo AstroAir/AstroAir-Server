@@ -119,6 +119,25 @@ namespace AstroAir
 	}	
 	
 	/*
+	 * name: timestampW()
+	 * @return ts:系统当前时间
+	 * describe: Get server time
+	 * 描述：获取服务器时间
+	 * note: The time is in the UTF-8 time zone
+	 */
+	const char *timestampW()			//获取当前时间
+	{
+		static char ts[32];
+		struct tm *tp;
+		time_t t;
+
+		time(&t);
+		tp = localtime(&t);
+		strftime(ts, sizeof(ts), "%H:%M:%S", tp);
+		return (ts);
+	}	
+
+	/*
 	 * name: GetCPUCores()
 	 * @return n:CPU核心个数
 	 * describe: Get cpu cores number
@@ -159,26 +178,4 @@ namespace AstroAir
 		}
 		return true;
 	}
-
-	/*
-	 * name: getSystemLocalTime()
-	 * @return t:本地系统时间
-	 * describe: Get local system time
-	 * 描述：获取本地系统时间
-	 */
-	TIME* getSystemLocalTime()
-	{
-		TIME *t = new TIME();
-		time_t timep;
-		struct tm *p;
-		time(&timep);
-		p = localtime(&timep); //取得当地时间
-		t->year = 1900 + p->tm_year;
-		t->month = 1 + p->tm_mon;
-		t->day = p->tm_mday;
-		t->hour = p->tm_hour;
-		t->minute = p->tm_min;
-		t->second = p->tm_sec;
-		return t;
-	}	
 }
