@@ -399,7 +399,7 @@ namespace AstroAir
 		}
 		return true;
     }
-    
+
     /*
      * name: AbortExposure()
      * describe: Stop camera exposure

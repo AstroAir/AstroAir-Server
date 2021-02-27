@@ -47,7 +47,9 @@ Description:Log system of astroair server
 #include <windows.h>
 #endif
 
-typedef std::uint64_t hash_t;  
+typedef std::uint64_t hash_t;
+typedef std::vector<std::string>  StringList;
+
 constexpr hash_t prime = 0x100000001B3ull;  
 constexpr hash_t basis = 0xCBF29CE484222325ull;  
 
@@ -75,6 +77,8 @@ namespace AstroAir
 	int GetCPUCores();
 	/*设置本地系统时间*/
 	bool setSystemTime(TIME *_time);
+
+	StringList splitstr(const std::string& str, char tag);
 }
 
 #endif

@@ -314,7 +314,7 @@ namespace AstroAir
 			}
 		}
 		return true;
-	}	
+	}
 
 	/*
      * name: AbortExposure()

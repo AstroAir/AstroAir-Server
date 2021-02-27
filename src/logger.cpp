@@ -178,4 +178,30 @@ namespace AstroAir
 		}
 		return true;
 	}
+
+	StringList splitstr(const std::string& str, char tag)
+	{
+		StringList  li;
+		std::string subStr;
+		for(size_t i = 0; i < str.length(); i++)
+		{
+			if(tag == str[i]) //完成一次切割
+			{
+				if(!subStr.empty())
+				{
+					li.push_back(subStr);
+					subStr.clear();
+				}
+			}
+			else
+			{
+				subStr.push_back(str[i]);
+			}
+		}
+		if(!subStr.empty())
+		{
+			li.push_back(subStr);
+		}
+		return li;
+	}
 }

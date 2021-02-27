@@ -12,3 +12,4 @@
 #define HAS_ASI @HAS_ASI@
 //#define HAS_INDI @HAS_INDI@
 #define HAS_GPhoto2 @HAS_GPhoto2@
+#define HAS_IOPTRON @HAS_IOPTRON@

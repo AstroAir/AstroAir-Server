@@ -170,6 +170,18 @@ else()
 	message("-- Not built GPhoto2 camera library")
 endif()
 
+option(HAS_IOPTRON "Using IOPTRON Library" ON)
+if(HAS_IOPTRON)
+	add_library(LIBIOPTRON src/telescope/ieqpro.cpp)
+	target_link_libraries(airserver PUBLIC LIBIOPTRON)
+endif()
+
+option(HAS_COM "Using com system Library" ON)
+if(HAS_COM)
+	add_library(LIBCOM src/aircom.cpp)
+	target_link_libraries(airserver PUBLIC LIBCOM)
+endif()
+
 #设置日志系统库
 option(HAS_LOGGER "Using Logger system Library" ON)
 if(HAS_LOGGER)
@@ -317,6 +329,7 @@ target_include_directories(airserver PUBLIC
                            "${PROJECT_SOURCE_DIR}/src/libasi"
 						   "${PROJECT_SOURCE_DIR}/src/air-qhy"
                            "${PROJECT_SOURCE_DIR}/src/libqhy"
+						   "${PROJECT_SOURCE_DIR}/src/telescope"
                            )
 
 #安装到系统

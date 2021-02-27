@@ -25,7 +25,7 @@ Author:Max Qian
 
 E-mail:astro_air@126.com
  
-Date:2021-2-14
+Date:2021-2-27
  
 Description:Main framework of astroair server
 
@@ -46,10 +46,12 @@ Using:JsonCpp<https://github.com/open-source-parsers/jsoncpp>
 #include "air-qhy/qhy_ccd.h"
 //#include "air-indi/indi_device.h"
 #include "air-gphoto2/gphoto2_ccd.h"
-
+#include "telescope/ieqpro.h"
 
 namespace AstroAir
 {
+//----------------------------------------服务器----------------------------------------
+
 #ifdef HAS_WEBSOCKET
     /*
      * name: WSSERVER()
@@ -90,6 +92,7 @@ namespace AstroAir
         isFilterConnected = false;      //滤镜轮连接状态
         isGuideConnected = false;       //导星软件连接状态
         InExposure = false;             //相机曝光状态
+        InSequenceRun = false;          //序列拍摄状态
     }
     
     /*
@@ -431,10 +434,34 @@ namespace AstroAir
                 EnvironmentDataSend();
                 break;
             }
+            /*赤道仪Goto*/
+            case "RemotePrecisePointTarget"_hash:{
+                std::thread GotoThread(&WSSERVER::Goto,this,root["params"]["RAText"].asString(),root["params"]["DECText"].asString());
+                GotoThread.detach();
+                break;
+            }
             /*解析*/
             case "RemoteSolveActualPosition"_hash:{
                 std::thread SolveThread(&WSSERVER::SolveActualPosition,this,root["params"]["IsBlind"].asBool(),root["params"]["IsSync"].asBool());
                 SolveThread.detach();
+                break;
+            }
+            /*搜索所有可以执行的序列*/
+            case "RemoteGetListAvalaibleSequence"_hash:{
+                std::thread SequenceThread(&WSSERVER::GetListAvalaibleSequence,this);
+                SequenceThread.detach();
+                break;
+            }
+            /*运行拍摄序列*/
+            case "RemoteSequence"_hash:{
+                std::thread SequenceThreadRun(&WSSERVER::RunSequence,this,root["params"]["SequenceFile"].asString());
+                SequenceThreadRun.detach();
+                break;
+            }
+            /*搜索所有可以执行的脚本*/
+            case "RemoteGetListAvalaibleDragScript"_hash:{
+                std::thread DragScriptThread(&WSSERVER::GetListAvalaibleDragScript,this);
+                DragScriptThread.detach();
                 break;
             }
             /*轮询，保持连接*/
@@ -599,8 +626,8 @@ namespace AstroAir
 		Root["code"] = Json::Value();
 		Root["Event"] = Json::Value("Version");
 		Root["AIRVersion"] = Json::Value("2.0.0");
-		json_messenge = Root.toStyledString();
-		send(json_messenge);
+		json_message = Root.toStyledString();
+		send(json_message);
 	}
 
     /*
@@ -632,31 +659,34 @@ namespace AstroAir
 		}  
 		closedir(dir);      //关闭目录
         /*判断是否找到配置文件*/
+        Json::Value Root,profile;
+        Root["Event"] = Json::Value("RemoteActionResult");
+        Root["UID"] = Json::Value("RemoteGetAstroAirProfiles");
         if(files.begin() == files.end())
         {
-            IDLog("Cound not found any configure files,please check it\n");
-            //Max:这里还缺少一个如果没有文件的错误处理函数
-            return;
+            IDLog("Cound not found any configration files,please check it\n");
+            Root["ActionResultInt"] = Json::Value(5);
+            Root["Motivo"] = Json::Value("Cound not found any configration files");
+        }
+        else
+        {
+            Root["ActionResultInt"] = Json::Value(4);
+            Root["ParamRet"]["name"] = Json::Value(files[0]);
+            FileName = files[0];
+            FileBuf[0] = files[0];
+            IDLog("Found configure file named %s\n",files[0].c_str());
+            files.erase(files.begin());
+            for (int i = 0; i < files.size(); i++)  
+            {
+                FileBuf[i+1] = files[i];
+                profile["name"] = Json::Value(files[i].c_str());
+                Root["ParamRet"]["list"].append(profile);
+                IDLog("Found configure file named %s\n",files[i].c_str());
+            }
         }
         /*整合信息并发送至客户端*/
-        Json::Value Root,profile;
-		Root["Event"] = Json::Value("RemoteActionResult");
-        Root["UID"] = Json::Value("RemoteGetAstroAirProfiles");
-        Root["ActionResultInt"] = Json::Value(4);
-        Root["ParamRet"]["name"] = Json::Value(files[0]);
-        FileName = files[0];
-        FileBuf[0] = files[0];
-        IDLog("Found configure file named %s\n",files[0].c_str());
-        files.erase(files.begin());
-        for (int i = 0; i < files.size(); i++)  
-		{
-            FileBuf[i+1] = files[i];
-            profile["name"] = Json::Value(files[i].c_str());
-            Root["ParamRet"]["list"].append(profile);
-            IDLog("Found configure file named %s\n",files[i].c_str());
-		}
-        json_messenge = Root.toStyledString();
-        send(json_messenge);
+        json_message = Root.toStyledString();
+        send(json_message);
     }
 
     /*
@@ -685,8 +715,8 @@ namespace AstroAir
             profile["name"] = Json::Value(FileBuf[i]);
             Root["ParamRet"]["list"].append(profile);
         }
-        json_messenge = Root.toStyledString();
-        send(json_messenge);
+        json_message = Root.toStyledString();
+        send(json_message);
     }
 
     /*
@@ -830,9 +860,9 @@ namespace AstroAir
                         /*初始化iOptron赤道仪，并赋值MOUNT*/
                         #ifdef HAS_IOPTRON
                         case "iOptron"_hash:{
-                            iOptron iOptronMount;
+                            IEQPro iOptronMount;
                             MOUNT = &iOptronMount;
-                            monut_ok = MOUNT->Connect(Mount_name);
+                            mount_ok = MOUNT->Connect(Mount_name);
                             break;
                         }
                         #endif
@@ -1162,8 +1192,8 @@ namespace AstroAir
         Root["Event"] = Json::Value("RemoteActionResult");
         Root["UID"] = Json::Value("RemoteGetFilterConfiguration");
         Root["ActionResultInt"] = Json::Value(4);
-        json_messenge = Root.toStyledString();
-        send(json_messenge);
+        json_message = Root.toStyledString();
+        send(json_message);
     }
 
     /*
@@ -1181,8 +1211,8 @@ namespace AstroAir
         Root["ActionResultInt"] = Json::Value(4);
         for(int i = 0;i<DeviceNum;i++)
             Root["ParamRet"].append(DeviceBuf[i]);
-        json_messenge = Root.toStyledString();
-        send(json_messenge);
+        json_message = Root.toStyledString();
+        send(json_message);
     }
 
     /*
@@ -1249,8 +1279,8 @@ namespace AstroAir
         Root["Event"] = Json::Value("RemoteActionResult");
         Root["UID"] = Json::Value("RemoteSetupConnect");
         Root["ActionResultInt"] = Json::Value(4);
-        json_messenge = Root.toStyledString();
-        send(json_messenge);
+        json_message = Root.toStyledString();
+        send(json_message);
     }
     
     /*
@@ -1270,8 +1300,8 @@ namespace AstroAir
         Root["Event"] = Json::Value("RemoteActionResult");
         Root["UID"] = Json::Value("RemoteSetupConnect");
         Root["ActionResultInt"] = Json::Value(id);
-        json_messenge = Root.toStyledString();
-        send(json_messenge);
+        json_message = Root.toStyledString();
+        send(json_message);
     }
 
     /*
@@ -1292,8 +1322,8 @@ namespace AstroAir
         Root["Event"] = Json::Value("RemoteActionResult");
         Root["UID"] = Json::Value("RemoteSetupDisconnect");
         Root["ActionResultInt"] = Json::Value(4);
-        json_messenge = Root.toStyledString();
-        send(json_messenge);
+        json_message = Root.toStyledString();
+        send(json_message);
     }
 
 //----------------------------------------相机----------------------------------------
@@ -1360,6 +1390,11 @@ namespace AstroAir
 			IDLog("There seems to be some unknown mistakes here.Maybe you need to check the camera connection\n");
 			return false;
         }
+        return true;
+    }
+
+    bool WSSERVER::StartExposureSeq(int loop,int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset)
+    {
         return true;
     }
     
@@ -1479,8 +1514,8 @@ namespace AstroAir
         Root["Event"] = Json::Value("RemoteActionResult");
         Root["UID"] = Json::Value("RemoteCameraShot");
         Root["ActionResultInt"] = Json::Value(4);
-        json_messenge = Root.toStyledString();
-        send(json_messenge);
+        json_message = Root.toStyledString();
+        send(json_message);
 	}
 	
     /*
@@ -1498,8 +1533,8 @@ namespace AstroAir
         Root["Event"] = Json::Value("RemoteActionResult");
         Root["UID"] = Json::Value("RemoteCameraShot");
         Root["ActionResultInt"] = Json::Value(6);
-        json_messenge = Root.toStyledString();
-        send(json_messenge);
+        json_message = Root.toStyledString();
+        send(json_message);
 	}
 
 	/*
@@ -1519,8 +1554,8 @@ namespace AstroAir
         Root["Event"] = Json::Value("RemoteActionResult");
         Root["UID"] = Json::Value("RemoteCameraShot");
         Root["ActionResultInt"] = Json::Value(5);
-        json_messenge = Root.toStyledString();
-		send(json_messenge);
+        json_message = Root.toStyledString();
+		send(json_message);
     }
     
     /*
@@ -1540,8 +1575,8 @@ namespace AstroAir
         Root["Event"] = Json::Value("RemoteActionResult");
         Root["UID"] = Json::Value("RemoteCameraShot");
         Root["ActionResultInt"] = Json::Value(5);
-        json_messenge = Root.toStyledString();
-		send(json_messenge);
+        json_message = Root.toStyledString();
+		send(json_message);
     }
     
     /*
@@ -1561,8 +1596,8 @@ namespace AstroAir
         Root["File"] = Json::Value(CameraImageName);
         Root["Expo"] = Json::Value(CameraExpo);
         Root["Elapsed"] = Json::Value(CameraExpoUsed);
-        json_messenge = Root.toStyledString();
-		send(json_messenge);
+        json_message = Root.toStyledString();
+		send(json_message);
     }
 
     /*
@@ -1596,15 +1631,15 @@ namespace AstroAir
         Root["TimeInfo"] = Json::Value(timestampW());
         Root["File"] = Json::Value(CameraImageName);
         Root["Filter"] = Json::Value("** BayerMatrix **");
-        json_messenge = Root.toStyledString();
+        json_message = Root.toStyledString();
         /*发送信息*/
-		send(json_messenge);
+		send(json_message);
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> diff = end - start;
         IDLog("Progress image took %g seconds\n", diff.count());
     }
 
-//----------------------------------------赤道仪----------------------------------------
+//----------------------------------------天体搜索----------------------------------------
 
     /*
 	 * name: SearchTarget(std::string TargetName)
@@ -1618,7 +1653,10 @@ namespace AstroAir
     {
         /*检查星体数据库是否存在*/
         if(access( "starbase.xls", F_OK ) == -1)
+        {
             SearchTargetError(2);
+            return;
+        }
         // 工作簿
         xls::WorkBook base("starbase.xls");
         int line = 2;
@@ -1690,8 +1728,8 @@ namespace AstroAir
         info["Key"] = Json::Value("星等");      //天体星等
         info["Value"] = Json::Value(MAG);
         Root["ParamRet"]["Info"].append(info);
-        json_messenge = Root.toStyledString();
-		send(json_messenge);
+        json_message = Root.toStyledString();
+		send(json_message);
     }
 
     /*
@@ -1716,8 +1754,38 @@ namespace AstroAir
             Root["ActionResultInt"] = Json::Value(5);
             Root["Motivo"] = Json::Value("Could not open starbase.xls");
         }
-        json_messenge = Root.toStyledString();
-		send(json_messenge);
+        json_message = Root.toStyledString();
+		send(json_message);
+    }
+
+//----------------------------------------赤道仪----------------------------------------
+
+    bool WSSERVER::Goto(std::string Target_RA,std::string Target_DEC)
+    {
+        bool mount_ok = false;
+        if((mount_ok = MOUNT->Goto(Target_RA,Target_DEC)) != true)
+        {
+            IDLog("The equator doesn't work properly\n");
+            WebLog("赤道仪无法正常工作",3);
+            return false;
+        }
+        IDLog("The equator moves to the designated position\n");
+        WebLog("赤道仪转动到指定位置",3);
+        return true;
+    }
+
+//----------------------------------------对焦----------------------------------------
+
+    bool WSSERVER::MoveTo(int TargetPosition)
+    {
+        return true;
+    }
+
+//----------------------------------------滤镜轮----------------------------------------
+
+    bool WSSERVER::FilterMoveTo(int TargetPosition)
+    {
+        return true;
     }
 
 //----------------------------------------解析----------------------------------------
@@ -1791,8 +1859,8 @@ namespace AstroAir
         Root["ParamRet"]["DEC"] = Json::Value(TargetDEC);
         Root["ParamRet"]["PA"] = Json::Value(MountAngle);
         Root["ParamRet"]["IsSolved"] = Json::Value("Completed");
-        json_messenge = Root.toStyledString();
-        send(json_messenge);
+        json_message = Root.toStyledString();
+        send(json_message);
     }
 
     /*
@@ -1808,8 +1876,229 @@ namespace AstroAir
         Root["UID"] = Json::Value("sendRemoteSolveNoSync");
         Root["ActionResultInt"] = Json::Value(5);
         Root["Motivo"] = Json::Value("Could not solve image!");
-        json_messenge = Root.toStyledString();
-        send(json_messenge);
+        json_message = Root.toStyledString();
+        send(json_message);
+    }
+
+//----------------------------------------计划拍摄----------------------------------------
+
+    /*
+     * name:GetListAvalaibleSequence()
+     * describe: Search all available shot sequences in the folder
+     * 描述：搜索文件夹中所有可用的拍摄序列
+     * calls: send()
+     */
+    void WSSERVER::GetListAvalaibleSequence()
+    {
+        lock_guard<mutex> guard(mtx);
+        /*寻找当前文件夹下的所有文件*/
+        struct dirent *ptr;      
+		DIR *dir;  
+		std::string PATH = "./Seq";        //搜索目录，正式版本应该可以选择目录位置
+		dir=opendir(PATH.c_str());      //打开目录
+        std::vector<std::string> files;
+        /*搜索所有符合条件的文件*/
+		while((ptr = readdir(dir)) != NULL)  
+		{  
+			if(ptr->d_name[0] == '.' || strcmp(ptr->d_name,"..") == 0)  
+				continue;
+            /*判断文件后缀是否为.air*/
+            int size = strlen(ptr->d_name);
+            if(strcmp( ( ptr->d_name + (size - 4) ) , ".air") != 0)
+                continue;
+            files.push_back(ptr->d_name);
+		}  
+		closedir(dir);      //关闭目录
+        /*判断是否找到配置文件*/
+        Json::Value Root,profile;
+        Root["Event"] = Json::Value("RemoteActionResult");
+        Root["UID"] = Json::Value("RemoteGetListAvalaibleSequence");
+        if(files.begin() == files.end())
+        {
+            IDLog("Cound not found any avalaible sequence files,please check it\n");
+            Root["ActionResultInt"] = Json::Value(5);
+            Root["Motivo"] = Json::Value("Cound not found any avalaible sequence files");
+        }
+        else
+        {
+            Root["ActionResultInt"] = Json::Value(4);
+            for (int i = 0; i < files.size(); i++)  
+            {
+                Root["ParamRet"]["list"].append(files[i]);
+                IDLog("Found avalaible sequence file named %s\n",files[i].c_str());
+            }
+        }
+        /*整合信息并发送至客户端*/
+        json_message = Root.toStyledString();
+        send(json_message);
+    }
+
+    /*
+	 * name: RunSequence(std::string SequenceFile)
+     * @param SequenceFile:序列文件
+	 * describe: Start shooting sequence
+	 * 描述：启动拍摄序列
+     * calls: IDLog()
+     * calls: IDLog_DEBUG()
+     * calls: WebLog()
+     * calls: RunSequenceError()
+	 * calls: Goto()
+     * calls: MoveTo()
+     * calls: FilterMoveTo()
+	 */
+    void WSSERVER::RunSequence(std::string SequenceFile)
+    {
+        std::string a = "Seq/"+SequenceFile;
+        if(access(a.c_str(), F_OK ) == -1)
+        {
+            RunSequenceError("Could not found file");
+            return;
+        }
+        std::string line,jsonStr;
+        std::ifstream in(a.c_str(), std::ios::binary);
+        Json::Value Root;
+        /*打开文件*/
+        if (!in.is_open())
+        {
+            IDLog("Unable to open sequence file\n");
+            IDLog_DEBUG("Unable to open sequence file\n");
+            return;
+        }
+        /*将文件转化为string格式*/
+        while (getline(in, line))
+        {
+            jsonStr.append(line);
+        }
+        /*关闭文件*/
+        in.close();
+        /*将读取出的json数组转化为string*/
+        std::unique_ptr<Json::CharReader>const json_read(reader.newCharReader());
+        json_read->parse(jsonStr.c_str(), jsonStr.c_str() + jsonStr.length(), &Root,&errs);
+        SequenceTarget = Root["TargetName"].asString();
+        /*赤道仪运动到指定位置*/
+        if(!Root["Mount"]["MountName"].asString().empty() && Root["Mount"]["MountName"] == MOUNT->ReturnDeviceName())
+        {
+            TargetRA = Root["Mount"]["TargetRA"].asString();
+            TargetDEC = Root["Mount"]["TargetDEC"].asString();
+            if(MOUNT->Goto(Root["Mount"]["TargetRA"].asString(),Root["Mount"]["TargetDEC"].asString()) == true)
+            {
+                IDLog("The equator successfully moved to the designated position\n");
+                WebLog("赤道仪运动到指定位置 RA:"+TargetRA+" DEC:"+TargetDEC,2);
+            }
+            else        //赤道仪无法运动到指定位置
+            {
+                IDLog("The equator could not moved to the designated position\n");
+                WebLog("赤道仪无法运动到指定位置 RA:"+TargetRA+" DEC:"+TargetDEC,3);
+                RunSequenceError("赤道仪无法运动到指定位置");
+                return;
+            }
+        }
+        if(!Root["Filter"]["FilterName"].asString().empty() && Root["Filter"]["FilterName"] == FILTER->ReturnDeviceName())
+        {
+            if(FILTER->FilterMoveTo(Root["Filter"]["TargetPosition"].asInt()) == true)
+            {
+                IDLog("%s moves to the specified focusing position\n",Filter_name.c_str());
+                WebLog(Filter_name+" 成功运动到对焦位置",2);
+            }
+            else        //滤镜轮无法运动到指定位置
+            {
+                IDLog("The equator could not moved to the designated position\n");
+                WebLog(Filter_name+" 无法运动到指定位置 " + Root["Filter"]["TargetPosition"].asString(),3);
+                RunSequenceError("滤镜轮无法运动到指定位置");
+                return;
+            }
+        }
+        if(!Root["Focus"]["FocusName"].asString().empty() && Root["Focus"]["FocusName"] == FOCUS->ReturnDeviceName())
+        {
+            if(FOCUS->MoveTo(Root["Focus"]["TargetPosition"].asInt()) == true)
+            {
+                IDLog("%s moves to the specified focusing position\n",Focus_name.c_str());
+                WebLog(Focus_name+" 成功运动到对焦位置",2);
+            }
+            else        //电动调焦座无法运动到指定位置
+            {
+                IDLog("The equator could not moved to the designated position\n");
+                WebLog(Focus_name+" 无法运动到指定位置: " + Root["Focus"]["TargetPosition"].asString(),3);
+                RunSequenceError("电动调焦座无法运动到指定位置");
+                return;
+            }
+        }
+        if(!Root["Camera"]["CameraName"].asString().empty() && Root["Camera"]["CameraName"] == CCD->ReturnDeviceName())
+        {
+            InSequenceRun = true;
+            SequenceImageName = "Image_"+SequenceTarget+"_"+timestamp();
+            std::thread RunSequenceCamera(&WSSERVER::StartExposureSeq,this,Root["Camera"]["Loop"].asInt(),Root["Camera"]["Expo"].asInt(),Root["Camera"]["Bin"].asInt(),Root["Camera"]["SaveImage"].asBool(),SequenceImageName,Root["Camera"]["Gain"].asInt(),Root["Camera"]["Offset"].asInt());
+            RunSequenceCamera.detach();
+            WebLog("Start sequence capture",2);
+        }
+        else
+        {
+            RunSequenceError("There is no camera been selected");
+            WebLog("未指定相机，无法进行计划拍摄",3);
+            return;
+        }
+    }
+
+    void WSSERVER::RunSequenceError(std::string error)
+    {
+        Json::Value Root;
+        Root["error"]["message"] = Json::Value(error);
+        Root["id"] = Json::Value(100);
+        json_message = Root.toStyledString();
+        send(json_message);
+    }
+
+//----------------------------------------脚本----------------------------------------
+
+    /*
+     * name:GetListAvalaibleDragScript()
+     * describe: Search all available shot drag script in the folder
+     * 描述：搜索文件夹中所有可用的拍摄脚本
+     * calls: send()
+     */
+    void WSSERVER::GetListAvalaibleDragScript()
+    {
+        lock_guard<mutex> guard(mtx);
+        /*寻找当前文件夹下的所有文件*/
+        struct dirent *ptr;      
+		DIR *dir;  
+		std::string PATH = "./DS";        //搜索目录，正式版本应该可以选择目录位置
+		dir=opendir(PATH.c_str());      //打开目录
+        std::vector<std::string> files;
+        /*搜索所有符合条件的文件*/
+		while((ptr = readdir(dir)) != NULL)  
+		{  
+			if(ptr->d_name[0] == '.' || strcmp(ptr->d_name,"..") == 0)  
+				continue;
+            /*判断文件后缀是否为.air*/
+            int size = strlen(ptr->d_name);
+            if(strcmp( ( ptr->d_name + (size - 4) ) , ".air") != 0)
+                continue;
+            files.push_back(ptr->d_name);
+		}  
+		closedir(dir);      //关闭目录
+        /*判断是否找到配置文件*/
+        Json::Value Root,profile;
+        Root["Event"] = Json::Value("RemoteActionResult");
+        Root["UID"] = Json::Value("RemoteGetListAvalaibleDragScript");
+        if(files.begin() == files.end())
+        {
+            IDLog("Cound not found any avalaible drag script,please check it\n");
+            Root["ActionResultInt"] = Json::Value(5);
+            Root["Motivo"] = Json::Value("Cound not found any avalaible drag script files");
+        }
+        else
+        {
+            Root["ActionResultInt"] = Json::Value(4);
+            for (int i = 0; i < files.size(); i++)  
+            {
+                Root["ParamRet"]["list"].append(files[i]);
+                IDLog("Found avalaible drag script file named %s\n",files[i].c_str());
+            }
+        }
+        /*整合信息并发送至客户端*/
+        json_message = Root.toStyledString();
+        send(json_message);
     }
 
 //----------------------------------------日志----------------------------------------
@@ -1829,8 +2118,8 @@ namespace AstroAir
         Root["Type"] = Json::Value(type);
         Root["Text"] = Json::Value(message);
         Root["TimeInfo"] = Json::Value(timestamp());
-        json_messenge = Root.toStyledString();
-        send(json_messenge);
+        json_message = Root.toStyledString();
+        send(json_message);
     }
 
 //----------------------------------------错误代码----------------------------------------
@@ -1855,8 +2144,8 @@ namespace AstroAir
         Root["id"] = Json::Value(403);
         error["message"] = Json::Value("Unknown information");
         Root["error"] = error;
-        json_messenge = Root.toStyledString();
-        send(json_messenge);
+        json_message = Root.toStyledString();
+        send(json_message);
     }
     
     /*
@@ -1877,8 +2166,8 @@ namespace AstroAir
         Root["id"] = Json::Value(id);
         error["message"] = Json::Value(message);
         Root["error"] = error;
-        json_messenge = Root.toStyledString();
-        send(json_messenge);
+        json_message = Root.toStyledString();
+        send(json_message);
     }
     
     void WSSERVER::ErrorCode()
@@ -1899,8 +2188,8 @@ namespace AstroAir
         Root["result"] = Json::Value(1);
 		Root["code"] = Json::Value();
         Root["Event"] = Json::Value("Polling");
-        json_messenge = Root.toStyledString();
-        send(json_messenge);
+        json_message = Root.toStyledString();
+        send(json_message);
     }
         
 }

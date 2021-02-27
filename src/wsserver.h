@@ -25,7 +25,7 @@ Author:Max Qian
 
 E-mail:astro_air@126.com
  
-Date:2021-2-14
+Date:2021-2-27
  
 Description:Main framework of astroair server
  
@@ -103,11 +103,23 @@ namespace AstroAir
 			virtual void run_tls(int port);
 		public:
 			virtual bool Connect(std::string Device_name);
-			virtual std::string ReturnDeviceName();
 			virtual bool Disconnect();
+			virtual std::string ReturnDeviceName();
+		/*相机*/
+		public:
 			virtual bool StartExposure(int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset);
+			virtual bool StartExposureSeq(int loop,int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset);
 			virtual bool AbortExposure();
 			virtual bool Cooling(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF,int CamTemp);
+		/*赤道仪*/
+		public:
+			virtual bool Goto(std::string Target_RA,std::string Target_DEC);
+		/*电调*/
+		public:
+			virtual bool MoveTo(int TargetPosition);
+		/*滤镜轮*/
+		public:
+			virtual bool FilterMoveTo(int TargetPosition);
 		public:
 			int CameraBin = 0;
 			int CameraExpo = 0;
@@ -135,6 +147,9 @@ namespace AstroAir
 			void SetupConnect(int timeout);
 			void SetupDisconnect(int timeout);
 			void GetFilterConfiguration();
+			void GetListAvalaibleSequence();
+			void RunSequence(std::string SequenceFile);
+			void GetListAvalaibleDragScript();
 			/*处理正确返回信息*/
 			void SetupConnectSuccess();
 			void SetupDisconnectSuccess();
@@ -151,6 +166,7 @@ namespace AstroAir
 			void AbortExposureError();
 			void SearchTargetError(int id);
 			void SolveActualPositionError();
+			void RunSequenceError(std::string error);
 			/*网页日志*/
 			void WebLog(std::string message,int type);
 			void UnknownMsg();
@@ -161,7 +177,7 @@ namespace AstroAir
 			Json::Value root;
 			Json::String errs;
 			Json::CharReaderBuilder reader;
-			std::string method,json_messenge,Image_Name;
+			std::string method,json_message,Image_Name;
 			std::string Camera,Mount,Focus,Filter,Guide;
 			std::string Camera_name,Mount_name,Focus_name,Filter_name,Guide_name;
 			typedef std::set<websocketpp::connection_hdl, std::owner_less<websocketpp::connection_hdl>> con_list;
@@ -173,7 +189,7 @@ namespace AstroAir
 			condition_variable m_server_cond,m_server_action;
 			/*定义服务器设备参数*/
 			WSSERVER *CCD,*MOUNT,*FOCUS,*FILTER,*GUIDE;
-			std::string FileName,SequenceTarget;
+			std::string FileName,SequenceTarget,SequenceImageName;
 			std::string FileBuf[10];
 			int DeviceNum = 0;
 			std::string DeviceBuf[5];
@@ -186,6 +202,7 @@ namespace AstroAir
 			std::atomic_bool isFilterConnected;
 			std::atomic_bool isGuideConnected;
 			std::atomic_bool InExposure;
+			std::atomic_bool InSequenceRun;
 			/*服务器配置参数*/
 			bool UseSSL = false;		//是否使用SSL
 			int MaxUsedTime = 0;		//解析最长时间
