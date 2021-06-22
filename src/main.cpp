@@ -89,16 +89,6 @@ void start_server()
 }
 
 /*
- * name: start_server_tls()
- * describe: Start the server according to different ports
- * 描述：依据不同端口启动服务器
- */
-void start_server_tls()
-{
-    ws.run_tls(port_tls);
-}
-
-/*
  * name: stop_server()
  * describe: Stop the server
  * 描述：停止服务器
@@ -178,10 +168,7 @@ void configure()
 	if(ok == "Y")
 	{
 		std::thread t1(start_server);
-		std::thread t2(start_server_tls);
 		t1.join();
-		sleep(1);
-		t2.join();
 	}
 	else
 	{
@@ -211,10 +198,8 @@ int main(int argc, char *argv[])
 		{    
 			case 'v':{
 				std::thread t1(start_server);
-				std::thread t2(start_server_tls);
 				t1.join();
 				sleep(1);
-				t2.join();
 				break;
 			}
 			case 'p':

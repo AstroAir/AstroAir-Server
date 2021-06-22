@@ -69,13 +69,6 @@ Description:Main framework of astroair server
 	using websocketpp::lib::lock_guard;
 	using websocketpp::lib::condition_variable;
 	typedef airserver::message_ptr message_ptr;
-	/*SSL信息格式*/
-	enum tls_mode {
-		MOZILLA_INTERMEDIATE = 1,
-		MOZILLA_MODERN = 2
-	};
-	typedef airserver_tls::message_ptr message_ptr_tls;
-	typedef websocketpp::lib::shared_ptr<websocketpp::lib::asio::ssl::context> context_ptr_tls;
 #endif
 
 namespace AstroAir
@@ -87,20 +80,13 @@ namespace AstroAir
 			explicit WSSERVER();
 			~WSSERVER();
 			virtual void on_open(websocketpp::connection_hdl hdl);
-			virtual void on_open_tls(websocketpp::connection_hdl hdl);
 			virtual void on_close(websocketpp::connection_hdl hdl);
-			virtual void on_close_tls(websocketpp::connection_hdl hdl);
 			virtual void on_message(websocketpp::connection_hdl hdl,message_ptr msg);
-			virtual void on_message_tls(websocketpp::connection_hdl hdl,message_ptr_tls msg);
-			virtual void on_socket_init(websocketpp::connection_hdl hdl, boost::asio::ip::tcp::socket & s);
-			virtual void on_http(websocketpp::connection_hdl hdl);
-			virtual context_ptr_tls on_tls_init(tls_mode mode, websocketpp::connection_hdl hdl);
 			virtual void send(std::string payload);
 			virtual void stop();
 			virtual bool is_running();
 			/*运行服务器*/
 			virtual void run(int port);
-			virtual void run_tls(int port);
 		public:
 			virtual bool Connect(std::string Device_name);
 			virtual bool Disconnect();
@@ -130,8 +116,6 @@ namespace AstroAir
 		protected:
 			/*转化Json信息*/
 			void readJson(std::string message);
-			/*获取密码*/
-			std::string get_password();
 			/*搜索目标*/
 			void SearchTarget(std::string TargetName);
 			/*解析*/
@@ -171,9 +155,11 @@ namespace AstroAir
 			void WebLog(std::string message,int type);
 			void UnknownMsg();
 			void UnknownDevice(int id,std::string message);
+			void ClientNumError();
 			void ErrorCode();
 			void Polling();
 		private:
+			virtual bool LoadConfigure();
 			Json::Value root;
 			Json::String errs;
 			Json::CharReaderBuilder reader;
@@ -182,9 +168,7 @@ namespace AstroAir
 			std::string Camera_name,Mount_name,Focus_name,Filter_name,Guide_name;
 			typedef std::set<websocketpp::connection_hdl, std::owner_less<websocketpp::connection_hdl>> con_list;
 			con_list m_connections;
-			con_list m_connections_tls;
 			airserver m_server;
-			airserver_tls m_server_tls;
 			mutex mtx,mtx_action;
 			condition_variable m_server_cond,m_server_action;
 			/*定义服务器设备参数*/
@@ -192,6 +176,7 @@ namespace AstroAir
 			std::string FileName,SequenceTarget,SequenceImageName;
 			std::string FileBuf[10];
 			int DeviceNum = 0;
+			int ClientNum = 0;
 			std::string DeviceBuf[5];
 			/*服务器设备连接状态参数*/
 			std::atomic_bool isConnected;
@@ -204,10 +189,11 @@ namespace AstroAir
 			std::atomic_bool InExposure;
 			std::atomic_bool InSequenceRun;
 			/*服务器配置参数*/
-			bool UseSSL = false;		//是否使用SSL
 			int MaxUsedTime = 0;		//解析最长时间
 			int MaxThreadNumber = 0;		//最多能同时处理的事件数量
-	};
+			int	MaxClientNumber = 0;		//最大客户端数量
+			std::string CertPath,ClientCertPath,PemPath,Password;		//SSL配置
+	};		
 }
 
 #endif

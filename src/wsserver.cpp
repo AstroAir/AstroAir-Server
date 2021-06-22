@@ -60,32 +60,22 @@ namespace AstroAir
      */
     WSSERVER::WSSERVER()
     {
+        LoadConfigure();
         /*初始化WebSocket服务器*/
         /*加载设置*/
         m_server.clear_access_channels(websocketpp::log::alevel::all ^ websocketpp::log::alevel::frame_payload);
-        m_server_tls.clear_access_channels(websocketpp::log::alevel::all ^ websocketpp::log::alevel::frame_payload);
         /*初始化服务器*/
         m_server.init_asio();
-        m_server_tls.init_asio();
         /*设置重新使用端口*/
         m_server.set_reuse_addr(true);
-        m_server_tls.set_reuse_addr(true);
         /*设置打开事件*/
         m_server.set_open_handler(bind(&WSSERVER::on_open, this , ::_1));
-        m_server_tls.set_open_handler(bind(&WSSERVER::on_open_tls, this , ::_1));
         /*设置关闭事件*/
         m_server.set_close_handler(bind(&WSSERVER::on_close, this , ::_1));
-        m_server_tls.set_close_handler(bind(&WSSERVER::on_close_tls, this , ::_1));
         /*设置事件*/
         m_server.set_message_handler(bind(&WSSERVER::on_message, this ,::_1,::_2));
-        m_server_tls.set_message_handler(bind(&WSSERVER::on_message_tls,this,::_1,::_2));
-        /*SSL设置*/
-        //m_server_tls.set_socket_init_handler(bind(&WSSERVER::on_socket_init,this,::_1,::_2));
-        m_server_tls.set_http_handler(bind(&WSSERVER::on_http,this,::_1));
-        m_server_tls.set_tls_init_handler(bind(&WSSERVER::on_tls_init,this,MOZILLA_INTERMEDIATE,::_1));
         /*重置参数*/
         isConnected = false;            //客户端连接状态
-        isConnectedTLS = false;         //WSS客户端连接状态
         isCameraConnected = false;      //相机连接状态
         isMountConnected = false;       //赤道仪连接状态
         isFocusConnected = false;       //电动调焦座连接状态
@@ -129,6 +119,9 @@ namespace AstroAir
         IDLog("Successfully established connection with client path %s\n",path.c_str());
         m_connections.insert(hdl);
         isConnected = true;
+        ClientNum++;
+        if(ClientNum > MaxClientNumber)
+            ClientNumError();
         m_server_cond.notify_one();
     }
     
@@ -147,44 +140,10 @@ namespace AstroAir
         /*防止多次连接导致错误*/
         memset(DeviceBuf,0,5);
         DeviceNum = 0;
+        ClientNum--;
         m_server_cond.notify_one();
     }
     
-    /*
-     * name: on_open_tls(websocketpp::connection_hdl hdl)
-     * @param hdl:WebSocket句柄
-     * describe: Insert handle when server connects
-     * 描述：服务器连接时插入句柄
-     */
-    void WSSERVER::on_open_tls(websocketpp::connection_hdl hdl)
-    {
-        lock_guard<mutex> guard(mtx);
-        airserver_tls::connection_ptr con = m_server_tls.get_con_from_hdl( hdl );      // 根据连接句柄获得连接对象
-        std::string path = con->get_resource();
-        IDLog("Successfully established wss connection with client path %s\n",path.c_str());
-        m_connections_tls.insert(hdl);
-        isConnectedTLS = true;
-        m_server_cond.notify_one();
-    }
-    
-    /*
-     * name: on_close_tls(websocketpp::connection_hdl hdl)
-     * @param hdl:WebSocket句柄
-     * describe: Clear data on server disconnection
-     * 描述：服务器断开连接时清空数据
-     */
-    void WSSERVER::on_close_tls(websocketpp::connection_hdl hdl)
-    {
-        lock_guard<mutex> guard(mtx);
-        IDLog("Disconnect from client\n");
-        m_connections_tls.erase(hdl);
-        isConnectedTLS = false;
-        /*防止多次连接导致错误*/
-        memset(DeviceBuf,0,5);
-        DeviceNum = 0;
-        m_server_cond.notify_one();
-    }
-
     /*
      * name: on_message(websocketpp::connection_hdl hdl,message_ptr msg)
      * @param hdl:WebSocket句柄
@@ -198,137 +157,6 @@ namespace AstroAir
         std::string message = msg->get_payload();
         /*处理信息*/
         readJson(message);
-    }
-    
-    /*
-     * name: on_message_tls(websocketpp::connection_hdl hdl,message_ptr msg)
-     * @param hdl:WebSocket句柄
-     * @param msg：服务器信息
-     * describe: Processing information from clients
-     * 描述：处理来自客户端的信息
-     * calls: readJson(std::string message)
-     * note:This is the WSS server, please connect through the webpage of HTTPS
-     */
-    void WSSERVER::on_message_tls(websocketpp::connection_hdl hdl,message_ptr_tls msg)
-    {
-        std::string message = msg->get_payload();
-        /*处理信息*/
-        readJson(message);
-    }
-
-    /*
-     * name: on_socket_init(websocketpp::connection_hdl, boost::asio::ip::tcp::socket & s) 
-     * @param hdl:WebSocket句柄
-     * describe: Handling socket events
-     * 描述：处理Socket事件
-     */
-    void WSSERVER::on_socket_init(websocketpp::connection_hdl hdl, boost::asio::ip::tcp::socket & s)
-    {
-        boost::asio::ip::tcp::no_delay option(true);
-        s.set_option(option);
-    }
-
-    /*
-     * name: on_http(websocketpp::connection_hdl hdl) 
-     * @param hdl:WebSocket句柄
-     * describe: Get client information when client and server shake hands
-     * 描述：在客户端与服务器握手时获取客户端信息
-     * calls: set_body()
-     * calls: set_status()
-     * note:This is the WSS server, please connect through the webpage of HTTPS
-     */
-    void WSSERVER::on_http(websocketpp::connection_hdl hdl) 
-    {
-        lock_guard<mutex> guard(mtx_action);
-        airserver_tls::connection_ptr con = m_server_tls.get_con_from_hdl(hdl);
-        websocketpp::http::parser::request rt = con->get_request();
-		const std::string& strUri = rt.get_uri();
-		const std::string& strMethod = rt.get_method();
-		const std::string& strBody = rt.get_body();	//只针对post时有数据
-		const std::string& strHost = rt.get_header("host");
-		const std::string& strContentType = rt.get_header("Content-type");
-		const std::string& strVersion = rt.get_version();
-        IDLog("Connection URI is %s,method is %s,host is %s",strUri.c_str(),strMethod.c_str(),strHost.c_str());
-		websocketpp::http::parser::header_list listhtpp = rt.get_headers();
-        con->set_body("Hello World!");
-        con->set_status(websocketpp::http::status_code::ok);
-        m_server_action.notify_one();
-    }
-
-    /*
-     * name: get_password()
-     * describe: Get password for client authentication
-     * 描述：获取密码用于客户端验证
-     * @return password:服务器密码
-     */
-    std::string WSSERVER::get_password() 
-    {
-        lock_guard<mutex> guard(mtx_action);
-        std::string password;
-        std::ifstream in("passwd.txt",std::ios::in);
-        if (! in.is_open())
-        {
-            IDLog("Error opening password file,use default password\n");
-            return "astroair";
-        }
-        in >> password;
-        in.close();
-        return password;
-    }
-
-    /*
-     * name: on_tls_init(tls_mode mode, websocketpp::connection_hdl hdl)
-     * @param hdl:WebSocket句柄
-     * @param mode：加密类型
-     * describe: Initialize the WSS connection and authenticate
-     * 描述：初始化WSS连接，并进行身份验证
-     */
-    context_ptr_tls WSSERVER::on_tls_init(tls_mode mode, websocketpp::connection_hdl hdl)
-    {
-        lock_guard<mutex> guard(mtx_action);
-        namespace asio = websocketpp::lib::asio;
-        context_ptr_tls ctx = websocketpp::lib::make_shared<asio::ssl::context>(asio::ssl::context::sslv23);
-        try
-        {
-            if (mode == MOZILLA_MODERN)
-            {
-                ctx->set_options(asio::ssl::context::default_workarounds |
-                                asio::ssl::context::no_sslv2 |
-                                asio::ssl::context::no_sslv3 |
-                                asio::ssl::context::no_tlsv1 |
-                                asio::ssl::context::single_dh_use);
-            } 
-            else
-            {
-                ctx->set_options(asio::ssl::context::default_workarounds |
-                                asio::ssl::context::no_sslv2 |
-                                asio::ssl::context::no_sslv3 |
-                                asio::ssl::context::single_dh_use);
-            }
-            //ctx->set_password_callback(bind(&get_password));
-            ctx->use_certificate_chain_file("server.crt");
-            ctx->use_private_key_file("server.pem", asio::ssl::context::pem);
-            ctx->use_tmp_dh_file("client.pem");
-            std::string ciphers;
-            if (mode == MOZILLA_MODERN)
-                ciphers = "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!3DES:!MD5:!PSK";
-            else
-                ciphers = "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:AES:CAMELLIA:DES-CBC3-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA";
-            if (SSL_CTX_set_cipher_list(ctx->native_handle() , ciphers.c_str()) != 1)
-            {
-                std::cout << "Error setting cipher list" << std::endl;
-            }
-        } 
-        catch (websocketpp::exception const &e)
-        {
-            std::cerr << e.what() << std::endl;
-        }
-        catch (...)
-        {
-            std::cerr << "other exception" << std::endl;
-        }
-        m_server_action.notify_one();
-        return ctx;
     }
 
     /*以下三个函数均是用于switch支持string*/
@@ -502,26 +330,6 @@ namespace AstroAir
                 }
             }
         }
-        /*向WSS客户端发送信息*/
-        if(isConnectedTLS == true)
-        {
-            for (auto it : m_connections_tls)
-            {
-                try
-                {
-                    m_server_tls.send(it, message, websocketpp::frame::opcode::text);
-                }
-                catch (websocketpp::exception const &e)
-                {
-                    std::cerr << e.what() << std::endl;
-                }
-                catch (...)
-                {
-                    std::cerr << "other exception" << std::endl;
-                }
-            }
-        }
-        
     }
     
     /*
@@ -535,15 +343,12 @@ namespace AstroAir
         for (auto it : m_connections)
         {
             m_server.close(it, websocketpp::close::status::normal, "Switched off by user.");
-            m_server_tls.close(it, websocketpp::close::status::normal, "Switched off by user.");
         }
         IDLog("Stop the server..\n");
         /*清除服务器句柄*/
         m_connections.clear();
-        m_connections_tls.clear();
         /*停止服务器*/
         m_server.stop();
-        m_server_tls.stop();
     }
 
     /*
@@ -584,34 +389,33 @@ namespace AstroAir
             std::cerr << "other exception" << std::endl;
         }
     }
+#endif
 
     /*
-     * name: run_tls(int port)
-     * @param port:服务器端口
-     * describe: This is used to start the wss websocket server
-     * 描述：启动WebSocket服务器
-	 * calls: IDLog(const char *fmt, ...)
+     * name: LoadConfigure()
+     * describe: Load configure file
+     * 描述：加载配置文件
      */
-    void WSSERVER::run_tls(int port)
+    bool WSSERVER::LoadConfigure()
     {
-        try
+        std::string line,jsonStr;
+        std::ifstream in("config/config.json", std::ios::binary);
+        if (!in.is_open())
         {
-            IDLog("Start the wss server at port %d ...\n",port);
-            /*设置端口为IPv4模式并指定端口*/
-            m_server_tls.listen(websocketpp::lib::asio::ip::tcp::v4(),port);
-            m_server_tls.start_accept();
-            m_server_tls.run();
+            IDLog("Unable to open configuration file\n");
+            return false;
         }
-        catch (websocketpp::exception const & e)
-        {   
-			std::cerr << e.what() << std::endl;
-        }
-        catch (...)
-        {
-            std::cerr << "other exception" << std::endl;
-        }
+        while (getline(in, line))
+            jsonStr.append(line);
+        in.close();
+        std::unique_ptr<Json::CharReader>const json_read(reader.newCharReader());
+        json_read->parse(jsonStr.c_str(), jsonStr.c_str() + jsonStr.length(), &root,&errs);
+        /*获取基础配置信息*/
+        MaxUsedTime = root["ServerConfig"]["Timeout"].asInt();
+        MaxClientNumber = root["ServerConfig"]["MaxClientNum"].asInt();
+        MaxThreadNumber = root["ServerConfig"]["MaxThreadNum"].asInt();
+        return true;
     }
-#endif
 
     /*
      * name: SetDashBoardMode()
@@ -643,7 +447,7 @@ namespace AstroAir
         /*寻找当前文件夹下的所有文件*/
         struct dirent *ptr;      
 		DIR *dir;  
-		std::string PATH = "./";        //搜索目录，正式版本应该可以选择目录位置
+		std::string PATH = "./config";        //搜索目录，正式版本应该可以选择目录位置
 		dir=opendir(PATH.c_str());      //打开目录
         std::vector<std::string> files;
         /*搜索所有符合条件的文件*/
@@ -734,8 +538,9 @@ namespace AstroAir
     void WSSERVER::SetupConnect(int timeout)
     {
         /*读取config.air配置文件，并且存入参数中*/
-        std::string line,jsonStr;
-        std::ifstream in(FileName.c_str(), std::ios::binary);
+        std::string line,jsonStr,path;
+        path = "config/" + FileName;
+        std::ifstream in(path.c_str(), std::ios::binary);
         /*打开文件*/
         if (!in.is_open())
         {
@@ -1614,7 +1419,7 @@ namespace AstroAir
         const char* JPGName = strtok(const_cast<char *>(Image_Name.c_str()),".");
 		strcat(const_cast<char *>(JPGName), ".jpg");
         int hfd,starIndex,width,height;
-        ClacStarInfo(CameraImageName,hfd,starIndex,width,height);
+        //ClacStarInfo(CameraImageName,hfd,starIndex,width,height);
         /*组合即将发送的json信息*/
         Json::Value Root;
         Root["Event"] = Json::Value("NewJPGReady");
@@ -1652,13 +1457,13 @@ namespace AstroAir
     void WSSERVER::SearchTarget(std::string TargetName)
     {
         /*检查星体数据库是否存在*/
-        if(access( "starbase.xls", F_OK ) == -1)
+        if(access( "base/starbase.xls", F_OK ) == -1)
         {
             SearchTargetError(2);
             return;
         }
         // 工作簿
-        xls::WorkBook base("starbase.xls");
+        xls::WorkBook base("base/starbase.xls");
         int line = 2;
         while(true)
         {
@@ -1752,7 +1557,7 @@ namespace AstroAir
         else        //星体数据库无法打开
         {
             Root["ActionResultInt"] = Json::Value(5);
-            Root["Motivo"] = Json::Value("Could not open starbase.xls");
+            Root["Motivo"] = Json::Value("Could not open star base!");
         }
         json_message = Root.toStyledString();
 		send(json_message);
@@ -1760,6 +1565,16 @@ namespace AstroAir
 
 //----------------------------------------赤道仪----------------------------------------
 
+    /*
+	 * name: Goto(std::string Target_RA,std::string Target_DEC)
+     * @param Target_RA:天体RA轴坐标
+     * @param Target_DEC:天体DEC轴坐标
+	 * describe: slew
+	 * 描述：赤道仪Goto
+	 * calls: IDLog()
+     * calls: WebLog()
+     * calls: Goto()
+	 */
     bool WSSERVER::Goto(std::string Target_RA,std::string Target_DEC)
     {
         bool mount_ok = false;
@@ -2165,6 +1980,20 @@ namespace AstroAir
 		Root["code"] = Json::Value();
         Root["id"] = Json::Value(id);
         error["message"] = Json::Value(message);
+        Root["error"] = error;
+        json_message = Root.toStyledString();
+        send(json_message);
+    }
+
+    void WSSERVER::ClientNumError()
+    {
+        IDLog("There are too many clients connected with server\n");
+        /*整合信息并发送至客户端*/
+        Json::Value Root,error;
+        Root["result"] = Json::Value(1);
+		Root["code"] = Json::Value();
+        Root["id"] = Json::Value(601);
+        error["message"] = Json::Value("客户端数量过多");
         Root["error"] = error;
         json_message = Root.toStyledString();
         send(json_message);

@@ -118,32 +118,6 @@ else()
 	message("-- Not built QHY camera library")
 endif()
 
-#设置INDI库
-option(HAS_INDI "Using INDI Library" ON)
-if(HAS_INDI)
-	find_path(PATH_INDI baseclient.h /usr/include/libindi)
-	find_path(PATH_INDI baseclient.h /usr/local/include/libindi)
-	find_library(PATH_INDI_LIB libindiclient.a /usr/lib)
-	find_library(PATH_INDI_LIB libindiclient.a /usr/local/lib)
-	if(PATH_INDI AND PATH_INDI_LIB)
-		message("-- Found INDI header file in ${PATH_INDI} and library in ${PATH_INDI_LIB}")
-		add_library(LIBINDI src/air-indi/indi_device.cpp)
-		target_link_libraries(airserver PUBLIC LIBINDI)
-		target_link_libraries(airserver PUBLIC libindiclient.a)
-		target_link_libraries(airserver PUBLIC libz.so)
-	else()
-		message("-- Could not found INDI library.Try to build it!")
-		add_custom_command(
-			TARGET LIBINDI
-			PRE_BUILD 
-			COMMAND sudo apt install libindi-dev -y
-			COMMENT "Downloaded and Building INDI Library"
-		)
-	endif()
-else()
-	message("-- Not built INDI library")
-endif()
-
 #设置GPhoto2相机库
 option(HAS_GPhoto2 "Using GPhoto2 camera Library" ON)
 if(HAS_GPhoto2)
