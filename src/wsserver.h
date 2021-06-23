@@ -38,6 +38,8 @@ Description:Main framework of astroair server
 
 #include "config.h"
 
+#define _(str)  gettext(str)
+
 #ifdef HAS_WEBSOCKET
 	#include <websocketpp/config/asio.hpp>
 	#include <websocketpp/server.hpp>
@@ -91,38 +93,19 @@ namespace AstroAir
 			virtual bool Connect(std::string Device_name);
 			virtual bool Disconnect();
 			virtual std::string ReturnDeviceName();
-		/*相机
-		public:
-			virtual bool StartExposure(int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset);
-			virtual bool StartExposureSeq(int loop,int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset);
-			virtual bool AbortExposure();
-			virtual bool Cooling(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF,int CamTemp);
-		*/
-		/*赤道仪*/
-		public:
-			//virtual bool Goto(std::string Target_RA,std::string Target_DEC);
 		/*电调*/
 		public:
 			virtual bool MoveTo(int TargetPosition);
 		/*滤镜轮*/
 		public:
 			virtual bool FilterMoveTo(int TargetPosition);
-		public:
-			/*
-			int CameraBin = 0;
-			int CameraExpo = 0;
-			int CameraExpoUsed = 0;
-			int CameraTemp = 0;
-			std::string CameraImageName;
-			*/
-			std::string TargetRA,TargetDEC,MountAngle;
 		protected:
 			/*转化Json信息*/
 			void readJson(std::string message);
 			/*搜索目标*/
 			void SearchTarget(std::string TargetName);
 			/*解析*/
-			void SolveActualPosition(bool IsBlind,bool IsSync);
+			//void SolveActualPosition(bool IsBlind,bool IsSync);
 			/*相机拍摄计数*/
 			void ImagineThread();
 			/*WebSocket服务器功能性函数*/
@@ -141,18 +124,18 @@ namespace AstroAir
 			void SetupConnectSuccess();
 			void SetupDisconnectSuccess();
 			void EnvironmentDataSend();
-			void StartExposureSuccess();
-			void AbortExposureSuccess();
-			void ShotRunningSend(int ElapsedPerc,int id);
-			void newJPGReadySend();
-			void SearchTargetSuccess(std::string RA,std::string DEC,std::string Name,std::string OtherName,std::string Type,std::string MAG);
-			void SolveActualPositionSuccess();
+			//void StartExposureSuccess();
+			//void AbortExposureSuccess();
+			//void ShotRunningSend(int ElapsedPerc,int id);
+			//void newJPGReadySend();
+			//void SearchTargetSuccess(std::string RA,std::string DEC,std::string Name,std::string OtherName,std::string Type,std::string MAG);
+			//void SolveActualPositionSuccess();
 			/*处理错误信息函数*/
 			void SetupConnectError(int id);
-			void StartExposureError();
-			void AbortExposureError();
-			void SearchTargetError(int id);
-			void SolveActualPositionError();
+			//void StartExposureError();
+			//void AbortExposureError();
+			//void SearchTargetError(int id);
+			//void SolveActualPositionError();
 			void RunSequenceError(std::string error);
 			/*网页日志*/
 			
@@ -165,8 +148,6 @@ namespace AstroAir
 			airserver m_server;
 			con_list m_connections;
 			virtual bool LoadConfigure();
-			
-
 			Json::Value root;
 			Json::String errs;
 			Json::CharReaderBuilder reader;
@@ -185,7 +166,6 @@ namespace AstroAir
 			std::string DeviceBuf[5];
 			/*服务器设备连接状态参数*/
 			std::atomic_bool isConnected;
-			std::atomic_bool isConnectedTLS;
 
 			std::atomic_bool isMountConnected;
 			std::atomic_bool isFocusConnected;
@@ -193,15 +173,15 @@ namespace AstroAir
 			std::atomic_bool isGuideConnected;
 			std::atomic_bool InExposure;
 			std::atomic_bool InSequenceRun;
-			/*服务器配置参数*/
-			int MaxUsedTime = 0;		//解析最长时间
-			int MaxThreadNumber = 0;		//最多能同时处理的事件数量
-			int	MaxClientNumber = 0;		//最大客户端数量
+			
 	};		
 	extern WSSERVER ws;
 	extern std::string img_data,SequenceTarget;
 	void WebLog(std::string message,int type);
 	extern std::atomic_bool isCameraConnected;
+	/*服务器配置参数*/
+	extern int MaxUsedTime,MaxThreadNumber,MaxClientNumber;		//解析最长时间,最多能同时处理的事件数量,最大客户端数量
+	extern std::string TargetRA,TargetDEC,MountAngle;
 }
 
 #endif

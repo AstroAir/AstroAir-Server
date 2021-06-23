@@ -43,6 +43,7 @@ Using:JsonCpp<https://github.com/open-source-parsers/jsoncpp>
 #include "air_search.h"
 #include "air_camera.h"
 #include "air_mount.h"
+#include "air_solver.h"
 
 #include "ccfits.h"
 
@@ -56,6 +57,12 @@ namespace AstroAir
     WSSERVER ws;
     std::string img_data,SequenceTarget;
     std::atomic_bool isCameraConnected;
+    /*服务器配置参数*/
+	int MaxUsedTime = 0;		//解析最长时间
+	int MaxThreadNumber = 0;		//最多能同时处理的事件数量
+	int	MaxClientNumber = 0;		//最大客户端数量
+    std::string TargetRA,TargetDEC,MountAngle;
+
 //----------------------------------------服务器----------------------------------------
 
 #ifdef HAS_WEBSOCKET
@@ -100,7 +107,7 @@ namespace AstroAir
     WSSERVER::~WSSERVER()
     {
 		/*如果服务器正在工作，则在停止程序之前停止服务器*/
-        if(isConnected ==true || isConnectedTLS == true)
+        if(isConnected ==true)
         {
             stop();
         }
@@ -122,7 +129,7 @@ namespace AstroAir
         lock_guard<mutex> guard(mtx);
         airserver::connection_ptr con = m_server.get_con_from_hdl( hdl );      // 根据连接句柄获得连接对象
         std::string path = con->get_resource();
-        IDLog("Successfully established connection with client path %s\n",path.c_str());
+        IDLog(_("Successfully established connection with client path %s\n"),path.c_str());
         m_connections.insert(hdl);
         isConnected = true;
         ClientNum++;
@@ -140,7 +147,7 @@ namespace AstroAir
     void WSSERVER::on_close(websocketpp::connection_hdl hdl)
     {
         lock_guard<mutex> guard(mtx);
-        IDLog("Disconnect from client\n");
+        IDLog(_("Disconnect from client\n"));
         m_connections.erase(hdl);
         isConnected = false;
         /*防止多次连接导致错误*/
@@ -277,8 +284,16 @@ namespace AstroAir
             }
             /*解析*/
             case "RemoteSolveActualPosition"_hash:{
-                std::thread SolveThread(&WSSERVER::SolveActualPosition,this,root["params"]["IsBlind"].asBool(),root["params"]["IsSync"].asBool());
-                SolveThread.detach();
+                if(root["params"]["IsBlind"].asBool() == true)
+                {
+                    std::thread SolveThread(&AIRSOLVER::SolveActualPosition,SOLVER,root["params"]["IsBlind"].asBool(),root["params"]["IsSync"].asBool());
+                    SolveThread.detach();
+                }  
+                else
+                {
+                    std::thread SolveThread(&AIRSOLVER::SolveActualPositionOnline,SOLVER,root["params"]["IsBlind"].asBool(),root["params"]["IsSync"].asBool());
+                    SolveThread.detach();
+                }
                 break;
             }
             /*搜索所有可以执行的序列*/
@@ -333,7 +348,7 @@ namespace AstroAir
                 }
                 catch (...)
                 {
-                    std::cerr << "other exception" << std::endl;
+                    std::cerr << _("other exception") << std::endl;
                 }
             }
         }
@@ -349,7 +364,7 @@ namespace AstroAir
     {
         for (auto it : m_connections)
         {
-            m_server.close(it, websocketpp::close::status::normal, "Switched off by user.");
+            m_server.close(it, websocketpp::close::status::normal, _("Switched off by user."));
         }
         IDLog("Stop the server..\n");
         /*清除服务器句柄*/
@@ -381,7 +396,7 @@ namespace AstroAir
     {
         try
         {
-            IDLog("Start the server at port %d ...\n",port);
+            IDLog(_("Start the server at port %d ...\n"),port);
             /*设置端口为IPv4模式并指定端口*/
             m_server.listen(websocketpp::lib::asio::ip::tcp::v4(),port);
             m_server.start_accept();
@@ -393,7 +408,7 @@ namespace AstroAir
         }
         catch (...)
         {
-            std::cerr << "other exception" << std::endl;
+            std::cerr << _("other exception") << std::endl;
         }
     }
 #endif
@@ -409,7 +424,7 @@ namespace AstroAir
         std::ifstream in("config/config.json", std::ios::binary);
         if (!in.is_open())
         {
-            IDLog("Unable to open configuration file\n");
+            IDLog(_("Unable to open configuration file\n"));
             return false;
         }
         while (getline(in, line))
@@ -475,9 +490,9 @@ namespace AstroAir
         Root["UID"] = Json::Value("RemoteGetAstroAirProfiles");
         if(files.begin() == files.end())
         {
-            IDLog("Cound not found any configration files,please check it\n");
+            IDLog(_("Cound not found any configration files,please check it\n"));
             Root["ActionResultInt"] = Json::Value(5);
-            Root["Motivo"] = Json::Value("Cound not found any configration files");
+            Root["Motivo"] = Json::Value(_("Cound not found any configration files"));
         }
         else
         {
@@ -485,14 +500,14 @@ namespace AstroAir
             Root["ParamRet"]["name"] = Json::Value(files[0]);
             FileName = files[0];
             FileBuf[0] = files[0];
-            IDLog("Found configure file named %s\n",files[0].c_str());
+            IDLog(_("Found configure file named %s\n"),files[0].c_str());
             files.erase(files.begin());
             for (int i = 0; i < files.size(); i++)  
             {
                 FileBuf[i+1] = files[i];
                 profile["name"] = Json::Value(files[i].c_str());
                 Root["ParamRet"]["list"].append(profile);
-                IDLog("Found configure file named %s\n",files[i].c_str());
+                IDLog(_("Found configure file named %s\n"),files[i].c_str());
             }
         }
         /*整合信息并发送至客户端*/
@@ -511,7 +526,7 @@ namespace AstroAir
     void WSSERVER::SetProfile(std::string File_Name)
     {
         lock_guard<mutex> guard(mtx);
-        IDLog("Change the configuration file to %s\n",File_Name.c_str());
+        IDLog(_("Change the configuration file to %s\n"),File_Name.c_str());
         FileName = File_Name;
         /*整合信息并发送至客户端*/
         Json::Value Root,profile;
@@ -551,8 +566,8 @@ namespace AstroAir
         /*打开文件*/
         if (!in.is_open())
         {
-            IDLog("Unable to open configuration file\n");
-            IDLog_DEBUG("Unable to open configuration file\n");
+            IDLog(_("Unable to open configuration file\n"));
+            IDLog_DEBUG(_("Unable to open configuration file\n"));
             return;
         }
         /*将文件转化为string格式*/
@@ -627,13 +642,13 @@ namespace AstroAir
                         }
                         #endif
                         default:
-                            UnknownDevice(301,"Unknown camera");		//未知相机返回错误信息
+                            UnknownDevice(301,_("Unknown camera"));		//未知相机返回错误信息
                     }
                     if(camera_ok == true)
                     {
                         isCameraConnected = true;
                         DeviceBuf[DeviceNum] = CCD->ReturnDeviceName();
-                        WebLog("Connect to "+DeviceBuf[DeviceNum]+" successfully",2);
+                        WebLog(_("Connect to ")+DeviceBuf[DeviceNum]+_(" successfully"),2);
                         DeviceNum++;
                         connect_ok = true;
                         break;
@@ -642,7 +657,7 @@ namespace AstroAir
                     {
                         /*相机未连接成功，返回错误信息*/
                         SetupConnectError(5);
-                        WebLog("Could not connect to "+Camera_name,3);
+                        WebLog(_("Could not connect to ") + Camera_name,3);
                         connect_ok = false;
                         break;
                     }
@@ -652,7 +667,7 @@ namespace AstroAir
         }
         else
         {
-            WebLog(Camera_name+" had already connected",3);
+            WebLog(Camera_name + _(" had already connected"),3);
         }
         /*连接指定品牌的指定型号赤道仪*/
         if(isMountConnected == false)
@@ -697,7 +712,7 @@ namespace AstroAir
                         }
                         #endif
                         default:
-                            UnknownDevice(302,"Unknown mount");		//未知赤道仪返回错误信息
+                            UnknownDevice(302,_("Unknown mount"));		//未知赤道仪返回错误信息
                     }
                     if(mount_ok == true)
                     {
@@ -712,7 +727,7 @@ namespace AstroAir
                     {
                         /*赤道仪未连接成功，返回错误信息*/
                         SetupConnectError(5);
-                        WebLog("Could not connect to "+Mount_name,3);
+                        WebLog(_("Could not connect to ") + Mount_name,3);
                         connect_ok = false;
                         break;
                     }
@@ -765,7 +780,7 @@ namespace AstroAir
                         }
                         #endif
                         default:
-                            UnknownDevice(303,"Unknown focus");		//未知电动调焦座返回错误信息
+                            UnknownDevice(303,_("Unknown focus"));		//未知电动调焦座返回错误信息
                     }
                     if(focus_ok == true)
                     {
@@ -931,12 +946,12 @@ namespace AstroAir
         {
             SetupConnectSuccess();		//将连接上的设备列表发送给客户端
             EnvironmentDataSend();
-            WebLog("All devices connected successfully",2);
+            WebLog(_("All devices connected successfully"),2);
         }
         else
         {
             SetupConnectError(5);
-            WebLog("There were some errors in connecting the device",3);
+            WebLog(_("There were some errors in connecting the device"),3);
         }
         return;
     }
@@ -986,7 +1001,7 @@ namespace AstroAir
         }
         if(disconnect_ok == true)
         {
-            WebLog("Successfully disconnected from all devices",2);
+            WebLog(_("Successfully disconnected from all devices"),2);
             SetupDisconnectSuccess();
         }
     }
@@ -1138,10 +1153,6 @@ namespace AstroAir
         send(json_message);
     }
 
-//----------------------------------------赤道仪----------------------------------------
-
-    
-
 //----------------------------------------对焦----------------------------------------
 
     bool WSSERVER::MoveTo(int TargetPosition)
@@ -1158,95 +1169,7 @@ namespace AstroAir
 
 //----------------------------------------解析----------------------------------------
 
-    /*
-	 * name: SolveActualPosition(bool IsBlind,bool IsSync)
-     * @param isBlind:是否为盲解析
-     * @param IsSync：是否同步
-	 * describe: Start the parser
-	 * 描述：启动解析器
-     * calls: IDLog()
-     * calls: SolveActualPositionSuccess()
-	 * calls: SolveActualPositionError()
-	 */
-    void WSSERVER::SolveActualPosition(bool IsBlind,bool IsSync)
-    {
-        char cmd[2048] = {0},line[256]={0},parity_str[8]={0};
-        int UsedTime = 0;
-        float ra = -1000, dec = -1000, angle = -1000, pixscale = -1000, parity = 0;
-        //snprintf(cmd,2048,"solve-field %s --guess-scale --downsample 2 --ra %s --dec %s --radius 5 ",CameraImageName.c_str(),TargetRA.c_str(),TargetDEC.c_str());
-        IDLog("Run:%s",cmd);
-        FILE *handle = popen(cmd, "r");
-        if (handle == nullptr)
-        {
-            IDLog("Could not solve this image,the error code is %s\n",strerror(errno));
-            return;
-        }
-        while (fgets(line, sizeof(line), handle) != nullptr && UsedTime <= MaxUsedTime)
-        {
-            UsedTime++;
-            IDLog("%s", line);
-            sscanf(line, "Field rotation angle: up is %f", &angle);
-            sscanf(line, "Field center: (RA,Dec) = (%f,%f)", &ra, &dec);
-            sscanf(line, "Field parity: %s", parity_str);
-            sscanf(line, "%*[^p]pixel scale %f", &pixscale);
-            if (strcmp(parity_str, "pos") == 0)
-                parity = 1;
-            else if (strcmp(parity_str, "neg") == 0)
-                parity = -1;
-            if (ra != -1000 && dec != -1000 && angle != -1000 && pixscale != -1000)
-            {
-                // Astrometry.net angle, E of N
-                MountAngle = angle;
-                // Astrometry.net J2000 RA in degrees
-                TargetRA = ra;
-                // Astrometry.net J2000 DEC in degrees
-                TargetDEC = dec;
-                fclose(handle);
-                IDLog("Solver complete.");
-                SolveActualPositionSuccess();
-                return;
-            }
-        }
-        fclose(handle);
-        SolveActualPositionError();
-    }
-
-    /*
-     * name: SolveActualPositionSuccess()
-     * describe: Return parsing information to client
-     * 描述：向客户端返回解析信息
-     * calls: send()
-     */
-    void WSSERVER::SolveActualPositionSuccess()
-    {
-        Json::Value Root;
-        Root["Event"] = Json::Value("RemoteActionResult");
-        Root["UID"] = Json::Value("sendRemoteSolveNoSync");
-        Root["ActionResultInt"] = Json::Value(4);
-        Root["ParamRet"]["RA"] = Json::Value(TargetRA);
-        Root["ParamRet"]["DEC"] = Json::Value(TargetDEC);
-        Root["ParamRet"]["PA"] = Json::Value(MountAngle);
-        Root["ParamRet"]["IsSolved"] = Json::Value("Completed");
-        json_message = Root.toStyledString();
-        send(json_message);
-    }
-
-    /*
-     * name:SolveActualPositionError()
-     * describe: Return parsing information to client
-     * 描述：向客户端返回解析信息
-     * calls: send()
-     */
-    void WSSERVER::SolveActualPositionError()
-    {
-        Json::Value Root;
-        Root["Event"] = Json::Value("RemoteActionResult");
-        Root["UID"] = Json::Value("sendRemoteSolveNoSync");
-        Root["ActionResultInt"] = Json::Value(5);
-        Root["Motivo"] = Json::Value("Could not solve image!");
-        json_message = Root.toStyledString();
-        send(json_message);
-    }
+    
 
 //----------------------------------------计划拍摄----------------------------------------
 

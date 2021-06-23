@@ -293,10 +293,15 @@ else()
 	message("Please check setting,libxls is one of the main library!")
 endif()
 
-add_library(LIBCAMERA src/air_camera.cpp)
+add_library(LIBCAMERA src/air_camera.cpp)		#相机
 target_link_libraries(airserver PUBLIC LIBCAMERA)
-add_library(LIBMOUNT src/air_mount.cpp)
+add_library(LIBMOUNT src/air_mount.cpp)			#赤道仪
 target_link_libraries(airserver PUBLIC LIBMOUNT)
+add_library(LIBSOLVER src/air_solver.cpp)		#解析
+target_link_libraries(airserver PUBLIC LIBSOLVER)
+
+add_library(LIBCHECK src/check.cpp)				#自动检查更新
+target_link_libraries(airserver PUBLIC LIBCHECK)
 
 set(LINK_DIR /usr/lib)
 link_directories(${LINK_DIR})

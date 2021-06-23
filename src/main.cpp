@@ -37,12 +37,12 @@ Description:Main program of astroair server
 #include <thread>
 
 #include "wsserver.h"
+#include "check.h"
 
 using namespace AstroAir;
-//WSSERVER ws;
+
 #define AIRPORT 5950
 int port = AIRPORT;
-
 
 /*
  * name: usage()
@@ -186,6 +186,7 @@ int main(int argc, char *argv[])
 {
 	/*输出Logo*/
 	PrintLogo();
+	//AutoCheckVersion();
 	char *optarg;
     int optind, opterr, optopt;
     int verbose = 0;

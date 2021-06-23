@@ -42,9 +42,11 @@ namespace AstroAir
     class AIRCAMERA
     {
         public:
-            virtual bool Connect(std::string Device_name);
-			virtual bool Disconnect();
-			virtual std::string ReturnDeviceName();
+            explicit AIRCAMERA();
+            ~AIRCAMERA();
+            virtual bool Connect(std::string Device_name);      //连接相机
+			virtual bool Disconnect();                          //断开连接
+			virtual std::string ReturnDeviceName();             //返回设备名称
             virtual bool StartExposure(int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset);
             virtual bool StartExposureServer(int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset);
             virtual bool StartExposureSeq(int loop,int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset);
@@ -62,13 +64,14 @@ namespace AstroAir
 			int CameraExpo = 0;
 			int CameraExpoUsed = 0;
 			int CameraTemp = 0;
-			std::string CameraImageName;
+			
         private:
             std::string json_message,Image_Name;
             std::atomic_bool InExposure;
 			std::atomic_bool InSequenceRun;
     };
     extern AIRCAMERA *CCD;
+    extern std::string CameraImageName;
 }
 
 #endif

@@ -38,12 +38,49 @@ Description:Camera Offical Port
 namespace AstroAir
 {
     AIRCAMERA *CCD;
+    std::string CameraImageName;
 
+    /*
+     * name: AIRCAMERA()()
+     * describe: Constructor for initializing solver parameters
+     * 描述：构造函数，用于初始化解析器参数
+     */
+    AIRCAMERA::AIRCAMERA()
+    {
+        InExposure = false;
+        InSequenceRun = false;
+    }
+
+    /*
+     * name: ~AIRCAMERA()
+     * describe: Destructor
+     * 描述：析构函数
+     */
+    AIRCAMERA::~AIRCAMERA()
+    {
+        if(InExposure == true || InSequenceRun == true)
+            CCD->AbortExposure();
+        InExposure = false;
+        InSequenceRun = false;
+    }
+
+    /*
+     * name: Connect()
+     * describe: Connect from camera
+     * 描述：连接（无任何实际用途，仅作为一个模板）
+	 * note:This function should not be executed normally
+     */
     bool AIRCAMERA::Connect(std::string Device_name)
     {
         return true;
     }
 
+    /*
+     * name: Disconnect()
+     * describe: Disconnect from camera
+     * 描述：断开连接（无任何实际用途，仅作为一个模板）
+	 * note:This function should not be executed normally
+     */
     bool AIRCAMERA::Disconnect()
     {
         return true;
@@ -51,11 +88,11 @@ namespace AstroAir
 
     std::string AIRCAMERA::ReturnDeviceName()
     {
-
+        return "None";
     }
 
     /*
-     * name: StartExposure(int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset)
+     * name: StartExposureServer(int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset)
      * @param exp:相机曝光时间
      * @param bin:像素合并
      * @param IsSave:是否保存图像
@@ -75,8 +112,8 @@ namespace AstroAir
     {
         if(exp <= 0)
         {
-            IDLog("Exposure time is less than 0, please input a reasonable data\n");
-            WebLog("Exposure time is less than 0, please input a reasonable data",3);
+            IDLog(_("Exposure time is less than 0, please input a reasonable data\n"));
+            WebLog(_("Exposure time is less than 0, please input a reasonable data"),3);
             StartExposureError();
             ShotRunningSend(0,4);
             return false;
@@ -91,14 +128,14 @@ namespace AstroAir
             InExposure = true;
             std::thread CameraCountThread(&AIRCAMERA::ImagineThread,this);
             CameraCountThread.detach();
-            WebLog("Start exposure",2);
+            WebLog(_("Start exposure"),2);
 			if((camera_ok = CCD->StartExposure(exp, bin, IsSave, FitsName, Gain, Offset)) != true)
 			{
 				/*返回曝光错误的原因*/
 				StartExposureError();
                 ShotRunningSend(0,4);
-				IDLog("Unable to start the exposure of the camera. Please check the connection of the camera. If you have any problems, please contact the developer\n");
-                WebLog("Unable to start the exposure of the camera",3);
+				IDLog(_("Unable to start the exposure of the camera. Please check the connection of the camera. If you have any problems, please contact the developer\n"));
+                WebLog(_("Unable to start the exposure of the camera"),3);
 				InExposure = false;
                 /*如果函数执行不成功返回false*/
 				return false;
@@ -119,9 +156,22 @@ namespace AstroAir
         return true;
     }
 
+
+    /*
+     * name: StartExposure(int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset)
+     * @param exp:相机曝光时间
+     * @param bin:像素合并
+     * @param IsSave:是否保存图像
+     * @param FitsName:保存图像名称
+     * @param Gain:相机增益
+     * @param Offset:相机偏置
+     * describe: Start exposure
+     * 描述：开始曝光（无任何实际用途，仅作为一个模板）
+	 * note:This function should not be executed normally
+     */
     bool AIRCAMERA::StartExposure(int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset)
     {
-
+        return true;
     }
 
     bool AIRCAMERA::StartExposureSeq(int loop,int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset)
@@ -341,8 +391,7 @@ namespace AstroAir
     {
         auto start = std::chrono::high_resolution_clock::now();
         /*读取JPG文件并转化为Mat格式*/
-        const char* JPGName = strtok(const_cast<char *>(Image_Name.c_str()),".");
-		strcat(const_cast<char *>(JPGName), ".jpg");
+        CameraImageName = Image_Name + ".fit";
         int hfd,starIndex,width,height;
         /*组合即将发送的json信息*/
         Json::Value Root;
