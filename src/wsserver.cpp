@@ -38,18 +38,24 @@ Using:JsonCpp<https://github.com/open-source-parsers/jsoncpp>
 #include "wsserver.h"
 #include "logger.h"
 #include "opencv.h"
-#include "base64.h"
-#include "libxls.h"
+//#include "base64.h"
+
+#include "air_search.h"
+#include "air_camera.h"
+#include "air_mount.h"
+
 #include "ccfits.h"
 
 #include "air-asi/asi_ccd.h"
 #include "air-qhy/qhy_ccd.h"
-//#include "air-indi/indi_device.h"
 #include "air-gphoto2/gphoto2_ccd.h"
 #include "telescope/ieqpro.h"
 
 namespace AstroAir
 {
+    WSSERVER ws;
+    std::string img_data,SequenceTarget;
+    std::atomic_bool isCameraConnected;
 //----------------------------------------服务器----------------------------------------
 
 #ifdef HAS_WEBSOCKET
@@ -232,23 +238,24 @@ namespace AstroAir
             }
             /*相机开始拍摄*/
             case "RemoteCameraShot"_hash:{
-                std::thread CamThread(&WSSERVER::StartExposure,this,root["params"]["Expo"].asInt(),root["params"]["Bin"].asInt(),root["params"]["IsSaveFile"].asBool(),root["params"]["FitFileName"].asString(),root["params"]["Gain"].asInt(),root["params"]["Offset"].asInt());
+                std::thread CamThread(&AIRCAMERA::StartExposureServer,CCD,root["params"]["Expo"].asInt(),root["params"]["Bin"].asInt(),root["params"]["IsSaveFile"].asBool(),root["params"]["FitFileName"].asString(),root["params"]["Gain"].asInt(),root["params"]["Offset"].asInt());
                 CamThread.detach();
                 break;
             }
             /*相机停止拍摄*/
             case "RemoteActionAbort"_hash:
-				AbortExposure();
+				CCD->AbortExposure();
 				break;
             /*相机制冷*/
             case "RemoteCooling"_hash:{
-                std::thread CoolingThread(&WSSERVER::Cooling,this,root["params"]["IsSetPoint"].asBool(),root["params"]["IsCoolDown"].asBool(),root["params"]["IsASync"].asBool(),root["params"]["IsWarmup"].asBool(),root["params"]["IsCoolerOFF"].asBool(),root["params"]["Temperature"].asInt());
+                std::thread CoolingThread(&AIRCAMERA::Cooling,CCD,root["params"]["IsSetPoint"].asBool(),root["params"]["IsCoolDown"].asBool(),root["params"]["IsASync"].asBool(),root["params"]["IsWarmup"].asBool(),root["params"]["IsCoolerOFF"].asBool(),root["params"]["Temperature"].asInt());
                 CoolingThread.detach();
                 break;
             }
             /*搜索天体*/
             case "RemoteSearchTarget"_hash:{
-                std::thread SearchThread(&WSSERVER::SearchTarget,this,root["params"]["Name"].asString());
+                Search a;
+                std::thread SearchThread(&Search::SearchTarget,a,root["params"]["Name"].asString());
                 SearchThread.detach();
                 break;
             }
@@ -264,7 +271,7 @@ namespace AstroAir
             }
             /*赤道仪Goto*/
             case "RemotePrecisePointTarget"_hash:{
-                std::thread GotoThread(&WSSERVER::Goto,this,root["params"]["RAText"].asString(),root["params"]["DECText"].asString());
+                std::thread GotoThread(&AIRMOUNT::GotoServer,MOUNT,root["params"]["RAText"].asString(),root["params"]["DECText"].asString());
                 GotoThread.detach();
                 break;
             }
@@ -447,7 +454,7 @@ namespace AstroAir
         /*寻找当前文件夹下的所有文件*/
         struct dirent *ptr;      
 		DIR *dir;  
-		std::string PATH = "./config";        //搜索目录，正式版本应该可以选择目录位置
+		std::string PATH = "config/";        //搜索目录，正式版本应该可以选择目录位置
 		dir=opendir(PATH.c_str());      //打开目录
         std::vector<std::string> files;
         /*搜索所有符合条件的文件*/
@@ -1131,463 +1138,9 @@ namespace AstroAir
         send(json_message);
     }
 
-//----------------------------------------相机----------------------------------------
-
-    /*
-     * name: StartExposure(int exp,int bin,bool is_roi,int roi_type,int roi_x,int roi_y,bool IsSave,std::string FitsName,int Gain,int Offset)
-     * @param exp:相机曝光时间
-     * @param bin:像素合并
-     * @param IsSave:是否保存图像
-     * @param FitsName:保存图像名称
-     * @param Gain:相机增益
-     * @param Offset:相机偏置
-     * describe: Start exposure
-     * 描述：开始曝光
-     * calls: ImagineThread()
-	 * calls: StartExposure(int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset)
-     * calls: IDLog(const char *fmt, ...)
-     * calls: IDLog_DEBUG(const char *fmt, ...)
-	 * calls :StartExposureError(std::string message）
-	 * note:This function should not be executed normally
-     */
-    bool WSSERVER::StartExposure(int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset)
-    {
-        if(exp <= 0)
-        {
-            IDLog("Exposure time is less than 0, please input a reasonable data\n");
-            WebLog("Exposure time is less than 0, please input a reasonable data",3);
-            StartExposureError();
-            ShotRunningSend(0,4);
-            return false;
-        }
-		if(isCameraConnected == true)
-		{
-			bool camera_ok = false;
-            Image_Name = FitsName;
-            CameraBin = bin;
-            CameraExpo = exp;
-            CameraImageName = FitsName;
-            InExposure = true;
-            std::thread CameraCountThread(&WSSERVER::ImagineThread,this);
-            CameraCountThread.detach();
-            WebLog("Start exposure",2);
-			if((camera_ok = CCD->StartExposure(exp, bin, IsSave, FitsName, Gain, Offset)) != true)
-			{
-				/*返回曝光错误的原因*/
-				StartExposureError();
-                ShotRunningSend(0,4);
-				IDLog("Unable to start the exposure of the camera. Please check the connection of the camera. If you have any problems, please contact the developer\n");
-                WebLog("Unable to start the exposure of the camera",3);
-				InExposure = false;
-                /*如果函数执行不成功返回false*/
-				return false;
-			}
-            InExposure = false;
-            sleep(1);
-			/*将拍摄成功的消息返回至客户端*/
-			StartExposureSuccess();
-            WebLog("Successfully exposure",2);
-            ShotRunningSend(100,2);
-            newJPGReadySend();
-		}
-		else
-		{
-			IDLog("There seems to be some unknown mistakes here.Maybe you need to check the camera connection\n");
-			return false;
-        }
-        return true;
-    }
-
-    bool WSSERVER::StartExposureSeq(int loop,int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset)
-    {
-        return true;
-    }
-    
-    /*
-     * name: ImagineThread()
-     * describe: Calculate the remaining exposure time
-     * 描述：计算曝光剩余时间
-     * calls: ShotRunningSend()
-     * note: This thread is orphan. Please note
-     */
-    void WSSERVER::ImagineThread()
-    {
-        while(CameraExpoUsed < CameraExpo && InExposure == true)
-        {
-            double a = CameraExpoUsed,b = CameraExpo;
-            sleep(1);
-            CameraExpoUsed++;
-            ShotRunningSend((a/b)*100,1);
-        }
-        CameraExpoUsed = 0;
-    }
-
-    /*
-     * name: AbortExposure()
-     * describe: Abort exposure
-     * 描述：停止曝光
-     * calls: IDLog(const char *fmt, ...)
-     * calls: IDLog_DEBUG(const char *fmt, ...)
-     * note: This function should not be executed normally
-     */
-    bool WSSERVER::AbortExposure()
-    {
-		if(isCameraConnected == true)
-		{
-			bool camera_ok = false;
-			if ((camera_ok = CCD->AbortExposure()) != true)
-			{
-				/*返回曝光错误的原因*/
-				AbortExposureError();
-                WebLog("Unable to stop the exposure of the camera",3);
-				IDLog("Unable to stop the exposure of the camera. Please check the connection of the camera. If you have any problems, please contact the developer\n");
-				/*如果函数执行不成功返回false*/
-				return false;
-			}
-			/*将拍摄成功的消息返回至客户端*/
-			AbortExposureSuccess();
-            WebLog("Abort exposure successfully",2);
-		}
-		else
-		{
-            WebLog("Unable to stop the exposure of the camera",3);
-			IDLog("Try to stop exposure,Should never get here.\n");
-			return false;
-        }
-        return true;
-    }
-    
-    /*
-     * name: Cooling(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF,int CamTemp)
-     * describe: Camera Cooling Settings
-     * 描述：相机制冷设置
-     * calls: IDLog(const char *fmt, ...)
-     * calls: Cooling()
-     */
-    bool WSSERVER::Cooling(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF,int CamTemp)
-    {
-        bool camera_ok = false;
-        CameraTemp = CamTemp;
-        if(CoolerOFF == true)
-        {
-            if((camera_ok = CCD->Cooling(false,false,false,false,true,CamTemp)) != true)
-            {
-                IDLog("Unable to turn off the camera cooling mode, please check the condition of the device\n");
-                return false;
-            }
-        }
-        if(CoolerOFF == false)
-        {
-            if((camera_ok = CCD->Cooling(true,false,false,false,false,CamTemp)) != true)
-            {
-                IDLog("Unable to turn on the camera cooling mode, please check the condition of the device\n");
-                return false;
-            }
-        }
-		if(CoolDown == true)
-		{
-			if((camera_ok = CCD->Cooling(false,true,false,false,false,CamTemp)) != true)
-			{
-				IDLog("The camera can't cool down normally, please check the condition of the equipment\n");
-				return false;
-			}
-		}
-		if(Warmup == true)
-		{
-			if((camera_ok = CCD->Cooling(false,false,false,true,false,CamTemp)) != true)
-			{
-				IDLog("The camera can't warm up normally, please check the condition of the equipment\n");
-				return false;
-			}
-		}
-        IDLog("Camera cooling set successfully\n");
-        return true;
-    }
-
-    /*
-     * name: StartExposureSuccess()
-     * describe: Successfully exposure
-     * 描述：成功连接设备
-     * calls: IDLog(const char *fmt, ...)
-     * calls: send()
-     */
-	void WSSERVER::StartExposureSuccess()
-	{
-        IDLog("Successfully exposure\n");
-        /*整合信息并发送至客户端*/
-        Json::Value Root;
-        Root["Event"] = Json::Value("RemoteActionResult");
-        Root["UID"] = Json::Value("RemoteCameraShot");
-        Root["ActionResultInt"] = Json::Value(4);
-        json_message = Root.toStyledString();
-        send(json_message);
-	}
-	
-    /*
-     * name: AbortExposureSuccess()
-     * describe: Successfully stop exposure
-     * 描述：成功连接设备
-     * calls: IDLog(const char *fmt, ...)
-     * calls: send()
-     */
-	void WSSERVER::AbortExposureSuccess()
-	{
-		IDLog("Successfully stop exposure\n");
-        /*整合信息并发送至客户端*/
-        Json::Value Root;
-        Root["Event"] = Json::Value("RemoteActionResult");
-        Root["UID"] = Json::Value("RemoteCameraShot");
-        Root["ActionResultInt"] = Json::Value(6);
-        json_message = Root.toStyledString();
-        send(json_message);
-	}
-
-	/*
-	 * name: StartExposureError()
-	 * describe: Error handling connection to device
-	 * 描述：处理开始曝光时的错误
-	 * calls: IDLog(const char *fmt, ...)
-	 * calls: IDLog_DEBUG(const char *fmt, ...)
-	 * calls: send()
-	 */
-    void WSSERVER::StartExposureError()
-    {
-		IDLog("Unable to start exposure\n");
-		IDLog_DEBUG("Unable to start exposure\n");
-		/*整合信息并发送至客户端*/
-        Json::Value Root;
-        Root["Event"] = Json::Value("RemoteActionResult");
-        Root["UID"] = Json::Value("RemoteCameraShot");
-        Root["ActionResultInt"] = Json::Value(5);
-        json_message = Root.toStyledString();
-		send(json_message);
-    }
-    
-    /*
-	 * name: AbortExposureError()
-	 * describe: Unable to stop camera exposure
-	 * 描述：无法停止相机曝光
-	 * calls: IDLog(const char *fmt, ...)
-	 * calls: IDLog_DEBUG(const char *fmt, ...)
-	 * calls: send()
-	 */
-    void WSSERVER::AbortExposureError()
-    {
-		IDLog("Unable to stop camera exposure\n");
-		IDLog_DEBUG("Unable to stop camera exposure\n");
-		/*整合信息并发送至客户端*/
-		Json::Value Root;
-        Root["Event"] = Json::Value("RemoteActionResult");
-        Root["UID"] = Json::Value("RemoteCameraShot");
-        Root["ActionResultInt"] = Json::Value(5);
-        json_message = Root.toStyledString();
-		send(json_message);
-    }
-    
-    /*
-	 * name: ShotRunningSend(int ElapsedPerc,int id)
-     * @param ElapsedPerc:已完成进度
-     * @param id:状态
-	 * describe: Send exposure information
-	 * 描述：发送曝光信息
-	 * calls: send()
-	 */
-    void WSSERVER::ShotRunningSend(int ElapsedPerc,int id)
-    {
-        Json::Value Root;
-        Root["Event"] = Json::Value("ShotRunning");
-        Root["ElapsedPerc"] = Json::Value(ElapsedPerc);
-        Root["Status"] = Json::Value(id);
-        Root["File"] = Json::Value(CameraImageName);
-        Root["Expo"] = Json::Value(CameraExpo);
-        Root["Elapsed"] = Json::Value(CameraExpoUsed);
-        json_message = Root.toStyledString();
-		send(json_message);
-    }
-
-    /*
-	 * name: newJPGReadySend()
-	 * describe: Send the message that the picture is ready to the client
-	 * 描述：将图片准备就绪的消息传给客户端
-	 * calls: send()
-     * calls: imread()
-	 */
-    void WSSERVER::newJPGReadySend()
-    {
-        auto start = std::chrono::high_resolution_clock::now();
-        /*读取JPG文件并转化为Mat格式*/
-        const char* JPGName = strtok(const_cast<char *>(Image_Name.c_str()),".");
-		strcat(const_cast<char *>(JPGName), ".jpg");
-        int hfd,starIndex,width,height;
-        //ClacStarInfo(CameraImageName,hfd,starIndex,width,height);
-        /*组合即将发送的json信息*/
-        Json::Value Root;
-        Root["Event"] = Json::Value("NewJPGReady");
-        Root["UID"] = Json::Value("RemoteCameraShot");
-        Root["ActionResultInt"] = Json::Value(5);
-        Root["Base64Data"] = Json::Value(JPGName);
-        Root["PixelDimX"] = Json::Value(width);
-        Root["PixelDimY"] = Json::Value(height);
-        Root["SequenceTarget"] = Json::Value(SequenceTarget);
-        Root["Bin"] = Json::Value(CameraBin);
-        Root["StarIndex"] = Json::Value(starIndex);
-        Root["HFD"] = Json::Value(hfd);
-        Root["Expo"] = Json::Value(CameraExpo);
-        Root["TimeInfo"] = Json::Value(timestampW());
-        Root["File"] = Json::Value(CameraImageName);
-        Root["Filter"] = Json::Value("** BayerMatrix **");
-        json_message = Root.toStyledString();
-        /*发送信息*/
-		send(json_message);
-        auto end = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double> diff = end - start;
-        IDLog("Progress image took %g seconds\n", diff.count());
-    }
-
-//----------------------------------------天体搜索----------------------------------------
-
-    /*
-	 * name: SearchTarget(std::string TargetName)
-     * @param TargerName:目标名称
-	 * describe: Search for celestial bodies
-	 * 描述：搜索天体
-	 * calls: SearchTargetSuccess()
-     * calls: SearchTargetError()
-	 */
-    void WSSERVER::SearchTarget(std::string TargetName)
-    {
-        /*检查星体数据库是否存在*/
-        if(access( "base/starbase.xls", F_OK ) == -1)
-        {
-            SearchTargetError(2);
-            return;
-        }
-        // 工作簿
-        xls::WorkBook base("base/starbase.xls");
-        int line = 2;
-        while(true)
-        {
-			xls::cellContent info = base.GetCell(0,line,1);
-			if(info.type == xls::cellBlank) 
-                break;
-            std::string name = info.str;
-            /*去除所有空格*/
-            if( !name.empty() )
-            {
-                name.erase(0,name.find_first_not_of(" "));
-                name.erase(name.find_last_not_of(" ") + 1);
-                int index = 0;
-                while( (index = name.find(' ',index)) != std::string::npos)
-                    name.erase(index,1);
-            }
-            /*找到制定目标*/
-            if(name == TargetName)
-            {
-                std::string ra,dec,oname,type,mag;
-                ra = base.GetCell(0,line,5).str;
-                dec = base.GetCell(0,line,6).str;
-                oname = base.GetCell(0,line,2).str;
-                type = base.GetCell(0,line,3).str;
-                mag = base.GetCell(0,line,7).str;
-                SearchTargetSuccess(ra,dec,name,oname,type,mag);
-                return;
-            }
-            line++;
-		}
-        /*未找到制定目标*/
-        SearchTargetError(0);
-        return;
-    }
-
-    /*
-	 * name: SearchTargetSuccess(std::string RA,std::string DEC,std::string Name,std::string OtherName,std::string Type)
-     * @param RA:天体RA轴坐标
-     * @param DEC:天体DEC轴坐标
-     * @param Name:天体名称
-     * @param OtherName:天体别名
-     * @param Type:天体类型
-	 * describe: Search for celestial bodies successfully
-	 * 描述：搜索天体成功
-	 * calls: send()
-	 */
-    void WSSERVER::SearchTargetSuccess(std::string RA,std::string DEC,std::string Name,std::string OtherName,std::string Type,std::string MAG)
-    {
-        Json::Value Root,info;
-        Root["Event"] = Json::Value("RemoteActionResult");
-        Root["UID"] = Json::Value("RemoteSearchTarget");
-        Root["ActionResultInt"] = Json::Value(4);
-        Root["ParamRet"]["Result"] = Json::Value(1);
-        Root["ParamRet"]["Name"] = Json::Value(Name);
-        /*天体坐标信息*/
-        TargetRA = RA;
-        TargetDEC = DEC;
-        Root["ParamRet"]["RAJ2000"] = Json::Value(RA);
-        Root["ParamRet"]["DECJ2000"] = Json::Value(DEC);
-        /*天体基础信息*/
-        info["Key"] = Json::Value("别称");     //天体别名
-        info["Value"] = Json::Value(OtherName);
-        Root["ParamRet"]["Info"].append(info);
-        info["Key"] = Json::Value("类型");      //天体类型
-        info["Value"] = Json::Value(Type);
-        Root["ParamRet"]["Info"].append(info);
-        info["Key"] = Json::Value("星等");      //天体星等
-        info["Value"] = Json::Value(MAG);
-        Root["ParamRet"]["Info"].append(info);
-        json_message = Root.toStyledString();
-		send(json_message);
-    }
-
-    /*
-	 * name: SearchTargetError(int id)
-     * @param id:错误信息ID
-	 * describe: Search for celestial bodies error
-	 * 描述：搜索天体失败
-	 * calls: send()
-	 */
-    void WSSERVER::SearchTargetError(int id)
-    {
-        Json::Value Root;
-        Root["Event"] = Json::Value("RemoteActionResult");
-        Root["UID"] = Json::Value("RemoteSearchTarget");
-        if(id == 0)     //目标未找到
-        {
-            Root["ActionResultInt"] = Json::Value(4);
-            Root["ParamRet"]["Result"] = Json::Value(0);
-        }
-        else        //星体数据库无法打开
-        {
-            Root["ActionResultInt"] = Json::Value(5);
-            Root["Motivo"] = Json::Value("Could not open star base!");
-        }
-        json_message = Root.toStyledString();
-		send(json_message);
-    }
-
 //----------------------------------------赤道仪----------------------------------------
 
-    /*
-	 * name: Goto(std::string Target_RA,std::string Target_DEC)
-     * @param Target_RA:天体RA轴坐标
-     * @param Target_DEC:天体DEC轴坐标
-	 * describe: slew
-	 * 描述：赤道仪Goto
-	 * calls: IDLog()
-     * calls: WebLog()
-     * calls: Goto()
-	 */
-    bool WSSERVER::Goto(std::string Target_RA,std::string Target_DEC)
-    {
-        bool mount_ok = false;
-        if((mount_ok = MOUNT->Goto(Target_RA,Target_DEC)) != true)
-        {
-            IDLog("The equator doesn't work properly\n");
-            WebLog("赤道仪无法正常工作",3);
-            return false;
-        }
-        IDLog("The equator moves to the designated position\n");
-        WebLog("赤道仪转动到指定位置",3);
-        return true;
-    }
+    
 
 //----------------------------------------对焦----------------------------------------
 
@@ -1620,7 +1173,7 @@ namespace AstroAir
         char cmd[2048] = {0},line[256]={0},parity_str[8]={0};
         int UsedTime = 0;
         float ra = -1000, dec = -1000, angle = -1000, pixscale = -1000, parity = 0;
-        snprintf(cmd,2048,"solve-field %s --guess-scale --downsample 2 --ra %s --dec %s --radius 5 ",CameraImageName.c_str(),TargetRA.c_str(),TargetDEC.c_str());
+        //snprintf(cmd,2048,"solve-field %s --guess-scale --downsample 2 --ra %s --dec %s --radius 5 ",CameraImageName.c_str(),TargetRA.c_str(),TargetDEC.c_str());
         IDLog("Run:%s",cmd);
         FILE *handle = popen(cmd, "r");
         if (handle == nullptr)
@@ -1842,7 +1395,7 @@ namespace AstroAir
         {
             InSequenceRun = true;
             SequenceImageName = "Image_"+SequenceTarget+"_"+timestamp();
-            std::thread RunSequenceCamera(&WSSERVER::StartExposureSeq,this,Root["Camera"]["Loop"].asInt(),Root["Camera"]["Expo"].asInt(),Root["Camera"]["Bin"].asInt(),Root["Camera"]["SaveImage"].asBool(),SequenceImageName,Root["Camera"]["Gain"].asInt(),Root["Camera"]["Offset"].asInt());
+            std::thread RunSequenceCamera(&AIRCAMERA::StartExposureSeq,CCD,Root["Camera"]["Loop"].asInt(),Root["Camera"]["Expo"].asInt(),Root["Camera"]["Bin"].asInt(),Root["Camera"]["SaveImage"].asBool(),SequenceImageName,Root["Camera"]["Gain"].asInt(),Root["Camera"]["Offset"].asInt());
             RunSequenceCamera.detach();
             WebLog("Start sequence capture",2);
         }
@@ -1926,15 +1479,15 @@ namespace AstroAir
 	 * 描述：发送日志信息并在客户端显示
      * calls: send()
 	 */
-    void WSSERVER::WebLog(std::string message,int type)
+    void WebLog(std::string message,int type)
     {
         Json::Value Root;
         Root["Event"] = Json::Value("LogEvent");
         Root["Type"] = Json::Value(type);
         Root["Text"] = Json::Value(message);
         Root["TimeInfo"] = Json::Value(timestamp());
-        json_message = Root.toStyledString();
-        send(json_message);
+        std::string json_message = Root.toStyledString();
+        ws.send(json_message);
     }
 
 //----------------------------------------错误代码----------------------------------------

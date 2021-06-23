@@ -36,11 +36,12 @@ Description:IEQPro equipment driver
 #ifndef _IEQPRO_H_
 #define _IEQPRO_H_
 
-#include "../wsserver.h"
+#include "../air_mount.h"
+#include <vector>
 
 namespace AstroAir
 {
-    class IEQPro:public WSSERVER
+    class IEQPro:public AIRMOUNT
     {
         public:
             explicit IEQPro();

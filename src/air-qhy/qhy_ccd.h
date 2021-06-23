@@ -38,6 +38,7 @@ Description:QHY camera driver
 
 #include "../wsserver.h"
 #include "../libqhy/qhyccd.h"
+#include "../air_camera.h"
 
 #include <atomic>
 
@@ -45,7 +46,7 @@ Description:QHY camera driver
 
 namespace AstroAir
 {
-	class QHYCCD: public WSSERVER
+	class QHYCCD: public AIRCAMERA 
 	{
 		public:
 			/*构造函数，重置参数*/

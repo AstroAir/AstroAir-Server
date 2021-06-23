@@ -36,6 +36,7 @@ Description:OPENCV Library
 
 #include "logger.h"
 #include "opencv.h"
+#include "base64.h"
 
 namespace AstroAir::OPENCV
 {
@@ -52,24 +53,31 @@ namespace AstroAir::OPENCV
      * calls: IDLog()
      * note: The default quality of JPG image is 100
      */
-	void SaveImage(unsigned char *imgBuf,std::string ImageName,bool isColor,int ImageHeight,int ImageWidth)
+	std::string SaveImage(unsigned char *imgBuf,std::string ImageName,bool isColor,int ImageHeight,int ImageWidth)
 	{
 		std::vector<int> compression_params;		//图像质量
 		compression_params.push_back(cv::IMWRITE_JPEG_QUALITY);		//JPG图像质量
 		compression_params.push_back(100);
-		const char* JPGName = strtok(const_cast<char *>(ImageName.c_str()),".");
-		strcat(const_cast<char *>(JPGName), ".jpg");
+		//const char* JPGName = strtok(const_cast<char *>(ImageName.c_str()),".");
+		//strcat(const_cast<char *>(JPGName), ".jpg");
 		if(isColor == true)
 		{
 			cv::Mat img(ImageHeight,ImageWidth, CV_8UC3, imgBuf);		//3通道图像信息
-			imwrite(JPGName,img, compression_params);
+			
+			return Mat2Base64(img,"jpg");
+			//imwrite(JPGName,img, compression_params);
+			//IDLog("JPG image saved successfully\n");
+			//return Mat2Base64(img,"jpg");
 		}
 		else
 		{
 			cv::Mat img(ImageHeight,ImageWidth, CV_8UC1, imgBuf);		//单通道图像信息
-			imwrite(JPGName,img, compression_params);		//写入文件
+
+			return Mat2Base64(img,"jpg");
+			//imwrite(JPGName,img, compression_params);		//写入文件
+			//IDLog("JPG image saved successfully\n");
+			//return Mat2Base64(img,"jpg");
 		}
-		IDLog("JPG image saved successfully\n");
 	} 
 
 	/*
@@ -93,7 +101,7 @@ namespace AstroAir::OPENCV
 		float hranges[] = { 0,255 }; //特征空间的取值范围
 		if(isColor == true)		//如果是彩色相机
 		{
-			IDLog("Start calculating color image histogram\n");
+			//IDLog("Start calculating color image histogram\n");
 			cv::Mat img(ImageHeight,ImageWidth, CV_8UC3, imgBuf);		//3通道图像信息
 			int histSize[3] = {256,256,256};
 			const float *ranges[3] = { hranges , hranges , hranges};
@@ -103,7 +111,7 @@ namespace AstroAir::OPENCV
 		}
 		else		//默认为黑白相机
 		{
-			IDLog("Start calculating histogram of mono image\n");
+			//IDLog("Start calculating histogram of mono image\n");
 			cv::Mat img(ImageHeight,ImageWidth, CV_8UC1, imgBuf);		//单通道图像信息
 			const float *ranges[] = { hranges };
 			int histSize = 256;  //存放每个维度的直方图的尺寸的数组
@@ -187,4 +195,65 @@ namespace AstroAir::OPENCV
 		cv::Mat dst2 = meanLocal + C*highFreq;
 		return dst2;
 	}
+/*
+	static std::string base64Encode(const unsigned char *Data, int DataByte)
+	{
+		//编码表
+		const char EncodeTable[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+		//返回值
+		std::string strEncode;
+		unsigned char Tmp[4] = {0};
+		int LineLength = 0;
+		for (int i = 0; i < (int)(DataByte / 3); i++)
+		{
+			Tmp[1] = *Data++;
+			Tmp[2] = *Data++;
+			Tmp[3] = *Data++;
+			strEncode += EncodeTable[Tmp[1] >> 2];
+			strEncode += EncodeTable[((Tmp[1] << 4) | (Tmp[2] >> 4)) & 0x3F];
+			strEncode += EncodeTable[((Tmp[2] << 2) | (Tmp[3] >> 6)) & 0x3F];
+			strEncode += EncodeTable[Tmp[3] & 0x3F];
+			if (LineLength += 4, LineLength == 76)
+			{
+				strEncode += "\r\n";
+				LineLength = 0;
+			}
+		}
+		//对剩余数据进行编码
+		int Mod = DataByte % 3;
+		if (Mod == 1)
+		{
+			Tmp[1] = *Data++;
+			strEncode += EncodeTable[(Tmp[1] & 0xFC) >> 2];
+			strEncode += EncodeTable[((Tmp[1] & 0x03) << 4)];
+			strEncode += "==";
+		}
+		else if (Mod == 2)
+		{
+			Tmp[1] = *Data++;
+			Tmp[2] = *Data++;
+			strEncode += EncodeTable[(Tmp[1] & 0xFC) >> 2];
+			strEncode += EncodeTable[((Tmp[1] & 0x03) << 4) | ((Tmp[2] & 0xF0) >> 4)];
+			strEncode += EncodeTable[((Tmp[2] & 0x0F) << 2)];
+			strEncode += "=";
+		}
+
+		return strEncode;
+	}
+
+	//imgType 包括png bmp jpg jpeg等opencv能够进行编码解码的文件
+	static std::string Mat2Base64(const cv::Mat &img, std::string imgType)
+	{
+		//Mat转base64
+		std::string img_data;
+		std::vector<uchar> vecImg;
+		std::vector<int> vecCompression_params;
+		vecCompression_params.push_back(cv::IMWRITE_JPEG_QUALITY);
+		vecCompression_params.push_back(100);
+		imgType = "." + imgType;
+		cv::imencode(imgType, img, vecImg, vecCompression_params);
+		img_data = "data:image/jpg;base64,"+base64Encode(vecImg.data(), vecImg.size());
+		return img_data;
+	}
+	*/
 }

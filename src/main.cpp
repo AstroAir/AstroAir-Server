@@ -39,12 +39,10 @@ Description:Main program of astroair server
 #include "wsserver.h"
 
 using namespace AstroAir;
-
+//WSSERVER ws;
 #define AIRPORT 5950
-#define AIRPORT_TLS 5951
 int port = AIRPORT;
-int port_tls = AIRPORT_TLS;
-WSSERVER ws;
+
 
 /*
  * name: usage()

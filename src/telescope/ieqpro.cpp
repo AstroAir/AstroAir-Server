@@ -34,6 +34,7 @@ Description:IEQPro equipment driver
 #include "ieqpro.h"
 #include "../logger.h"
 #include "../aircom.h"
+#include "../wsserver.h"
 
 namespace AstroAir
 {

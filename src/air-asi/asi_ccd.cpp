@@ -34,9 +34,9 @@ Description:ZWO camera driver
 #include "asi_ccd.h"
 #include "../logger.h"
 #include "../opencv.h"
+#include "../base64.h"
 
 #include <fitsio.h>
-
 namespace AstroAir
 {
     /*
@@ -180,7 +180,7 @@ namespace AstroAir
 			IDLog("Stop exposure.\n");
 		}
 		/*在关闭相机之前保存设置*/
-		//SaveConfig();
+		SaveCameraConfig();
 		/*关闭相机*/
 		if((errCode = ASICloseCamera(CamId)) != ASI_SUCCESS)		//关闭相机
 		{
@@ -519,14 +519,41 @@ namespace AstroAir
 				fits_report_error(stderr, FitsStatus);		//如果有错则返回错误信息
 			#endif
 			#ifdef HAS_OPENCV
-				OPENCV::SaveImage(imgBuf,FitsName,isColorCamera,CamHeight,CamWidth);
+				img_data = "data:image/png;base64," + OPENCV::SaveImage(imgBuf,FitsName,isColorCamera,CamHeight,CamWidth);
 				OPENCV::clacHistogram(imgBuf,isColorCamera,CamHeight,CamWidth);
+				//std::vector<unsigned char> vctBuf(&imgBuf[0], imgSize);
+				//std::string strBuf(vctBuf.begin(), vctBuf.end());
+				//img_data = base64Encode(reinterpret_cast<const unsigned char*>(strBuf.c_str()),strBuf.length());
+				//ws.send(img_data);
 			#endif
 			if(imgBuf)
 				delete[] imgBuf;		//删除图像缓存
 		}
 		return true;
 	}
+
+	bool ASICCD::SaveCameraConfig()
+    {
+		std::string temp,a,b,d;
+		//d = CamBin + "x" +CamBin;
+        Json::Value Root;
+        Root["Brand"] = Json::Value("ZWOASI");
+        Root["Name"] = Json::Value(CamName[CamId]);
+        //Root["Config"]["BinMode"] = Json::Value(d);
+        Root["Config"]["Exposure"] = Json::Value(CameraExpo);
+		Root["Config"]["CamFrameWidth"] = Json::Value(CamWidth);
+		Root["Config"]["CamFrameHeight"] = Json::Value(CamHeight);
+		Root["Config"]["MaxFrameWidth"] = Json::Value(iMaxWidth);
+		Root["Config"]["MaxFrameHeight"] = Json::Value(iMaxHeight);
+		Root["Config"]["ImageType"] = Json::Value(Image_type);
+		temp = Root.toStyledString();
+		a = CamName[CamId];
+		b = "config/camera/" + a + ".json";
+		std::ofstream c(b.c_str(),std::ios::trunc);
+		c << temp;
+		c.close();
+		return true;
+    }
 }
 
 

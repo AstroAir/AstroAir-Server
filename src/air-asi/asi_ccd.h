@@ -37,6 +37,7 @@ Description:ZWO camera driver
 #define _ASICCD_H_
 
 #include "../wsserver.h"
+#include "../air_camera.h"
 #include "../libasi/ASICamera2.h"
 
 #include <mutex>
@@ -49,7 +50,8 @@ Description:ZWO camera driver
 
 namespace AstroAir
 {
-	class ASICCD: public WSSERVER
+
+	class ASICCD: public AIRCAMERA
 	{
 		public:
 			/*构造函数，重置参数*/
@@ -79,7 +81,9 @@ namespace AstroAir
 		private:
 			/*打开制冷*/
 			virtual bool ActiveCool(bool enable);
-
+			/*保存相机设置*/
+			virtual bool SaveCameraConfig();
+			
 			std::mutex condMutex;
 			std::mutex ccdBufferLock;
 			/*基础参数*/
@@ -118,6 +122,7 @@ namespace AstroAir
 			ASI_ERROR_CODE errCode;
 			ASI_EXPOSURE_STATUS expStatus;
 	};
+	
 }
 
 #endif

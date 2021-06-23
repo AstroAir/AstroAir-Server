@@ -1,5 +1,5 @@
 /*
- * opencv.h
+ * search.h
  * 
  * Copyright (C) 2020-2021 Max Qian
  * 
@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
+ 
 /************************************************* 
  
 Copyright: 2020-2021 Max Qian. All rights reserved
@@ -25,36 +25,29 @@ Author:Max Qian
 
 E-mail:astro_air@126.com
  
-Date:2021-2-14
+Date:2021-6-23
  
-Description:OPENCV Library
- 
+Description:Object search engine
+
 **************************************************/
 
-#pragma once
+#ifndef _AIR_SEARCH_H_
+#define _AIR_SEARCH_H_
 
-#ifndef _OPENCV_H_
-#define _OPENCV_H_
+#include "wsserver.h"
 
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/opencv.hpp>
-
-namespace AstroAir::OPENCV
+namespace AstroAir
 {
-	/*保存图像*/
-	std::string SaveImage(unsigned char *imgBuf,std::string ImageName,bool isColor,int ImageHeight,int ImageWidth);
-	/*计算直方图*/
-	void clacHistogram(unsigned char *imgBuf,bool isColor,int ImageHeight,int ImageWidth);
-	/*简单的降噪*/
-	void drop_noise(cv::Mat &img);
-	/*拼合两幅图像*/
-	cv::Mat matrixWiseMulti(cv::Mat &m1, cv::Mat &m2);
-	/*图像增强算法*/
-	cv::Mat ACE(cv::Mat &src);
-	/*
-	static std::string base64Encode(const unsigned char* Data, int DataByte);
-	static std::string Mat2Base64(const cv::Mat &img, std::string imgType);
-	*/
+    class Search
+    {
+        public:
+            void SearchTarget(std::string TargetName);
+            void SearchTargetSuccess(std::string RA,std::string DEC,std::string Name,std::string OtherName,std::string Type,std::string MAG);
+            void SearchTargetError(int id);
+
+        private:
+            std::string json_message;
+    };
 }
 
 #endif

@@ -61,7 +61,7 @@ Description:Main framework of astroair server
 
 #ifdef HAS_WEBSOCKET
 	typedef websocketpp::server<websocketpp::config::asio> airserver;
-	typedef websocketpp::server<websocketpp::config::asio_tls> airserver_tls;
+	typedef std::set<websocketpp::connection_hdl, std::owner_less<websocketpp::connection_hdl>> con_list;
 	using websocketpp::lib::placeholders::_1;
 	using websocketpp::lib::placeholders::_2;
 	using websocketpp::lib::bind;
@@ -91,15 +91,16 @@ namespace AstroAir
 			virtual bool Connect(std::string Device_name);
 			virtual bool Disconnect();
 			virtual std::string ReturnDeviceName();
-		/*相机*/
+		/*相机
 		public:
 			virtual bool StartExposure(int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset);
 			virtual bool StartExposureSeq(int loop,int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset);
 			virtual bool AbortExposure();
 			virtual bool Cooling(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF,int CamTemp);
+		*/
 		/*赤道仪*/
 		public:
-			virtual bool Goto(std::string Target_RA,std::string Target_DEC);
+			//virtual bool Goto(std::string Target_RA,std::string Target_DEC);
 		/*电调*/
 		public:
 			virtual bool MoveTo(int TargetPosition);
@@ -107,11 +108,13 @@ namespace AstroAir
 		public:
 			virtual bool FilterMoveTo(int TargetPosition);
 		public:
+			/*
 			int CameraBin = 0;
 			int CameraExpo = 0;
 			int CameraExpoUsed = 0;
 			int CameraTemp = 0;
 			std::string CameraImageName;
+			*/
 			std::string TargetRA,TargetDEC,MountAngle;
 		protected:
 			/*转化Json信息*/
@@ -152,27 +155,29 @@ namespace AstroAir
 			void SolveActualPositionError();
 			void RunSequenceError(std::string error);
 			/*网页日志*/
-			void WebLog(std::string message,int type);
+			
 			void UnknownMsg();
 			void UnknownDevice(int id,std::string message);
 			void ClientNumError();
 			void ErrorCode();
 			void Polling();
 		private:
+			airserver m_server;
+			con_list m_connections;
 			virtual bool LoadConfigure();
+			
+
 			Json::Value root;
 			Json::String errs;
 			Json::CharReaderBuilder reader;
 			std::string method,json_message,Image_Name;
 			std::string Camera,Mount,Focus,Filter,Guide;
 			std::string Camera_name,Mount_name,Focus_name,Filter_name,Guide_name;
-			typedef std::set<websocketpp::connection_hdl, std::owner_less<websocketpp::connection_hdl>> con_list;
-			con_list m_connections;
-			airserver m_server;
+
 			mutex mtx,mtx_action;
 			condition_variable m_server_cond,m_server_action;
 			/*定义服务器设备参数*/
-			WSSERVER *CCD,*MOUNT,*FOCUS,*FILTER,*GUIDE;
+			WSSERVER *FOCUS,*FILTER,*GUIDE;
 			std::string FileName,SequenceTarget,SequenceImageName;
 			std::string FileBuf[10];
 			int DeviceNum = 0;
@@ -181,7 +186,7 @@ namespace AstroAir
 			/*服务器设备连接状态参数*/
 			std::atomic_bool isConnected;
 			std::atomic_bool isConnectedTLS;
-			std::atomic_bool isCameraConnected;
+
 			std::atomic_bool isMountConnected;
 			std::atomic_bool isFocusConnected;
 			std::atomic_bool isFilterConnected;
@@ -192,8 +197,11 @@ namespace AstroAir
 			int MaxUsedTime = 0;		//解析最长时间
 			int MaxThreadNumber = 0;		//最多能同时处理的事件数量
 			int	MaxClientNumber = 0;		//最大客户端数量
-			std::string CertPath,ClientCertPath,PemPath,Password;		//SSL配置
 	};		
+	extern WSSERVER ws;
+	extern std::string img_data,SequenceTarget;
+	void WebLog(std::string message,int type);
+	extern std::atomic_bool isCameraConnected;
 }
 
 #endif

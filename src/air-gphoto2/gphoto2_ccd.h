@@ -37,6 +37,7 @@ Description:DSLR driver
 #define _GPHOTO2_H_
 
 #include "../wsserver.h"
+#include "../air_camera.h"
 
 #include <gphoto2/gphoto2.h>
 
@@ -44,13 +45,13 @@ Description:DSLR driver
 
 namespace AstroAir
 {
-    class GPhotoCCD: public WSSERVER
+    class GPhotoCCD: public AIRCAMERA
     {
         public:
             /*构造函数，重置参数*/
 			explicit GPhotoCCD();
 			/*析构函数*/
-			virtual ~GPhotoCCD();
+			~GPhotoCCD();
 			/*连接相机*/
 			virtual bool Connect(std::string Device_name) override;
 			/*断开连接*/
