@@ -45,23 +45,36 @@ Using:JsonCpp<https://github.com/open-source-parsers/jsoncpp>
 #include "air_mount.h"
 #include "air_solver.h"
 #include "air_script.h"
+#include "air_focus.h"
+#include "air_filter.h"
 
-//#include "ccfits.h"
+#ifdef HAS_ASI
+    #include "camera/air-asi/asi_ccd.h"
+#endif
+#ifdef HAS_QHY
+    #include "camera/air-qhy/qhy_ccd.h"
+#endif
+#ifdef HAS_GPhoto2
+    #include "camera/air-gphoto2/gphoto2_ccd.h"
+#endif
 
-#include "air-asi/asi_ccd.h"
-#include "air-qhy/qhy_ccd.h"
-#include "air-gphoto2/gphoto2_ccd.h"
-#include "telescope/ieqpro.h"
+#ifdef HAS_ASIEAF
+    #include "focus/air-eaf/air_eaf.h"
+#endif
+
+#ifdef HAS_ASIEFW
+    #include "filter/air-efw/air_efw.h"
+#endif
+
+#ifdef HAS_IOPTRON
+    #include "telescope/ieqpro/ieqpro.h"
+#endif
 
 namespace AstroAir
 {
     WSSERVER ws;
     std::string img_data,SequenceTarget;
-    std::atomic_bool isCameraConnected;
-    std::atomic_bool isMountConnected;
-	std::atomic_bool isFocusConnected;
-	std::atomic_bool isFilterConnected;
-	std::atomic_bool isGuideConnected;
+    std::atomic_bool isGuideConnected;
 
     /*服务器配置参数*/
 	int MaxUsedTime = 0;		//解析最长时间
@@ -783,7 +796,8 @@ namespace AstroAir
                         #ifdef HAS_ASIEAF
                         case "ASIEAF"_hash:{
                             /*初始化EAF电动调焦座，并赋FOCUS*/
-                            FOCUS = &EAFFocus;
+                            EAF *EAFFOCUS = new EAF();
+                            FOCUS = EAFFOCUS;
                             focus_ok = FOCUS->Connect(Focus_name);
                             break;
                         }
@@ -851,7 +865,8 @@ namespace AstroAir
                         #ifdef HAS_ASIEFW
                         case "ASIEFW"_hash:{
                             /*初始化EFW滤镜轮，并赋FILTER*/
-                            FILTER = &ASIFilter;
+                            EFW *EFWFILTER = new EFW();
+                            FILTER = EFWFILTER;
                             filter_ok = FILTER->Connect(Filter_name);
                             break;
                         }
@@ -1182,28 +1197,6 @@ namespace AstroAir
         json_message = Root.toStyledString();
         send(json_message);
     }
-
-//----------------------------------------对焦----------------------------------------
-
-    bool WSSERVER::MoveTo(int TargetPosition)
-    {
-        return true;
-    }
-
-//----------------------------------------滤镜轮----------------------------------------
-
-    bool WSSERVER::FilterMoveTo(int TargetPosition)
-    {
-        return true;
-    }
-
-//----------------------------------------解析----------------------------------------
-
-    
-
-//----------------------------------------计划拍摄----------------------------------------
-
-    
 
 //----------------------------------------日志----------------------------------------
 

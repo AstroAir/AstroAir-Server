@@ -71,8 +71,11 @@ namespace AstroAir
 			std::atomic_bool InSequenceRun;
     };
     extern AIRCAMERA *CCD;
+    extern std::atomic_bool isCameraConnected;
+    
     extern std::string CameraImageName;
-    extern int Image_Height,Image_Width;
+    extern int Image_Height,Image_Width,StarIndex;
+    extern double HFD;
 }
 
 #endif

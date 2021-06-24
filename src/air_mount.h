@@ -35,6 +35,7 @@ Description:Mount Offical Port
 #define _AIR_MOUNT_H_
 
 #include <string>
+#include <atomic>
 
 namespace AstroAir
 {
@@ -60,6 +61,7 @@ namespace AstroAir
 
     };
     extern AIRMOUNT *MOUNT;
+    extern std::atomic_bool isMountConnected;
 }
 
 #endif

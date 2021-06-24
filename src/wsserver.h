@@ -38,8 +38,6 @@ Description:Main framework of astroair server
 
 #include "config.h"
 
-#define _(str)  gettext(str)
-
 #ifdef HAS_WEBSOCKET
 	#include <websocketpp/config/asio.hpp>
 	#include <websocketpp/server.hpp>
@@ -93,21 +91,9 @@ namespace AstroAir
 			virtual bool Connect(std::string Device_name);
 			virtual bool Disconnect();
 			virtual std::string ReturnDeviceName();
-		/*电调*/
-		public:
-			virtual bool MoveTo(int TargetPosition);
-		/*滤镜轮*/
-		public:
-			virtual bool FilterMoveTo(int TargetPosition);
 		protected:
 			/*转化Json信息*/
 			void readJson(std::string message);
-			/*搜索目标*/
-			void SearchTarget(std::string TargetName);
-			/*解析*/
-			//void SolveActualPosition(bool IsBlind,bool IsSync);
-			/*相机拍摄计数*/
-			void ImagineThread();
 			/*WebSocket服务器功能性函数*/
 			void SetDashBoardMode();
 			/*获取配置文件*/
@@ -117,27 +103,12 @@ namespace AstroAir
 			void SetupConnect(int timeout);
 			void SetupDisconnect(int timeout);
 			void GetFilterConfiguration();
-			//void GetListAvalaibleSequence();
-			//void RunSequence(std::string SequenceFile);
-			//void GetListAvalaibleDragScript();
 			/*处理正确返回信息*/
 			void SetupConnectSuccess();
 			void SetupDisconnectSuccess();
 			void EnvironmentDataSend();
-			//void StartExposureSuccess();
-			//void AbortExposureSuccess();
-			//void ShotRunningSend(int ElapsedPerc,int id);
-			//void newJPGReadySend();
-			//void SearchTargetSuccess(std::string RA,std::string DEC,std::string Name,std::string OtherName,std::string Type,std::string MAG);
-			//void SolveActualPositionSuccess();
 			/*处理错误信息函数*/
 			void SetupConnectError(int id);
-			//void StartExposureError();
-			//void AbortExposureError();
-			//void SearchTargetError(int id);
-			//void SolveActualPositionError();
-			//void RunSequenceError(std::string error);
-			/*网页日志*/
 			
 			void UnknownMsg();
 			void UnknownDevice(int id,std::string message);
@@ -156,7 +127,7 @@ namespace AstroAir
 			mutex mtx,mtx_action;
 			condition_variable m_server_cond,m_server_action;
 			/*定义服务器设备参数*/
-			WSSERVER *FOCUS,*FILTER,*GUIDE;
+			WSSERVER *GUIDE;
 			std::string FileName;
 			std::string FileBuf[10];
 			int DeviceNum = 0;
@@ -170,11 +141,8 @@ namespace AstroAir
 
 	void WebLog(std::string message,int type);
 
-	extern int thread_num;
-	extern std::atomic_bool isCameraConnected;
-	extern std::atomic_bool isMountConnected;
-	extern std::atomic_bool isFocusConnected;
-	extern std::atomic_bool isFilterConnected;
+	extern int thread_num;		//线程数量
+	
 	extern std::atomic_bool isGuideConnected;
 	/*服务器配置参数*/
 	extern int MaxUsedTime,MaxThreadNumber,MaxClientNumber;		//解析最长时间,最多能同时处理的事件数量,最大客户端数量

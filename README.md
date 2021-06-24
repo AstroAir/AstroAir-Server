@@ -12,18 +12,25 @@ AstroAir Server
 ## Install Pre-requisites
 On Debian/Ubuntu:
 ```
-sudo apt-get -y install g++ make libnova-dev libcfitsio-dev libusb-1.0-0-dev build-essential cmake git libasio-dev
+sudo apt-get -y install g++ make libnova-dev libcfitsio-dev libusb-1.0-0-dev build-essential cmake git libasio-dev libwebsocketpp-dev libssl-dev libccfits-dev 
 ```
+And you alse need to install all of the SDK.
 ## Get the code
 ```
 git clone https://github.com/AstroAir-Develop-Team/AstroAir-Server.git
+Or
+git clone https://github.com/AstroAir/AstroAir-Server.git   (This port doesn't update on time!)
 ```
 ## Building the server
 ```
 mkdir build&&cd build 
 cmake ..
-sudo make 
+make 
 sudo make install #Currently, direct installation to the system is not supported. Please test in the build directory
+```
+## Test
+```
+./airserver -v  #In building directory
 ```
 # Problem report
 - Join the official QQ group 710622107

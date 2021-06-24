@@ -35,20 +35,27 @@ Description:Filter port
 #define _AIR_FILTER_H_
 
 #include <string>
+#include <atomic>
 
 namespace AstroAir 
 {
     class AIRFILTER
     {
         public:
-            virtual bool FilterMoveTo(int TargetPosition);
+            
             virtual bool Connect(std::string Device_name);      //连接相机
 			virtual bool Disconnect();                          //断开连接
 			virtual std::string ReturnDeviceName();             //返回设备名称
-
+            virtual bool FilterMoveToServer(int TargetPosition);
+            virtual bool FilterMoveTo(int TargetPosition);
+        protected:
+            void FilterMoveToSuccess();
+            void FilterMoveToError();
         private:
+            bool InMoving = false;
     };
     extern AIRFILTER *FILTER;
+    extern std::atomic_bool isFilterConnected;
 }
 
 #endif

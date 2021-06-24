@@ -38,6 +38,7 @@ Description:Filter port
 namespace AstroAir
 {
     AIRFILTER *FILTER;
+    std::atomic_bool isFilterConnected;
 
     /*
      * name: Connect()
@@ -66,8 +67,66 @@ namespace AstroAir
         return "None";
     }
 
+    /*
+     * name: FilterMoveToServer(int TargetPosition)
+     * @param TargetPosition:滤镜轮将运动至的位置
+     * describe: Filter move （Server）
+     * 描述：滤镜轮运动至   （服务器）
+     * calls: FilterMoveTo(int TargetPosition)
+     * calls: IDLog(const char *fmt, ...)
+     * calls: WebLog()
+	 * calls: FilterMoveToError(）
+     * calls: FilterMoveToSuccess()
+     */
+    bool AIRFILTER::FilterMoveToServer(int TargetPosition)
+    {
+        if(TargetPosition < 0)
+        {
+            IDLog(_("Target position is less than 0, please input a reasonable data\n"));
+            WebLog(_("Are you kidding me?!"),3);
+            return false;
+        }
+        if(isFilterConnected == true)
+        {
+            if(InMoving == true)
+            {
+                IDLog(_("Filter is moving,try again later!\n"));
+                WebLog(_("Filter is moving,try again later!"),3);
+                return false;
+            }
+            if(FILTER->FilterMoveTo(TargetPosition) != true)
+            {
+                /*返回原因*/
+				FilterMoveToError();
+				IDLog(_("The filter failed to move to %d\n"),TargetPosition);
+                WebLog(_("The filter failed to move to."),3);
+				InMoving = false;
+				return false;
+            }
+            InMoving = false;
+            FilterMoveToSuccess();
+            WebLog(_("Filter move to  ok"),2);
+        }
+        else
+        {
+            IDLog("There seems to be some unknown mistakes here.Maybe you need to check the filter connection\n");
+			return false;
+        }
+        return true;
+    }
+
     bool AIRFILTER::FilterMoveTo(int TargetPosition)
     {
         return true;
+    }
+
+    void AIRFILTER::FilterMoveToSuccess()
+    {
+        return ;
+    }
+
+    void AIRFILTER::FilterMoveToError()
+    {
+        return ;
     }
 }

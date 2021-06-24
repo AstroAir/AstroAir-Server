@@ -35,22 +35,33 @@ Description:Focus offical port
 #define _AIR_FOCUS_H_
 
 #include <string>
+#include <atomic>
 
 namespace AstroAir
 {
     class AIRFOCUS
     {
         public:
+            explicit AIRFOCUS();
+            ~AIRFOCUS();
             virtual bool Connect(std::string Device_name);      //连接相机
 			virtual bool Disconnect();                          //断开连接
 			virtual std::string ReturnDeviceName();             //返回设备名称
             virtual bool MoveToServer(int TargetPosition);
             virtual bool MoveTo(int TargetPosition);
+            virtual bool MoveServer(int Steps);
+            virtual bool Move(int Steps);
 
         private:
-            
+            virtual void MoveToError();
+            virtual void MoveToSuccess();
+            virtual void MoveError();
+            virtual void MoveSuccess();
+
+            std::atomic_bool InMoving;
     };
     extern AIRFOCUS *FOCUS;
+    extern std::atomic_bool isFocusConnected;
 }
 
 #endif

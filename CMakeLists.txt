@@ -65,34 +65,81 @@ else()
 	message("Please check setting,websocketpp is one of the main library!")
 endif()
 
-#设置ASI相机库
-option(HAS_ASI "Using ASI camera Library" ON)
-if(HAS_ASI)
-	find_path(PATH_ASI ASICamera2.h /usr/include/libasi)
-	find_path(PATH_ASI ASICamera2.h /usr/local/include/libasi)
-	find_library(PATH_ASI_LIB libASICamera2.so /usr/lib)
-	find_library(PATH_ASI_LIB libASICamera2.so /usr/local/lib)
-	if(PATH_ASI AND PATH_ASI_LIB)
+#----------------------------------------设置ASI库----------------------------------------
+
+option(HAS_ASI_CAMERA "Using ASI Camera Library" ON)
+if(HAS_ASI_CAMERA)
+	find_path(PATH_ASI_CAMERA ASICamera2.h /usr/include/libasi)
+	find_path(PATH_ASI_CAMERA ASICamera2.h /usr/local/include/libasi)
+	find_library(PATH_ASI_CAMERA_LIB libASICamera2.so /usr/lib)
+	find_library(PATH_ASI_CAMERA_LIB libASICamera2.so /usr/local/lib)
+	if(PATH_ASI_CAMERA AND PATH_ASI_CAMERA_LIB)
 		message("-- Found ASI camera header file in ${PATH_ASI} and library in ${PATH_ASI_LIB}")
-		add_library(LIBASI src/air-asi/asi_ccd.cpp)
-		target_link_libraries(airserver PUBLIC LIBASI)
-		link_directories("${PROJECT_SOURCE_DIR}/src/libasi/${PLATFORM}/")
+		add_library(LIBASI_CAMERA src/camera/air-asi/asi_ccd.cpp)
+		target_link_libraries(airserver PUBLIC LIBASI_CAMERA)
 		target_link_libraries(airserver PUBLIC libASICamera2.so)		#ASI相机
 		target_link_libraries(airserver PUBLIC libusb-1.0.so)
 	else()
 		message("-- Could not found ASI camera library.Please build it before intall!")
 		add_custom_command(
-			TARGET LIBASI
+			TARGET LIBASI_CAMERA
 			PRE_BUILD 
 			COMMAND sudo apt install libasi -y
-			COMMENT "Downloaded and Building ASI Library"
+			COMMENT "Downloaded and Building ASI Camera Library"
 		)
 	endif()
 else()
 	message("-- Not built ASI camera library")
 endif()
+option(HAS_ASI_FOCUSER "Using ASI Focuser Library" ON)
+if(HAS_ASI_FOCUSER)
+	find_path(PATH_ASI_FOCUSER EAF_focuser.h /usr/include/libasi)
+	find_path(PATH_ASI_FOCUSER EAF_focuser.h /usr/local/include/libasi)
+	find_library(PATH_ASI_FOCUSER_LIB libEAFFocuser.so /usr/lib)
+	find_library(PATH_ASI_FOCUSER_LIB libEAFFocuser.so /usr/local/lib)
+	if(PATH_ASI_FOCUSER AND PATH_ASI_FOCUSER_LIB)
+		message("-- Found ASI focuser header file in ${PATH_ASI_FOCUSER} and library in ${PATH_ASI_FOCUSER_LIB}")
+		add_library(LIBASI_FOCUSER src/focus/air-eaf/air_eaf.cpp)
+		target_link_libraries(airserver PUBLIC LIBASI_FOCUSER)
+		target_link_libraries(airserver PUBLIC libEAFFocuser.so)		#ASI电动调焦座
+	else()
+		message("-- Could not found ASI focuser library.Please build it before intall!")
+		add_custom_command(
+			TARGET LIBASI_FOCUSER
+			PRE_BUILD 
+			COMMAND sudo apt install libasi -y
+			COMMENT "Downloaded and Building ASI Focuser Library"
+		)
+	endif()
+else()
+	message("-- Not built ASI focuser library")
+endif()
+option(HAS_ASI_FILTER "Using ASI Filter Library" ON)
+if(HAS_ASI_FILTER)
+	find_path(PATH_ASI_FILTER EFW_filter.h /usr/include/libasi)
+	find_path(PATH_ASI_FILTER EFW_filter.h /usr/local/include/libasi)
+	find_library(PATH_ASI_FILTER_LIB libEFWFilter.so /usr/lib)
+	find_library(PATH_ASI_FILTER_LIB libEFWFilter.so /usr/local/lib)
+	if(PATH_ASI_FILTER AND PATH_ASI_FILTER_LIB)
+		message("-- Found ASI filter header file in ${PATH_ASI_FILTER} and library in ${PATH_ASI_FILTER_LIB}")
+		add_library(LIBASI_FILTER src/filter/air-efw/air_efw.cpp)
+		target_link_libraries(airserver PUBLIC LIBASI_FILTER)
+		target_link_libraries(airserver PUBLIC libEFWFilter.so)		#ASI滤镜轮
+	else()
+		message("-- Could not found ASI filter library.Please build it before intall!")
+		add_custom_command(
+			TARGET LIBASI_FILTER
+			PRE_BUILD 
+			COMMAND sudo apt install libasi -y
+			COMMENT "Downloaded and Building ASI Filter Library"
+		)
+	endif()
+else()
+	message("-- Not built ASI filter library")
+endif()
 
-#设置QHY相机库
+#----------------------------------------设置QHY库----------------------------------------
+
 option(HAS_QHY "Using QHY camera Library" ON)
 if(HAS_QHY)
 	find_path(PATH_QHY qhyccd.h /usr/include/libqhy)
@@ -101,9 +148,9 @@ if(HAS_QHY)
 	find_library(PATH_QHY_LIB libqhyccd.so /usr/local/lib)
 	if(PATH_QHY AND PATH_QHY_LIB)
 		message("-- Found QHY camera header file in ${PATH_QHY} and library in ${PATH_QHY_LIB}")
-		add_library(LIBQHY src/air-qhy/qhy_ccd.cpp)
+		add_library(LIBQHY src/camera/air-qhy/qhy_ccd.cpp)
 		target_link_libraries(airserver PUBLIC LIBQHY)
-		link_directories("${PROJECT_SOURCE_DIR}/src/libqhy/${PLATFORM}/")
+		#link_directories("${PROJECT_SOURCE_DIR}/src/libqhy/${PLATFORM}/")
 		target_link_libraries(airserver PUBLIC libqhyccd.so)		#QHY相机
 	else()
 		message("-- Could not found QHY camera library.Please build it before intall!")
@@ -118,7 +165,8 @@ else()
 	message("-- Not built QHY camera library")
 endif()
 
-#设置GPhoto2相机库
+#----------------------------------------设置GPhoto2相机库----------------------------------------
+
 option(HAS_GPhoto2 "Using GPhoto2 camera Library" ON)
 if(HAS_GPhoto2)
 	find_path(PATH_GPhoto2 gphoto2.h /usr/include/gphoto2)
@@ -127,7 +175,7 @@ if(HAS_GPhoto2)
 	find_library(PATH_GPhoto2_LIB libgphoto2.so /usr/local/lib)
 	if(PATH_GPhoto2 AND PATH_GPhoto2_LIB)
 		message("-- Found GPhoto2 camera header file in ${PATH_GPhoto2} and library in ${PATH_GPhoto2_LIB}")
-		add_library(LIBGPhoto2 src/air-gphoto2/gphoto2_ccd.cpp)
+		add_library(LIBGPhoto2 src/camera/air-gphoto2/gphoto2_ccd.cpp)
 		target_link_libraries(airserver PUBLIC LIBGPhoto2)
 		target_link_libraries(airserver PUBLIC libgphoto2.so)		#GPhoto2相机
 		target_link_libraries(airserver PUBLIC libgphoto2_port.so)
@@ -146,7 +194,7 @@ endif()
 
 option(HAS_IOPTRON "Using IOPTRON Library" ON)
 if(HAS_IOPTRON)
-	add_library(LIBIOPTRON src/telescope/ieqpro.cpp)
+	add_library(LIBIOPTRON src/telescope/ieqpro/ieqpro.cpp)
 	target_link_libraries(airserver PUBLIC LIBIOPTRON)
 endif()
 
@@ -293,6 +341,8 @@ else()
 	message("Please check setting,libxls is one of the main library!")
 endif()
 
+#----------------------------------------AstroAir-Server官方API文件----------------------------------------
+
 add_library(LIBCAMERA src/air_camera.cpp)		#相机
 target_link_libraries(airserver PUBLIC LIBCAMERA)
 add_library(LIBMOUNT src/air_mount.cpp)			#赤道仪
@@ -305,8 +355,8 @@ add_library(LIBFILTER src/air_filter.cpp)			#滤镜轮
 target_link_libraries(airserver PUBLIC LIBFILTER)
 add_library(LIBSOLVER src/air_solver.cpp)		#解析
 target_link_libraries(airserver PUBLIC LIBSOLVER)
-add_library(LIBAUTOFOCUS src/air_autofocus.cpp)			#自动对焦
-target_link_libraries(airserver PUBLIC LIBAUTOFOCUS)
+#add_library(LIBAUTOFOCUS src/air_autofocus.cpp)			#自动对焦
+#target_link_libraries(airserver PUBLIC LIBAUTOFOCUS)
 
 
 add_library(LIBCHECK src/check.cpp)				#自动检查更新
@@ -320,10 +370,9 @@ link_directories(${LINK_DIR})
 #头文件
 target_include_directories(airserver PUBLIC
                            "${PROJECT_BINARY_DIR}/src"
-                           "${PROJECT_SOURCE_DIR}/src/air-asi"
-                           "${PROJECT_SOURCE_DIR}/src/libasi"
-						   "${PROJECT_SOURCE_DIR}/src/air-qhy"
-                           "${PROJECT_SOURCE_DIR}/src/libqhy"
+                           "${PROJECT_SOURCE_DIR}/src/camera/air-asi"
+						   "${PROJECT_SOURCE_DIR}/src/camera/air-qhy"
+						   "${PROJECT_SOURCE_DIR}/src/focus/air-eaf"
 						   "${PROJECT_SOURCE_DIR}/src/telescope"
                            )
 

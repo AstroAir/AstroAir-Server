@@ -32,20 +32,22 @@ Description:Camera Offical Port
 **************************************************/
 
 #include "air_camera.h"
-#include "air_autofocus.h"
+//#include "air_autofocus.h"
 #include "wsserver.h"
 #include "logger.h"
 
 namespace AstroAir
 {
     AIRCAMERA *CCD;
-    std::string CameraImageName;
-    int Image_Height,Image_Width;
+    std::atomic_bool isCameraConnected;
 
+    std::string CameraImageName;
+    int Image_Height,Image_Width,StarIndex;
+    double HFD;
     /*
-     * name: AIRCAMERA()()
-     * describe: Constructor for initializing solver parameters
-     * 描述：构造函数，用于初始化解析器参数
+     * name: AIRCAMERA()
+     * describe: Constructor for initializing camera parameters
+     * 描述：构造函数，用于初始化相机参数
      */
     AIRCAMERA::AIRCAMERA()
     {
@@ -88,6 +90,12 @@ namespace AstroAir
         return true;
     }
 
+    /*
+     * name: ReturnDeviceName()
+     * describe: Return device's name
+     * 描述：返回设备名称（无任何实际用途，仅作为一个模板）
+	 * note:This function should not be executed normally
+     */
     std::string AIRCAMERA::ReturnDeviceName()
     {
         return "None";
@@ -122,7 +130,6 @@ namespace AstroAir
         }
 		if(isCameraConnected == true)
 		{
-			bool camera_ok = false;
             Image_Name = FitsName;
             CameraBin = bin;
             CameraExpo = exp;
@@ -131,7 +138,7 @@ namespace AstroAir
             std::thread CameraCountThread(&AIRCAMERA::ImagineThread,this);
             CameraCountThread.detach();
             WebLog(_("Start exposure"),2);
-			if((camera_ok = CCD->StartExposure(exp, bin, IsSave, FitsName, Gain, Offset)) != true)
+			if(CCD->StartExposure(exp, bin, IsSave, FitsName, Gain, Offset) != true)
 			{
 				/*返回曝光错误的原因*/
 				StartExposureError();
@@ -143,7 +150,6 @@ namespace AstroAir
 				return false;
 			}
             InExposure = false;
-            //sleep(1);
 			/*将拍摄成功的消息返回至客户端*/
 			StartExposureSuccess();
             WebLog("Successfully exposure",2);
@@ -206,7 +212,6 @@ namespace AstroAir
      * 描述：停止曝光
      * calls: IDLog(const char *fmt, ...)
      * calls: IDLog_DEBUG(const char *fmt, ...)
-     * note: This function should not be executed normally
      */
     bool AIRCAMERA::AbortExposure()
     {

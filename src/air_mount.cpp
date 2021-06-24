@@ -39,6 +39,7 @@ Description:Mount Offical Port
 namespace AstroAir
 {
     AIRMOUNT *MOUNT;
+    std::atomic_bool isMountConnected;
 
     bool AIRMOUNT::Connect(std::string Device_name)
     {
