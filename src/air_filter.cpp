@@ -1,5 +1,5 @@
 /*
- * air_focus.cpp
+ * air_filter.cpp
  * 
  * Copyright (C) 2020-2021 Max Qian
  * 
@@ -25,19 +25,19 @@ Author:Max Qian
 
 E-mail:astro_air@126.com
  
-Date:2021-6-23
+Date:2021-6-24
  
-Description:Focus offical port
+Description:Filter port
 
 **************************************************/
 
-#include "air_focus.h"
+#include "air_filter.h"
 #include "wsserver.h"
 #include "logger.h"
 
 namespace AstroAir
 {
-    AIRFOCUS *FOCUS;
+    AIRFILTER *FILTER;
 
     /*
      * name: Connect()
@@ -45,7 +45,7 @@ namespace AstroAir
      * 描述：连接（无任何实际用途，仅作为一个模板）
 	 * note:This function should not be executed normally
      */
-    bool AIRFOCUS::Connect(std::string Device_name)
+    bool AIRFILTER::Connect(std::string Device_name)
     {
         return true;
     }
@@ -56,22 +56,17 @@ namespace AstroAir
      * 描述：断开连接（无任何实际用途，仅作为一个模板）
 	 * note:This function should not be executed normally
      */
-    bool AIRFOCUS::Disconnect()
+    bool AIRFILTER::Disconnect()
     {
         return true;
     }
 
-    std::string AIRFOCUS::ReturnDeviceName()
+    std::string AIRFILTER::ReturnDeviceName()
     {
         return "None";
     }
 
-    bool AIRFOCUS::MoveToServer(int TargetPosition)
-    {
-        return true;
-    }
-
-    bool AIRFOCUS::MoveTo(int TargetPosition)
+    bool AIRFILTER::FilterMoveTo(int TargetPosition)
     {
         return true;
     }

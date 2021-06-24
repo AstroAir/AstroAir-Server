@@ -117,9 +117,9 @@ namespace AstroAir
 			void SetupConnect(int timeout);
 			void SetupDisconnect(int timeout);
 			void GetFilterConfiguration();
-			void GetListAvalaibleSequence();
-			void RunSequence(std::string SequenceFile);
-			void GetListAvalaibleDragScript();
+			//void GetListAvalaibleSequence();
+			//void RunSequence(std::string SequenceFile);
+			//void GetListAvalaibleDragScript();
 			/*处理正确返回信息*/
 			void SetupConnectSuccess();
 			void SetupDisconnectSuccess();
@@ -136,7 +136,7 @@ namespace AstroAir
 			//void AbortExposureError();
 			//void SearchTargetError(int id);
 			//void SolveActualPositionError();
-			void RunSequenceError(std::string error);
+			//void RunSequenceError(std::string error);
 			/*网页日志*/
 			
 			void UnknownMsg();
@@ -152,36 +152,35 @@ namespace AstroAir
 			Json::String errs;
 			Json::CharReaderBuilder reader;
 			std::string method,json_message,Image_Name;
-			std::string Camera,Mount,Focus,Filter,Guide;
-			std::string Camera_name,Mount_name,Focus_name,Filter_name,Guide_name;
 
 			mutex mtx,mtx_action;
 			condition_variable m_server_cond,m_server_action;
 			/*定义服务器设备参数*/
 			WSSERVER *FOCUS,*FILTER,*GUIDE;
-			std::string FileName,SequenceTarget,SequenceImageName;
+			std::string FileName;
 			std::string FileBuf[10];
 			int DeviceNum = 0;
 			int ClientNum = 0;
 			std::string DeviceBuf[5];
 			/*服务器设备连接状态参数*/
 			std::atomic_bool isConnected;
-
-			std::atomic_bool isMountConnected;
-			std::atomic_bool isFocusConnected;
-			std::atomic_bool isFilterConnected;
-			std::atomic_bool isGuideConnected;
-			std::atomic_bool InExposure;
-			std::atomic_bool InSequenceRun;
-			
-	};		
+	};
 	extern WSSERVER ws;
 	extern std::string img_data,SequenceTarget;
+
 	void WebLog(std::string message,int type);
+
+	extern int thread_num;
 	extern std::atomic_bool isCameraConnected;
+	extern std::atomic_bool isMountConnected;
+	extern std::atomic_bool isFocusConnected;
+	extern std::atomic_bool isFilterConnected;
+	extern std::atomic_bool isGuideConnected;
 	/*服务器配置参数*/
 	extern int MaxUsedTime,MaxThreadNumber,MaxClientNumber;		//解析最长时间,最多能同时处理的事件数量,最大客户端数量
 	extern std::string TargetRA,TargetDEC,MountAngle;
+	extern std::string Camera,Mount,Focus,Filter,Guide;
+	extern std::string Camera_name,Mount_name,Focus_name,Filter_name,Guide_name;
 }
 
 #endif

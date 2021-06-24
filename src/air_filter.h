@@ -1,5 +1,5 @@
 /*
- * air_focus.h
+ * air_filter.h
  * 
  * Copyright (C) 2020-2021 Max Qian
  * 
@@ -25,32 +25,30 @@ Author:Max Qian
 
 E-mail:astro_air@126.com
  
-Date:2021-6-23
+Date:2021-6-24
  
-Description:Focus offical port
+Description:Filter port
 
 **************************************************/
 
-#ifndef _AIR_FOCUS_H_
-#define _AIR_FOCUS_H_
+#ifndef _AIR_FILTER_H_
+#define _AIR_FILTER_H_
 
 #include <string>
 
-namespace AstroAir
+namespace AstroAir 
 {
-    class AIRFOCUS
+    class AIRFILTER
     {
         public:
+            virtual bool FilterMoveTo(int TargetPosition);
             virtual bool Connect(std::string Device_name);      //连接相机
 			virtual bool Disconnect();                          //断开连接
 			virtual std::string ReturnDeviceName();             //返回设备名称
-            virtual bool MoveToServer(int TargetPosition);
-            virtual bool MoveTo(int TargetPosition);
 
         private:
-            
     };
-    extern AIRFOCUS *FOCUS;
+    extern AIRFILTER *FILTER;
 }
 
 #endif

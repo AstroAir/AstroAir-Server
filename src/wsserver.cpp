@@ -44,6 +44,7 @@ Using:JsonCpp<https://github.com/open-source-parsers/jsoncpp>
 #include "air_camera.h"
 #include "air_mount.h"
 #include "air_solver.h"
+#include "air_script.h"
 
 //#include "ccfits.h"
 
@@ -57,11 +58,20 @@ namespace AstroAir
     WSSERVER ws;
     std::string img_data,SequenceTarget;
     std::atomic_bool isCameraConnected;
+    std::atomic_bool isMountConnected;
+	std::atomic_bool isFocusConnected;
+	std::atomic_bool isFilterConnected;
+	std::atomic_bool isGuideConnected;
+
     /*服务器配置参数*/
 	int MaxUsedTime = 0;		//解析最长时间
 	int MaxThreadNumber = 0;		//最多能同时处理的事件数量
 	int	MaxClientNumber = 0;		//最大客户端数量
+    int thread_num = 0;
     std::string TargetRA,TargetDEC,MountAngle;
+
+    std::string Camera,Mount,Focus,Filter,Guide;
+	std::string Camera_name,Mount_name,Focus_name,Filter_name,Guide_name;
 
 //----------------------------------------服务器----------------------------------------
 
@@ -94,8 +104,6 @@ namespace AstroAir
         isFocusConnected = false;       //电动调焦座连接状态
         isFilterConnected = false;      //滤镜轮连接状态
         isGuideConnected = false;       //导星软件连接状态
-        InExposure = false;             //相机曝光状态
-        InSequenceRun = false;          //序列拍摄状态
     }
     
     /*
@@ -229,24 +237,28 @@ namespace AstroAir
             case "RemoteSetProfile"_hash:{
                 std::thread ProfileThread(&WSSERVER::SetProfile,this,root["params"]["FileName"].asString());
                 ProfileThread.detach();
+                thread_num++;
                 break;
             }
             /*连接设备*/
             case "RemoteSetupConnect"_hash:{
                 std::thread ConnectThread(&WSSERVER::SetupConnect,this,root["params"]["TimeoutConnect"].asInt());
                 ConnectThread.detach();
+                thread_num++;
                 break;
             }
             /*断开连接*/
             case "RemoteSetupDisconnect"_hash:{
                 std::thread DisconnectThread(&WSSERVER::SetupDisconnect,this,root["params"]["TimeoutConnect"].asInt());
                 DisconnectThread.detach();
+                thread_num++;
                 break;
             }
             /*相机开始拍摄*/
             case "RemoteCameraShot"_hash:{
                 std::thread CamThread(&AIRCAMERA::StartExposureServer,CCD,root["params"]["Expo"].asInt(),root["params"]["Bin"].asInt(),root["params"]["IsSaveFile"].asBool(),root["params"]["FitFileName"].asString(),root["params"]["Gain"].asInt(),root["params"]["Offset"].asInt());
                 CamThread.detach();
+                thread_num++;
                 break;
             }
             /*相机停止拍摄*/
@@ -257,6 +269,7 @@ namespace AstroAir
             case "RemoteCooling"_hash:{
                 std::thread CoolingThread(&AIRCAMERA::Cooling,CCD,root["params"]["IsSetPoint"].asBool(),root["params"]["IsCoolDown"].asBool(),root["params"]["IsASync"].asBool(),root["params"]["IsWarmup"].asBool(),root["params"]["IsCoolerOFF"].asBool(),root["params"]["Temperature"].asInt());
                 CoolingThread.detach();
+                thread_num++;
                 break;
             }
             /*搜索天体*/
@@ -264,6 +277,7 @@ namespace AstroAir
                 Search a;
                 std::thread SearchThread(&Search::SearchTarget,a,root["params"]["Name"].asString());
                 SearchThread.detach();
+                thread_num++;
                 break;
             }
             /*获取滤镜轮设置*/
@@ -280,6 +294,7 @@ namespace AstroAir
             case "RemotePrecisePointTarget"_hash:{
                 std::thread GotoThread(&AIRMOUNT::GotoServer,MOUNT,root["params"]["RAText"].asString(),root["params"]["DECText"].asString());
                 GotoThread.detach();
+                thread_num++;
                 break;
             }
             /*解析*/
@@ -294,24 +309,35 @@ namespace AstroAir
                     std::thread SolveThread(&AIRSOLVER::SolveActualPositionOnline,SOLVER,root["params"]["IsBlind"].asBool(),root["params"]["IsSync"].asBool());
                     SolveThread.detach();
                 }
+                thread_num++;
                 break;
             }
             /*搜索所有可以执行的序列*/
             case "RemoteGetListAvalaibleSequence"_hash:{
-                std::thread SequenceThread(&WSSERVER::GetListAvalaibleSequence,this);
+                std::thread SequenceThread(&AIRSCRIPT::GetListAvalaibleSequence,SCRIPT);
                 SequenceThread.detach();
+                thread_num++;
                 break;
             }
             /*运行拍摄序列*/
             case "RemoteSequence"_hash:{
-                std::thread SequenceThreadRun(&WSSERVER::RunSequence,this,root["params"]["SequenceFile"].asString());
+                std::thread SequenceThreadRun(&AIRSCRIPT::RunSequence,SCRIPT,root["params"]["SequenceFile"].asString());
                 SequenceThreadRun.detach();
+                thread_num++;
                 break;
             }
             /*搜索所有可以执行的脚本*/
             case "RemoteGetListAvalaibleDragScript"_hash:{
-                std::thread DragScriptThread(&WSSERVER::GetListAvalaibleDragScript,this);
+                std::thread DragScriptThread(&AIRSCRIPT::GetListAvalaibleDragScript,SCRIPT);
                 DragScriptThread.detach();
+                thread_num++;
+                break;
+            }
+            /*运行脚本*/
+            case "RemoteDragScript"_hash:{
+                std::thread DragScriptThreadRun(&AIRSCRIPT::RemoteDragScript,SCRIPT,root["params"]["DragScriptFile"].asString());
+                DragScriptThreadRun.detach();
+                thread_num++;
                 break;
             }
             /*轮询，保持连接*/
@@ -1177,224 +1203,7 @@ namespace AstroAir
 
 //----------------------------------------计划拍摄----------------------------------------
 
-    /*
-     * name:GetListAvalaibleSequence()
-     * describe: Search all available shot sequences in the folder
-     * 描述：搜索文件夹中所有可用的拍摄序列
-     * calls: send()
-     */
-    void WSSERVER::GetListAvalaibleSequence()
-    {
-        lock_guard<mutex> guard(mtx);
-        /*寻找当前文件夹下的所有文件*/
-        struct dirent *ptr;      
-		DIR *dir;  
-		std::string PATH = "./Seq";        //搜索目录，正式版本应该可以选择目录位置
-		dir=opendir(PATH.c_str());      //打开目录
-        std::vector<std::string> files;
-        /*搜索所有符合条件的文件*/
-		while((ptr = readdir(dir)) != NULL)  
-		{  
-			if(ptr->d_name[0] == '.' || strcmp(ptr->d_name,"..") == 0)  
-				continue;
-            /*判断文件后缀是否为.air*/
-            int size = strlen(ptr->d_name);
-            if(strcmp( ( ptr->d_name + (size - 4) ) , ".air") != 0)
-                continue;
-            files.push_back(ptr->d_name);
-		}  
-		closedir(dir);      //关闭目录
-        /*判断是否找到配置文件*/
-        Json::Value Root,profile;
-        Root["Event"] = Json::Value("RemoteActionResult");
-        Root["UID"] = Json::Value("RemoteGetListAvalaibleSequence");
-        if(files.begin() == files.end())
-        {
-            IDLog("Cound not found any avalaible sequence files,please check it\n");
-            Root["ActionResultInt"] = Json::Value(5);
-            Root["Motivo"] = Json::Value("Cound not found any avalaible sequence files");
-        }
-        else
-        {
-            Root["ActionResultInt"] = Json::Value(4);
-            for (int i = 0; i < files.size(); i++)  
-            {
-                Root["ParamRet"]["list"].append(files[i]);
-                IDLog("Found avalaible sequence file named %s\n",files[i].c_str());
-            }
-        }
-        /*整合信息并发送至客户端*/
-        json_message = Root.toStyledString();
-        send(json_message);
-    }
-
-    /*
-	 * name: RunSequence(std::string SequenceFile)
-     * @param SequenceFile:序列文件
-	 * describe: Start shooting sequence
-	 * 描述：启动拍摄序列
-     * calls: IDLog()
-     * calls: IDLog_DEBUG()
-     * calls: WebLog()
-     * calls: RunSequenceError()
-	 * calls: Goto()
-     * calls: MoveTo()
-     * calls: FilterMoveTo()
-	 */
-    void WSSERVER::RunSequence(std::string SequenceFile)
-    {
-        std::string a = "Seq/"+SequenceFile;
-        if(access(a.c_str(), F_OK ) == -1)
-        {
-            RunSequenceError("Could not found file");
-            return;
-        }
-        std::string line,jsonStr;
-        std::ifstream in(a.c_str(), std::ios::binary);
-        Json::Value Root;
-        /*打开文件*/
-        if (!in.is_open())
-        {
-            IDLog("Unable to open sequence file\n");
-            IDLog_DEBUG("Unable to open sequence file\n");
-            return;
-        }
-        /*将文件转化为string格式*/
-        while (getline(in, line))
-        {
-            jsonStr.append(line);
-        }
-        /*关闭文件*/
-        in.close();
-        /*将读取出的json数组转化为string*/
-        std::unique_ptr<Json::CharReader>const json_read(reader.newCharReader());
-        json_read->parse(jsonStr.c_str(), jsonStr.c_str() + jsonStr.length(), &Root,&errs);
-        SequenceTarget = Root["TargetName"].asString();
-        /*赤道仪运动到指定位置*/
-        if(!Root["Mount"]["MountName"].asString().empty() && Root["Mount"]["MountName"] == MOUNT->ReturnDeviceName())
-        {
-            TargetRA = Root["Mount"]["TargetRA"].asString();
-            TargetDEC = Root["Mount"]["TargetDEC"].asString();
-            if(MOUNT->Goto(Root["Mount"]["TargetRA"].asString(),Root["Mount"]["TargetDEC"].asString()) == true)
-            {
-                IDLog("The equator successfully moved to the designated position\n");
-                WebLog("赤道仪运动到指定位置 RA:"+TargetRA+" DEC:"+TargetDEC,2);
-            }
-            else        //赤道仪无法运动到指定位置
-            {
-                IDLog("The equator could not moved to the designated position\n");
-                WebLog("赤道仪无法运动到指定位置 RA:"+TargetRA+" DEC:"+TargetDEC,3);
-                RunSequenceError("赤道仪无法运动到指定位置");
-                return;
-            }
-        }
-        if(!Root["Filter"]["FilterName"].asString().empty() && Root["Filter"]["FilterName"] == FILTER->ReturnDeviceName())
-        {
-            if(FILTER->FilterMoveTo(Root["Filter"]["TargetPosition"].asInt()) == true)
-            {
-                IDLog("%s moves to the specified focusing position\n",Filter_name.c_str());
-                WebLog(Filter_name+" 成功运动到对焦位置",2);
-            }
-            else        //滤镜轮无法运动到指定位置
-            {
-                IDLog("The equator could not moved to the designated position\n");
-                WebLog(Filter_name+" 无法运动到指定位置 " + Root["Filter"]["TargetPosition"].asString(),3);
-                RunSequenceError("滤镜轮无法运动到指定位置");
-                return;
-            }
-        }
-        if(!Root["Focus"]["FocusName"].asString().empty() && Root["Focus"]["FocusName"] == FOCUS->ReturnDeviceName())
-        {
-            if(FOCUS->MoveTo(Root["Focus"]["TargetPosition"].asInt()) == true)
-            {
-                IDLog("%s moves to the specified focusing position\n",Focus_name.c_str());
-                WebLog(Focus_name+" 成功运动到对焦位置",2);
-            }
-            else        //电动调焦座无法运动到指定位置
-            {
-                IDLog("The equator could not moved to the designated position\n");
-                WebLog(Focus_name+" 无法运动到指定位置: " + Root["Focus"]["TargetPosition"].asString(),3);
-                RunSequenceError("电动调焦座无法运动到指定位置");
-                return;
-            }
-        }
-        if(!Root["Camera"]["CameraName"].asString().empty() && Root["Camera"]["CameraName"] == CCD->ReturnDeviceName())
-        {
-            InSequenceRun = true;
-            SequenceImageName = "Image_"+SequenceTarget+"_"+timestamp();
-            std::thread RunSequenceCamera(&AIRCAMERA::StartExposureSeq,CCD,Root["Camera"]["Loop"].asInt(),Root["Camera"]["Expo"].asInt(),Root["Camera"]["Bin"].asInt(),Root["Camera"]["SaveImage"].asBool(),SequenceImageName,Root["Camera"]["Gain"].asInt(),Root["Camera"]["Offset"].asInt());
-            RunSequenceCamera.detach();
-            WebLog("Start sequence capture",2);
-        }
-        else
-        {
-            RunSequenceError("There is no camera been selected");
-            WebLog("未指定相机，无法进行计划拍摄",3);
-            return;
-        }
-    }
-
-    void WSSERVER::RunSequenceError(std::string error)
-    {
-        Json::Value Root;
-        Root["error"]["message"] = Json::Value(error);
-        Root["id"] = Json::Value(100);
-        json_message = Root.toStyledString();
-        send(json_message);
-    }
-
-//----------------------------------------脚本----------------------------------------
-
-    /*
-     * name:GetListAvalaibleDragScript()
-     * describe: Search all available shot drag script in the folder
-     * 描述：搜索文件夹中所有可用的拍摄脚本
-     * calls: send()
-     */
-    void WSSERVER::GetListAvalaibleDragScript()
-    {
-        lock_guard<mutex> guard(mtx);
-        /*寻找当前文件夹下的所有文件*/
-        struct dirent *ptr;      
-		DIR *dir;  
-		std::string PATH = "./DS";        //搜索目录，正式版本应该可以选择目录位置
-		dir=opendir(PATH.c_str());      //打开目录
-        std::vector<std::string> files;
-        /*搜索所有符合条件的文件*/
-		while((ptr = readdir(dir)) != NULL)  
-		{  
-			if(ptr->d_name[0] == '.' || strcmp(ptr->d_name,"..") == 0)  
-				continue;
-            /*判断文件后缀是否为.air*/
-            int size = strlen(ptr->d_name);
-            if(strcmp( ( ptr->d_name + (size - 4) ) , ".air") != 0)
-                continue;
-            files.push_back(ptr->d_name);
-		}  
-		closedir(dir);      //关闭目录
-        /*判断是否找到配置文件*/
-        Json::Value Root,profile;
-        Root["Event"] = Json::Value("RemoteActionResult");
-        Root["UID"] = Json::Value("RemoteGetListAvalaibleDragScript");
-        if(files.begin() == files.end())
-        {
-            IDLog("Cound not found any avalaible drag script,please check it\n");
-            Root["ActionResultInt"] = Json::Value(5);
-            Root["Motivo"] = Json::Value("Cound not found any avalaible drag script files");
-        }
-        else
-        {
-            Root["ActionResultInt"] = Json::Value(4);
-            for (int i = 0; i < files.size(); i++)  
-            {
-                Root["ParamRet"]["list"].append(files[i]);
-                IDLog("Found avalaible drag script file named %s\n",files[i].c_str());
-            }
-        }
-        /*整合信息并发送至客户端*/
-        json_message = Root.toStyledString();
-        send(json_message);
-    }
+    
 
 //----------------------------------------日志----------------------------------------
 

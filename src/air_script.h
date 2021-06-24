@@ -1,5 +1,5 @@
 /*
- * air_focus.h
+ * air_script.h
  * 
  * Copyright (C) 2020-2021 Max Qian
  * 
@@ -25,32 +25,35 @@ Author:Max Qian
 
 E-mail:astro_air@126.com
  
-Date:2021-6-23
+Date:2021-6-24
  
-Description:Focus offical port
+Description:Script port
 
 **************************************************/
 
-#ifndef _AIR_FOCUS_H_
-#define _AIR_FOCUS_H_
+#ifndef _AIR_SCRIPT_H_
+#define _AIR_SCRIPT_H_
 
 #include <string>
+#include <atomic>
 
 namespace AstroAir
 {
-    class AIRFOCUS
+    class AIRSCRIPT
     {
         public:
-            virtual bool Connect(std::string Device_name);      //连接相机
-			virtual bool Disconnect();                          //断开连接
-			virtual std::string ReturnDeviceName();             //返回设备名称
-            virtual bool MoveToServer(int TargetPosition);
-            virtual bool MoveTo(int TargetPosition);
-
+            explicit AIRSCRIPT();
+            ~AIRSCRIPT();
+            void GetListAvalaibleSequence();
+            void RunSequence(std::string SequenceFile);
+            void RunSequenceError(std::string error);
+            void GetListAvalaibleDragScript();
+            void RemoteDragScript(std::string DragScript);
         private:
-            
+            std::string SequenceImageName;
+            std::atomic_bool InSequenceRun;
     };
-    extern AIRFOCUS *FOCUS;
+    extern AIRSCRIPT *SCRIPT;
 }
 
 #endif

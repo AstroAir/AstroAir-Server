@@ -297,10 +297,17 @@ add_library(LIBCAMERA src/air_camera.cpp)		#相机
 target_link_libraries(airserver PUBLIC LIBCAMERA)
 add_library(LIBMOUNT src/air_mount.cpp)			#赤道仪
 target_link_libraries(airserver PUBLIC LIBMOUNT)
+add_library(LIBSCRIPT src/air_script.cpp)			#脚本&序列
+target_link_libraries(airserver PUBLIC LIBSCRIPT)
+add_library(LIBFOCUS src/air_focus.cpp)			#对焦
+target_link_libraries(airserver PUBLIC LIBFOCUS)
+add_library(LIBFILTER src/air_filter.cpp)			#滤镜轮
+target_link_libraries(airserver PUBLIC LIBFILTER)
 add_library(LIBSOLVER src/air_solver.cpp)		#解析
 target_link_libraries(airserver PUBLIC LIBSOLVER)
 add_library(LIBAUTOFOCUS src/air_autofocus.cpp)			#自动对焦
 target_link_libraries(airserver PUBLIC LIBAUTOFOCUS)
+
 
 add_library(LIBCHECK src/check.cpp)				#自动检查更新
 target_link_libraries(airserver PUBLIC LIBCHECK)
