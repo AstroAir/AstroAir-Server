@@ -32,6 +32,7 @@ Description:Camera Offical Port
 **************************************************/
 
 #include "air_camera.h"
+#include "air_autofocus.h"
 #include "wsserver.h"
 #include "logger.h"
 
@@ -39,6 +40,7 @@ namespace AstroAir
 {
     AIRCAMERA *CCD;
     std::string CameraImageName;
+    int Image_Height,Image_Width;
 
     /*
      * name: AIRCAMERA()()
@@ -313,8 +315,7 @@ namespace AstroAir
         Root["Event"] = Json::Value("RemoteActionResult");
         Root["UID"] = Json::Value("RemoteCameraShot");
         Root["ActionResultInt"] = Json::Value(6);
-        json_message = Root.toStyledString();
-        ws.send(json_message);
+        ws.send(Root.toStyledString());
 	}
 
 	/*
@@ -334,8 +335,7 @@ namespace AstroAir
         Root["Event"] = Json::Value("RemoteActionResult");
         Root["UID"] = Json::Value("RemoteCameraShot");
         Root["ActionResultInt"] = Json::Value(5);
-        json_message = Root.toStyledString();
-		ws.send(json_message);
+		ws.send(Root.toStyledString());
     }
     
     /*
@@ -355,8 +355,7 @@ namespace AstroAir
         Root["Event"] = Json::Value("RemoteActionResult");
         Root["UID"] = Json::Value("RemoteCameraShot");
         Root["ActionResultInt"] = Json::Value(5);
-        json_message = Root.toStyledString();
-		ws.send(json_message);
+		ws.send(Root.toStyledString());
     }
     
     /*
@@ -376,8 +375,7 @@ namespace AstroAir
         Root["File"] = Json::Value(CameraImageName);
         Root["Expo"] = Json::Value(CameraExpo);
         Root["Elapsed"] = Json::Value(CameraExpoUsed);
-        json_message = Root.toStyledString();
-		ws.send(json_message);
+		ws.send(Root.toStyledString());
     }
 
     /*
@@ -390,30 +388,27 @@ namespace AstroAir
     void AIRCAMERA::newJPGReadySend()
     {
         auto start = std::chrono::high_resolution_clock::now();
-        /*读取JPG文件并转化为Mat格式*/
-        CameraImageName = Image_Name + ".fit";
-        int hfd,starIndex,width,height;
+        //autofocus->SolveImageInfo(CameraImageName); 这里还有很大的问题，暂时不使用
         /*组合即将发送的json信息*/
         Json::Value Root;
         Root["Event"] = Json::Value("NewJPGReady");
         Root["UID"] = Json::Value("RemoteCameraShot");
         Root["ActionResultInt"] = Json::Value(5);
         Root["Base64Data"] = Json::Value(img_data);
-        Root["PixelDimX"] = Json::Value(width);
-        Root["PixelDimY"] = Json::Value(height);
+        Root["PixelDimX"] = Json::Value(Image_Width);
+        Root["PixelDimY"] = Json::Value(Image_Height);
         Root["SequenceTarget"] = Json::Value(SequenceTarget);
         Root["Bin"] = Json::Value(CameraBin);
-        Root["StarIndex"] = Json::Value(starIndex);
-        Root["HFD"] = Json::Value(hfd);
+        Root["StarIndex"] = Json::Value(StarIndex);
+        Root["HFD"] = Json::Value(HFD);
         Root["Expo"] = Json::Value(CameraExpo);
         Root["TimeInfo"] = Json::Value(timestampW());
         Root["File"] = Json::Value(CameraImageName);
         Root["Filter"] = Json::Value("** BayerMatrix **");
-        json_message = Root.toStyledString();
         /*发送信息*/
-		ws.send(json_message);
+		ws.send(Root.toStyledString());
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> diff = end - start;
-        IDLog("Progress image took %g seconds\n", diff.count());
+        IDLog(_("Progress image took %g seconds\n"), diff.count());
     }
 }

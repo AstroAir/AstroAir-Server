@@ -72,6 +72,7 @@ namespace AstroAir
     };
     extern AIRCAMERA *CCD;
     extern std::string CameraImageName;
+    extern int Image_Height,Image_Width;
 }
 
 #endif

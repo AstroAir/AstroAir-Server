@@ -45,7 +45,7 @@ Using:JsonCpp<https://github.com/open-source-parsers/jsoncpp>
 #include "air_mount.h"
 #include "air_solver.h"
 
-#include "ccfits.h"
+//#include "ccfits.h"
 
 #include "air-asi/asi_ccd.h"
 #include "air-qhy/qhy_ccd.h"
@@ -966,6 +966,7 @@ namespace AstroAir
             else
                 WebLog("Could not Disconnect from"+Camera_name,3);
             isCameraConnected = false;
+            delete [] CCD;
         }
         if(isMountConnected == true)
         {
@@ -973,7 +974,8 @@ namespace AstroAir
                 WebLog("Disconnect from"+Mount_name,2);
             else
                 WebLog("Could not Disconnect from"+Mount_name,3);
-                isMountConnected = false;
+            isMountConnected = false;
+            delete [] MOUNT;    
         }
         if(isFocusConnected == true)
         {
@@ -982,6 +984,7 @@ namespace AstroAir
             else
                 WebLog("Could not Disconnect from"+Focus_name,3);
             isFocusConnected = false;
+            delete [] FOCUS;
         }
         if(isFilterConnected == true)
         {
@@ -990,6 +993,7 @@ namespace AstroAir
             else
                 WebLog("Could not Disconnect from"+Filter_name,3);
             isFilterConnected = false;
+            delete [] FILTER;
         }
         if(isGuideConnected == true)
         {

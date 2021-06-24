@@ -197,8 +197,8 @@ if(HAS_FITSIO)
 	find_library(PATH_FITSIO_LIB libcfitsio.so /usr/local/lib)
 	if(PATH_FITSIO AND PATH_FITSIO_LIB)
 		message("-- Found FITSIO header file in ${PATH_FITSIO} and library in ${PATH_FITSIO_LIB}")
-		add_library(LIBCCFITS src/ccfits.cpp)
-		target_link_libraries(airserver PUBLIC LIBCCFITS)
+		#add_library(LIBCCFITS src/ccfits.cpp)
+		target_link_libraries(airserver PUBLIC libgsl.so)
 		target_link_libraries(airserver PUBLIC libcfitsio.so)		#CFitsIO
 		target_link_libraries(airserver PUBLIC libCCfits.so)		#CCFits
 		target_link_libraries(airserver PUBLIC libX11.so)
@@ -299,6 +299,8 @@ add_library(LIBMOUNT src/air_mount.cpp)			#赤道仪
 target_link_libraries(airserver PUBLIC LIBMOUNT)
 add_library(LIBSOLVER src/air_solver.cpp)		#解析
 target_link_libraries(airserver PUBLIC LIBSOLVER)
+add_library(LIBAUTOFOCUS src/air_autofocus.cpp)			#自动对焦
+target_link_libraries(airserver PUBLIC LIBAUTOFOCUS)
 
 add_library(LIBCHECK src/check.cpp)				#自动检查更新
 target_link_libraries(airserver PUBLIC LIBCHECK)

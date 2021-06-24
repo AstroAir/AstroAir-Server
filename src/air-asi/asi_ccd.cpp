@@ -219,8 +219,8 @@ namespace AstroAir
 		/*获取相机最大画幅*/
 		iMaxWidth = ASICameraInfo.MaxWidth;
 		iMaxHeight = ASICameraInfo.MaxHeight;
-		CamWidth = iMaxWidth;
-		CamHeight = iMaxHeight;
+		Image_Width =  CamWidth = iMaxWidth;
+		Image_Height = CamHeight = iMaxHeight;
 		IDLog("Camera information obtained successfully.\n");
 		return true;
     }

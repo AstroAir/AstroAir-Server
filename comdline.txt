@@ -1,0 +1,2 @@
+{"method":"RemoteSetDashboardMode","params":{"UID":"4FE971F7-E073-237C-D720-0FC134CF33DE","IsOn":true},"id":7}
+{"method":"RemoteGetAstroAirProfiles","params":{"UID":"BAB193D6-9F05-9A9F-4F7C-9F0A4FB662AB"},"id":8}
