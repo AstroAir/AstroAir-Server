@@ -38,6 +38,7 @@ Description:Main program of astroair server
 
 #include "wsserver.h"
 #include "check.h"
+#include "logger.h"
 
 using namespace AstroAir;
 
@@ -184,6 +185,9 @@ void configure()
  */
 int main(int argc, char *argv[])
 {
+	setlocale(LC_ALL,"");
+  	bindtextdomain(PACKAGE, "locale");
+  	textdomain(PACKAGE);
 	/*输出Logo*/
 	PrintLogo();
 	//AutoCheckVersion();

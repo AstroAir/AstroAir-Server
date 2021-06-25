@@ -38,7 +38,6 @@ Using:JsonCpp<https://github.com/open-source-parsers/jsoncpp>
 #include "wsserver.h"
 #include "logger.h"
 #include "opencv.h"
-//#include "base64.h"
 
 #include "air_search.h"
 #include "air_camera.h"
@@ -48,20 +47,24 @@ Using:JsonCpp<https://github.com/open-source-parsers/jsoncpp>
 #include "air_focus.h"
 #include "air_filter.h"
 
-#ifdef HAS_ASI
-    #include "camera/air-asi/asi_ccd.h"
-#endif
+
 #ifdef HAS_QHY
     #include "camera/air-qhy/qhy_ccd.h"
 #endif
+#ifdef HAS_QHYCFW
+    #include "filter/air-cfw/qhy_cfw.h"
+#endif
+
 #ifdef HAS_GPhoto2
     #include "camera/air-gphoto2/gphoto2_ccd.h"
 #endif
 
+#ifdef HAS_ASI
+    #include "camera/air-asi/asi_ccd.h"
+#endif
 #ifdef HAS_ASIEAF
     #include "focus/air-eaf/air_eaf.h"
 #endif
-
 #ifdef HAS_ASIEFW
     #include "filter/air-efw/air_efw.h"
 #endif
@@ -874,7 +877,8 @@ namespace AstroAir
                         #ifdef HAS_QHYCFW
                         case "QHYCFW"_hash:{
                             /*初始化QHY滤镜轮，并赋FILTER*/
-                            FILTER = &QHYFilter
+                            CFW *CFWFILTER = new CFW();
+                            FILTER = CFWFILTER;
                             filter_ok = FILTER->Connect(Filter_name);
                             break;
                         }

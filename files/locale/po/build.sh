@@ -1,0 +1,2 @@
+xgettext -o main.po  --from-code=utf-8 -f srclist.txt -k_ -l zh_CN --package-name=AstroAirServer --package-version=1.0.0 --copyright-holder=Max_Qian --msgid-bugs-address=qwdmax@qq.com
+msgfmt airserver.po -o airserver.mo

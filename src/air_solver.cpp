@@ -164,5 +164,6 @@ namespace AstroAir
     void AIRSOLVER::SolveActualPositionOnline(bool IsBlind,bool IsSync)
     {
         //这一个功能还有待考量，如果需要注册账号则不与添加！！！
+        
     }
 }

@@ -1,0 +1,295 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR Max_Qian
+# This file is distributed under the same license as the AstroAirServer package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: AstroAirServer 1.0.0\n"
+"Report-Msgid-Bugs-To: qwdmax@qq.com\n"
+"POT-Creation-Date: 2021-06-25 16:33+0800\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../src/wsserver.cpp:153
+#, c-format
+msgid "Successfully established connection with client path %s\n"
+msgstr "成功与路径为 %s 的服务器建立连接\n"
+
+#: ../../src/wsserver.cpp:171
+msgid "Disconnect from client\n"
+msgstr "与客户端断开连接\n"
+
+#: ../../src/wsserver.cpp:390 ../../src/wsserver.cpp:450
+msgid "other exception"
+msgstr "其他原因"
+
+#: ../../src/wsserver.cpp:406
+msgid "Switched off by user."
+msgstr "被用户关闭"
+
+#: ../../src/wsserver.cpp:438
+#, c-format
+msgid "Start the server at port %d ...\n"
+msgstr "在%d端口启动服务器\n"
+
+#: ../../src/wsserver.cpp:466 ../../src/wsserver.cpp:608
+#: ../../src/wsserver.cpp:609
+msgid "Unable to open configuration file\n"
+msgstr "无法打开配置文件\n"
+
+#: ../../src/wsserver.cpp:532
+msgid "Cound not found any configration files,please check it\n"
+msgstr "未找到任何配置文件，请检查文件夹\n"
+
+#: ../../src/wsserver.cpp:534
+msgid "Cound not found any configration files"
+msgstr "未发现任何配置文件"
+
+#: ../../src/wsserver.cpp:542 ../../src/wsserver.cpp:549
+#, c-format
+msgid "Found configure file named %s\n"
+msgstr "发现名为%s的配置文件\n"
+
+#: ../../src/wsserver.cpp:568
+#, c-format
+msgid "Change the configuration file to %s\n"
+msgstr "将配置文件改为%s\n"
+
+#: ../../src/wsserver.cpp:684
+msgid "Unknown camera"
+msgstr "未知的相机"
+
+#: ../../src/wsserver.cpp:690
+msgid "Connect to "
+msgstr "连接"
+
+#: ../../src/wsserver.cpp:690
+msgid " successfully"
+msgstr "成功"
+
+#: ../../src/wsserver.cpp:699 ../../src/wsserver.cpp:769
+msgid "Could not connect to "
+msgstr "无法连接"
+
+#: ../../src/wsserver.cpp:709
+msgid " had already connected"
+msgstr "已经连接"
+
+#: ../../src/wsserver.cpp:754
+msgid "Unknown mount"
+msgstr "未知的赤道仪"
+
+#: ../../src/wsserver.cpp:823
+msgid "Unknown focus"
+msgstr "未知的电动调焦座"
+
+#: ../../src/wsserver.cpp:990
+msgid "All devices connected successfully"
+msgstr "所有设备连接成功"
+
+#: ../../src/wsserver.cpp:995
+msgid "There were some errors in connecting the device"
+msgstr "连接设备时发生错误"
+
+#: ../../src/wsserver.cpp:1049
+msgid "Successfully disconnected from all devices"
+msgstr "成功与所有设备断开连接"
+
+#: ../../src/air_camera.cpp:125
+msgid "Exposure time is less than 0, please input a reasonable data\n"
+msgstr "曝光时间小于0，请输入一个合理的数据\n"
+
+#: ../../src/air_camera.cpp:126
+msgid "Exposure time is less than 0, please input a reasonable data"
+msgstr "曝光时间小于0，请输入一个合理的数据"
+
+#: ../../src/air_camera.cpp:140
+msgid "Start exposure"
+msgstr "开始曝光"
+
+#: ../../src/air_camera.cpp:146
+msgid ""
+"Unable to start the exposure of the camera. Please check the connection of "
+"the camera. If you have any problems, please contact the developer\n"
+msgstr "无法开始曝光，请检查与相机的连接。如果你有任何问题，请联系开发人员\n"
+
+#: ../../src/air_camera.cpp:147
+msgid "Unable to start the exposure of the camera"
+msgstr "相机无法曝光"
+
+#: ../../src/air_camera.cpp:417
+#, c-format
+msgid "Progress image took %g seconds\n"
+msgstr "处理图像花费了%g秒\n"
+
+#: ../../src/air_focus.cpp:113 ../../src/air_filter.cpp:85
+#: ../../src/filter/air-efw/air_efw.cpp:145
+#: ../../src/focus/air-eaf/air_eaf.cpp:171
+msgid "Target position is less than 0, please input a reasonable data\n"
+msgstr "目标位置小于0，请输入一个合理的数据\n"
+
+#: ../../src/air_focus.cpp:114 ../../src/air_filter.cpp:86
+msgid "Are you kidding me?!"
+msgstr "你是在开玩笑的吗？！"
+
+#: ../../src/air_focus.cpp:121 ../../src/air_focus.cpp:184
+msgid "Focus is moving,try again later!\n"
+msgstr "电动调焦座正在运动中，请稍后再尝试！\n"
+
+#: ../../src/air_focus.cpp:122 ../../src/air_focus.cpp:185
+msgid "Focus is moving,try again later!"
+msgstr "电动调焦座正在运动中，请稍后再尝试！"
+
+#: ../../src/air_focus.cpp:129
+#, c-format
+msgid "The focus failed to move to %d\n"
+msgstr "电动调焦座无法移动至%d\n"
+
+#: ../../src/air_focus.cpp:130
+msgid "The focus failed to move to."
+msgstr "电动调焦座无法移动至指定位置"
+
+#: ../../src/air_focus.cpp:136
+msgid "Focus move to  ok"
+msgstr "电动调焦座移动完成"
+
+#: ../../src/air_focus.cpp:192
+#, c-format
+msgid "The focus failed to move %d\n"
+msgstr "电动调焦座移动至%d失败\n"
+
+#: ../../src/air_focus.cpp:193
+msgid "The focus failed to move."
+msgstr "电动调焦座移动失败"
+
+#: ../../src/air_focus.cpp:199
+msgid "Focus move ok"
+msgstr "电动调焦座移动完成"
+
+#: ../../src/air_filter.cpp:93
+msgid "Filter is moving,try again later!\n"
+msgstr "滤镜轮正在运动中，请稍后再尝试！\n"
+
+#: ../../src/air_filter.cpp:94
+msgid "Filter is moving,try again later!"
+msgstr "滤镜轮正在运动中，请稍后再尝试！"
+
+#: ../../src/air_filter.cpp:101
+#, c-format
+msgid "The filter failed to move to %d\n"
+msgstr "滤镜无法运动至%d\n"
+
+#: ../../src/air_filter.cpp:102
+msgid "The filter failed to move to."
+msgstr "滤镜轮无法移动至指定位置。"
+
+#: ../../src/air_filter.cpp:108
+msgid "Filter move to  ok"
+msgstr "滤镜轮转至指定位置"
+
+#: ../../src/air_script.cpp:304
+msgid "Run script successfully\n"
+msgstr "成功运行脚本\n"
+
+#: ../../src/air_script.cpp:305
+msgid "Run script successfully"
+msgstr "成功运行脚本"
+
+#: ../../src/air_script.cpp:309
+msgid "Failed to run script\n"
+msgstr "运行脚本失败\n"
+
+#: ../../src/air_script.cpp:310
+msgid "Failed to run script"
+msgstr "运行脚本失败"
+
+#: ../../src/filter/air-efw/air_efw.cpp:84
+msgid "No filter connected\n"
+msgstr "没有滤镜轮连接\n"
+
+#: ../../src/filter/air-efw/air_efw.cpp:91
+#: ../../src/focus/air-eaf/air_eaf.cpp:89
+#, c-format
+msgid ""
+"Unable to get information,the error code is %d,please check program "
+"permissions.\n"
+msgstr "无法获取信息，错误代码是%d,请检查程序。\n"
+
+#: ../../src/filter/air-efw/air_efw.cpp:96
+#: ../../src/focus/air-eaf/air_eaf.cpp:94
+#, c-format
+msgid "Find %s"
+msgstr "发现%s"
+
+#: ../../src/filter/air-efw/air_efw.cpp:99
+msgid "Could not open the filter!\n"
+msgstr ""
+
+#: ../../src/filter/air-efw/air_efw.cpp:103
+msgid "Filter turned on successfully!\n"
+msgstr ""
+
+#: ../../src/filter/air-efw/air_efw.cpp:123
+#, c-format
+msgid "Failed to close Filter with error code %d"
+msgstr ""
+
+#: ../../src/filter/air-efw/air_efw.cpp:139
+msgid "Filter is busy\n"
+msgstr ""
+
+#: ../../src/filter/air-efw/air_efw.cpp:151
+msgid "Filter failed to move\n"
+msgstr ""
+
+#: ../../src/filter/air-efw/air_efw.cpp:163
+msgid "Filter's moving finished\n"
+msgstr ""
+
+#: ../../src/filter/air-efw/air_efw.cpp:167
+msgid "Filter has something wrong!\n"
+msgstr ""
+
+#: ../../src/focus/air-eaf/air_eaf.cpp:82
+msgid "No focuser connected\n"
+msgstr ""
+
+#: ../../src/focus/air-eaf/air_eaf.cpp:97
+msgid "Could not open the focuser!\n"
+msgstr ""
+
+#: ../../src/focus/air-eaf/air_eaf.cpp:101
+msgid "Focuser turned on successfully!\n"
+msgstr ""
+
+#: ../../src/focus/air-eaf/air_eaf.cpp:124
+msgid "Could not stop focuser\n"
+msgstr ""
+
+#: ../../src/focus/air-eaf/air_eaf.cpp:130
+#, c-format
+msgid "Failed to close focuser with error code %d"
+msgstr ""
+
+#: ../../src/focus/air-eaf/air_eaf.cpp:165
+msgid "Focuser is busy\n"
+msgstr ""
+
+#: ../../src/focus/air-eaf/air_eaf.cpp:177
+msgid "Focuser failed to move\n"
+msgstr ""
+
+#: ../../src/focus/air-eaf/air_eaf.cpp:191
+msgid "Focuser's moving finished\n"
+msgstr ""
+
+#: ../../src/focus/air-eaf/air_eaf.cpp:195
+msgid "Focuser has something wrong!\n"
+msgstr ""

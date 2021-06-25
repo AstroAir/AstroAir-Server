@@ -42,13 +42,18 @@ Description:Log system of astroair server
 #include <sys/time.h>
 #include <vector>
 #include <string>
+
 #include <libintl.h>
+#include <locale.h>
 
 #ifdef WINDOWS
 #include <windows.h>
 #endif
 
 #define _(str)  gettext(str)
+
+#define PACKAGE "airserver"
+
 
 typedef std::uint64_t hash_t;
 typedef std::vector<std::string>  StringList;

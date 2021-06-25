@@ -140,20 +140,21 @@ endif()
 
 #----------------------------------------设置QHY库----------------------------------------
 
-option(HAS_QHY "Using QHY camera Library" ON)
+option(HAS_QHY "Using QHY Library" ON)
 if(HAS_QHY)
 	find_path(PATH_QHY qhyccd.h /usr/include/libqhy)
 	find_path(PATH_QHY qhyccd.h /usr/local/include/libqhy)
 	find_library(PATH_QHY_LIB libqhyccd.so /usr/lib)
 	find_library(PATH_QHY_LIB libqhyccd.so /usr/local/lib)
 	if(PATH_QHY AND PATH_QHY_LIB)
-		message("-- Found QHY camera header file in ${PATH_QHY} and library in ${PATH_QHY_LIB}")
-		add_library(LIBQHY src/camera/air-qhy/qhy_ccd.cpp)
-		target_link_libraries(airserver PUBLIC LIBQHY)
-		#link_directories("${PROJECT_SOURCE_DIR}/src/libqhy/${PLATFORM}/")
-		target_link_libraries(airserver PUBLIC libqhyccd.so)		#QHY相机
+		message("-- Found QHY header file in ${PATH_QHY} and library in ${PATH_QHY_LIB}")
+		add_library(LIBQHY_CAMERA src/camera/air-qhy/qhy_ccd.cpp)		#QHY相机
+		target_link_libraries(airserver PUBLIC LIBQHY_CAMERA)
+		add_library(LIBQHY_FILTER src/filter/air-cfw/qhy_cfw.cpp)		#QHY滤镜轮
+		target_link_libraries(airserver PUBLIC LIBQHY_FILTER)
+		target_link_libraries(airserver PUBLIC libqhyccd.so)
 	else()
-		message("-- Could not found QHY camera library.Please build it before intall!")
+		message("-- Could not found QHY library.Please build it before intall!")
 		add_custom_command(
 			TARGET LIBQHY
 			PRE_BUILD 
@@ -370,10 +371,6 @@ link_directories(${LINK_DIR})
 #头文件
 target_include_directories(airserver PUBLIC
                            "${PROJECT_BINARY_DIR}/src"
-                           "${PROJECT_SOURCE_DIR}/src/camera/air-asi"
-						   "${PROJECT_SOURCE_DIR}/src/camera/air-qhy"
-						   "${PROJECT_SOURCE_DIR}/src/focus/air-eaf"
-						   "${PROJECT_SOURCE_DIR}/src/telescope"
                            )
 
 #安装到系统

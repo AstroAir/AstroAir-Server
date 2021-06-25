@@ -8,7 +8,10 @@
 #define HAS_OPENCV @HAS_OPENCV@
 #define HAS_FITSIO @HAS_FITSIO@
 #define HAS_NOVA @HAS_NOVA@
+
 #define HAS_QHY @HAS_QHY@
+#define HAS_QHYCFW @HAS_QHYCFW@
+
 #define HAS_ASI @HAS_ASI@
 #define HAS_ASIEAF @HAS_ASIEAF@
 #define HAS_ASIEFW @HAS_ASIEFW@

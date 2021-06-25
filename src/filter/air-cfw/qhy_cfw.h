@@ -30,3 +30,36 @@ Date:2021-6-25
 Description:CFW Filter offical port
 
 **************************************************/
+
+#ifndef _QHY_CFW_H_
+#define _QHY_CFW_H_
+
+#include "../../air_filter.h"
+
+#include <qhyccd.h>
+
+namespace AstroAir
+{
+    class CFW:public AIRFILTER
+    {
+        public:
+            explicit CFW();
+            ~CFW();
+            virtual bool Connect(std::string Device_name)override;
+            virtual bool Disconnect()override;
+            std::string ReturnDeviceName()override;
+            virtual bool FilterMoveTo(int TargetPosition)override;
+        private:
+            uint32_t retVal;
+            struct CFWInfo
+            {
+                double MaxSlot = 0;
+                char CFW_position_now[64] = {0};
+            };
+            CFWInfo Info;
+
+            qhyccd_handle *pFilterHandle;
+    };
+}
+
+#endif
