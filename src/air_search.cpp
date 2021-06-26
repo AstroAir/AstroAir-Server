@@ -32,10 +32,13 @@ Description:Object search engine
 **************************************************/
 
 #include "air_search.h"
-#include "libxls.h"
+#include "logger.h"
+#include "wsserver.h"
 
 namespace AstroAir
 {
+    Search SEARCH;
+
     /*
 	 * name: SearchTarget(std::string TargetName)
      * @param TargerName:目标名称
@@ -46,45 +49,73 @@ namespace AstroAir
 	 */
     void Search::SearchTarget(std::string TargetName)
     {
-        
-        /*检查星体数据库是否存在*/
-        if(access( "base/starbase.xls", F_OK ) == -1)
+        if(TargetName[0] == 'M' || TargetName[0] == 'm')
         {
-            SearchTargetError(2);
-            return;
-        }
-        // 工作簿
-        xls::WorkBook base("base/starbase.xls");
-        int line = 2;
-        while(true)
-        {
-			xls::cellContent info = base.GetCell(0,line,1);
-			if(info.type == xls::cellBlank) 
-                break;
-            std::string name = info.str;
-            /*去除所有空格*/
-            if( !name.empty() )
+            /*检查星体数据库是否存在*/
+            if(access( "StarBase/Messier.json", F_OK ) == -1)
             {
-                name.erase(0,name.find_first_not_of(" "));
-                name.erase(name.find_last_not_of(" ") + 1);
-                int index = 0;
-                while( (index = name.find(' ',index)) != std::string::npos)
-                    name.erase(index,1);
-            }
-            /*找到制定目标*/
-            if(name == TargetName)
-            {
-                std::string ra,dec,oname,type,mag;
-                ra = base.GetCell(0,line,5).str;
-                dec = base.GetCell(0,line,6).str;
-                oname = base.GetCell(0,line,2).str;
-                type = base.GetCell(0,line,3).str;
-                mag = base.GetCell(0,line,7).str;
-                SearchTargetSuccess(ra,dec,name,oname,type,mag);
+                SearchTargetError(2);
                 return;
             }
-            line++;
-		}
+            std::string line,jsonStr;
+            std::ifstream in("StarBase/Messier.json", std::ios::binary);
+            if (!in.is_open())
+            {
+                IDLog(_("Unable to open star file\n"));
+                return ;
+            }
+            while (getline(in, line))
+                jsonStr.append(line);
+            in.close();
+            std::unique_ptr<Json::CharReader>const json_read(reader.newCharReader());
+            json_read->parse(jsonStr.c_str(), jsonStr.c_str() + jsonStr.length(), &root,&errs);
+            if(!root[TargetName].empty())
+            {   
+                std::string ra,dec,oname,type,mag;
+                ra = root[TargetName]["RAJ2000"].asString();
+                dec = root[TargetName]["DECJ2000"].asString();
+                oname = root[TargetName]["NGC"].asString();
+                type = root[TargetName]["TYPE"].asString();
+                mag = root[TargetName]["VMAG"].asString();
+                SearchTargetSuccess(ra,dec,TargetName,oname,type,mag);
+                return ;
+            }
+        }
+        else
+        {
+            if(access( "StarBase/NGCIC.json", F_OK ) == -1)
+            {
+                SearchTargetError(2);
+                return;
+            }
+            std::string line,jsonStr;
+            std::ifstream in("StarBase/NGCIC.json", std::ios::binary);
+            if (!in.is_open())
+            {
+                IDLog(_("Unable to open star file\n"));
+                return ;
+            }
+            while (getline(in, line))
+                jsonStr.append(line);
+            in.close();
+            std::unique_ptr<Json::CharReader>const json_read(reader.newCharReader());
+            json_read->parse(jsonStr.c_str(), jsonStr.c_str() + jsonStr.length(), &root,&errs);
+            if(!root[TargetName].empty())
+            {   
+                
+                std::string ra,dec,oname,type,mag;
+                if(root[TargetName]["NAMEZH"].empty())
+                    oname = "None";
+                else
+                    oname = root[TargetName]["NGC"].asString();
+                ra = root[TargetName]["RAJ2000"].asString();
+                dec = root[TargetName]["DECJ2000"].asString();
+                type = root[TargetName]["TYPE"].asString();
+                mag = root[TargetName]["VMAG"].asString();
+                SearchTargetSuccess(ra,dec,TargetName,oname,type,mag);
+                return ;
+            }
+        }
         /*未找到制定目标*/
         SearchTargetError(0);
         return;
@@ -124,8 +155,7 @@ namespace AstroAir
         info["Key"] = Json::Value("星等");      //天体星等
         info["Value"] = Json::Value(MAG);
         Root["ParamRet"]["Info"].append(info);
-        json_message = Root.toStyledString();
-		ws.send(json_message);
+		ws.send(Root.toStyledString());
     }
 
     /*
@@ -150,7 +180,127 @@ namespace AstroAir
             Root["ActionResultInt"] = Json::Value(5);
             Root["Motivo"] = Json::Value("Could not open star base!");
         }
-        json_message = Root.toStyledString();
-		ws.send(json_message);
+		ws.send(Root.toStyledString());
+    }
+
+    /*
+	 * name: RoboClipGetTargetList(std::string FilterGroup,std::string FilterName,std::string FilterNote,int order)
+     * @param FilterGroup:过滤组
+     * @param FilterName:过滤名称
+     * @param FilterNote:过滤提示
+     * @param order:?
+	 * describe: Celestial object manager
+	 * 描述：天体目标管理器
+	 * calls: RoboClipGetTargetListSuccess()
+     * calls: RoboClipGetTargetListError(int errCode)
+	 */
+    void Search::RoboClipGetTargetList(std::string FilterGroup,std::string FilterName,std::string FilterNote,int order)
+    {
+        //此处需加入多文件支持
+        if(access( "Roboclip/roboclip.json", F_OK ) == -1)
+        {
+            RoboClipGetTargetListError(5);
+            return;
+        }
+        std::ifstream in("Roboclip/roboclip.json", std::ios::binary);
+        if (!in.is_open())
+        {
+            IDLog(_("Unable to open roboclip file\n"));
+            return;
+        }
+        std::string line, jsonStr;
+        while (getline(in, line))
+            jsonStr.append(line);
+        /*判断文件是否为空*/
+        in.seekg(0, std::ios_base::end);
+        std::fstream::off_type Len = in.tellg();
+        in.close();
+        Json::Value Root;
+        if (Len != 0)
+        {
+            std::unique_ptr<Json::CharReader> const json_read(reader.newCharReader());
+            json_read->parse(jsonStr.c_str(), jsonStr.c_str() + jsonStr.length(), &root, &errs);
+            for(int i = 0;i < root["target"].size(); i++)
+            {
+                Info.DEC[i] = root["target"][i]["DECJ2000"].asString();
+                Info.RA[i] = root["target"][i]["RAJ2000"].asString();
+                Info.FCOL[i] = root["target"][i]["FCOL"].asInt();
+                Info.FROW[i] = root["target"][i]["FROW"].asInt();
+                Info.Group[i] = root["target"][i]["Group"].asString();
+                Info.GuidTarget[i] = root["target"][i]["GuidTarget"].asString();
+                Info.IsMosaic[i] = root["target"][i]["IsMosaic"].asBool();
+                Info.Note[i] = root["target"][i]["Note"].asString();
+                Info.overlap[i] = root["target"][i]["overlap"].asInt();
+                Info.PA[i] = root["target"][i]["PA"].asString();
+                Info.TargetName[i] = root["target"][i]["TargetName"].asString();
+                Info.TILES[i] = root["target"][i]["TILES"].asString();
+                Info.angleAdj[i] = root["target"][i]["angleAdj"].asBool();
+            }
+            TargetCount = root["target"].size();
+            if(TargetCount == 0)
+            {
+                IDLog(_("There is no target in the file\n"));
+                RoboClipGetTargetListError(4);
+            }
+            else
+            {
+                IDLog(_("Found %d targets in the roboclip.json\n"),TargetCount);
+                IDLog(_("Get target list and send to client\n"));
+                RoboClipGetTargetListSuccess();
+            }
+                
+        }
+        else
+        {
+            IDLog(_("roboclip.json is an empty file\n"));
+            RoboClipGetTargetListError(4);
+            in.close();
+            return ;
+        }
+        in.close();
+        
+    }
+
+    void Search::RoboClipGetTargetListSuccess()
+    {
+        Json::Value Root,info;
+        Root["Event"] = Json::Value("RemoteActionResult");
+        Root["UID"] = Json::Value("RemoteRoboClipGetTargetList");
+        Root["ActionResultInt"] = Json::Value(4);
+        int i = 0;
+        while(i < TargetCount)
+        {
+            info["targetname"] = Json::Value(Info.TargetName[i]);
+            info["raj2000"] = Json::Value(Info.RA[i]);
+            info["decj2000"] = Json::Value(Info.DEC[i]);
+            info["frow"] = Json::Value(Info.FROW[i]);
+            info["fcol"] = Json::Value(Info.FCOL[i]);
+            info["tiles"] = Json::Value(Info.TILES[i]);
+            info["pa"] = Json::Value(Info.PA[i]);
+            info["note"] = Json::Value(Info.Note[i]);
+            info["guid"] = Json::Value(Info.GuidTarget[i]);
+            info["gruppo"] = Json::Value(Info.Group[i]);
+            Root["ParamRet"]["list"].append(info);
+            i++;
+        }
+        ws.send(Root.toStyledString());
+    }
+
+    void Search::RoboClipGetTargetListError(int errCode)
+    {
+        Json::Value Root;
+        Root["Event"] = Json::Value("RemoteActionResult");
+        Root["UID"] = Json::Value("RemoteRoboClipGetTargetList");
+        Root["ActionResultInt"] = Json::Value(5);
+        if(errCode == 5)
+            Root["Motivo"] = Json::Value("Not Found File!");
+        else
+            Root["Motivo"] = Json::Value("Empty File!");
+        ws.send(Root.toStyledString());
+    }
+
+    void Search::RemoteRoboClipAddTarget(std::string DECJ2000,std::string RAJ2000,int FCOL,int FROW,std::string Group,std::string GuidTarget,bool IsMosaic,std::string Note,std::string PA,std::string TILES,std::string TargetName,bool angleAdj,int overlap)
+    {
+
     }
 }

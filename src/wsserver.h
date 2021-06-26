@@ -127,7 +127,6 @@ namespace AstroAir
 			mutex mtx,mtx_action;
 			condition_variable m_server_cond,m_server_action;
 			/*定义服务器设备参数*/
-			WSSERVER *GUIDE;
 			std::string FileName;
 			std::string FileBuf[10];
 			int DeviceNum = 0;
@@ -138,12 +137,8 @@ namespace AstroAir
 	};
 	extern WSSERVER ws;
 	extern std::string img_data,SequenceTarget;
-
 	void WebLog(std::string message,int type);
-
-	extern int thread_num;		//线程数量
-	
-	extern std::atomic_bool isGuideConnected;
+	extern int thread_num;		//线程数量	
 	/*服务器配置参数*/
 	extern int MaxUsedTime,MaxThreadNumber,MaxClientNumber;		//解析最长时间,最多能同时处理的事件数量,最大客户端数量
 	extern std::string TargetRA,TargetDEC,MountAngle;

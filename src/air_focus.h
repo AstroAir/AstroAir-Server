@@ -44,7 +44,7 @@ namespace AstroAir
         public:
             explicit AIRFOCUS();
             ~AIRFOCUS();
-            virtual bool Connect(std::string Device_name);      //连接相机
+            virtual bool Connect(std::string Device_name);      //连接电动调焦座
 			virtual bool Disconnect();                          //断开连接
 			virtual std::string ReturnDeviceName();             //返回设备名称
             virtual bool MoveToServer(int TargetPosition);

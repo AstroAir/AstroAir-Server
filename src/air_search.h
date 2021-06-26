@@ -41,13 +41,45 @@ namespace AstroAir
     class Search
     {
         public:
+            /*搜索天体目标*/
             void SearchTarget(std::string TargetName);
             void SearchTargetSuccess(std::string RA,std::string DEC,std::string Name,std::string OtherName,std::string Type,std::string MAG);
             void SearchTargetError(int id);
 
+            void RoboClipGetTargetList(std::string FilterGroup,std::string FilterName,std::string FilterNote,int order);
+            void RoboClipGetTargetListSuccess();
+            void RoboClipGetTargetListError(int errCode);
+
+            void RemoteRoboClipAddTarget(std::string DECJ2000,std::string RAJ2000,int FCOL,int FROW,std::string Group,std::string GuidTarget,bool IsMosaic,std::string Note,std::string PA,std::string TILES,std::string TargetName,bool angleAdj,int overlap);
         private:
-            std::string json_message;
+            Json::Value root;
+			Json::String errs;
+			Json::CharReaderBuilder reader;
+
+            struct RoboclipInfo
+            {
+                std::string DEC[100];
+                std::string RA[100];
+                int FCOL[100];
+                int FROW[100];
+                std::string Group[100];
+                std::string GuidTarget[100];
+                bool IsMosaic[100];
+                std::string Note[100];
+                std::string PA[100];
+                std::string TILES[100];
+                std::string TargetName[100];
+                bool angleAdj[100];
+                int overlap[100];
+            };
+            RoboclipInfo Info;
+
+            int TargetCount = 0;
+
+            std::string TargetRA_temp,TargetDEC_temp;
+            
     };
+    extern Search SEARCH;
 }
 
 #endif

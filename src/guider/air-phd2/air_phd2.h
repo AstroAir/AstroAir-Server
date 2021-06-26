@@ -1,5 +1,5 @@
 /*
- * air_eaf.h
+ * air_phd2.h
  * 
  * Copyright (C) 2020-2021 Max Qian
  * 
@@ -25,42 +25,28 @@ Author:Max Qian
 
 E-mail:astro_air@126.com
  
-Date:2021-6-25
+Date:2021-6-26
  
-Description:EAF Focus offical port
+Description:PD2 offical port
 
 **************************************************/
 
-#ifndef _AIR_EAF_H_
-#define _AIR_EAF_H_
+#ifndef _AIR_PHD2_H_
+#define _AIR_PHD2_H_
 
-#include "../../air_focus.h"
-
-#include <unistd.h>
-
-#include <libasi/EAF_focuser.h>
+#include "../../air_guider.h"
 
 namespace AstroAir
 {
-    class EAF:public AIRFOCUS
+    class PHD2:public AIRGUIDER
     {
         public:
-            explicit EAF();
-            ~EAF();
-            virtual bool Connect(std::string Device_name)override;
-            virtual bool Disconnect()override;
-            std::string ReturnDeviceName()override;
-            virtual bool MoveTo(int TargetPosition)override;
-        protected:
-            void EAF_temperature_Thread();
+            explicit PHD2();
+            ~PHD2();
+            virtual bool Connect(std::string Device_name)override;      //连接PHD2
+		    virtual bool Disconnect()override;                          //断开连接
+		    virtual std::string ReturnDeviceName()override;             //返回设备名称
         private:
-            int EAF_count = 0;
-            int EAF_position_now = 0;
-            bool InMoving = false;
-            float EAF_temp = 0;
-
-            EAF_INFO EAFInfo;
-            EAF_ERROR_CODE errCode;
 
     };
 }

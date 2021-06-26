@@ -46,7 +46,7 @@ Using:JsonCpp<https://github.com/open-source-parsers/jsoncpp>
 #include "air_script.h"
 #include "air_focus.h"
 #include "air_filter.h"
-
+#include "air_guider.h"
 
 #ifdef HAS_QHY
     #include "camera/air-qhy/qhy_ccd.h"
@@ -77,8 +77,7 @@ namespace AstroAir
 {
     WSSERVER ws;
     std::string img_data,SequenceTarget;
-    std::atomic_bool isGuideConnected;
-
+    
     /*服务器配置参数*/
 	int MaxUsedTime = 0;		//解析最长时间
 	int MaxThreadNumber = 0;		//最多能同时处理的事件数量
@@ -293,6 +292,20 @@ namespace AstroAir
                 Search a;
                 std::thread SearchThread(&Search::SearchTarget,a,root["params"]["Name"].asString());
                 SearchThread.detach();
+                thread_num++;
+                break;
+            }
+            /*自定义目标管理*/
+            case "RemoteRoboClipGetTargetList"_hash:{
+                std::thread RoboClipThread(&Search::RoboClipGetTargetList,SEARCH,root["params"]["FilterGroup"].asString(),root["params"]["FilterName"].asString(),root["params"]["FilterNote"].asString(),root["params"]["Order"].asInt());
+                RoboClipThread.detach();
+                thread_num++;
+                break;
+            }
+            /*自定义目标管理-添加目标*/
+            case "RemoteRoboClipAddTarget"_hash:{
+                std::thread RoboClipThread(&Search::RemoteRoboClipAddTarget,SEARCH,root["params"]["DECJ2000"].asString(),root["params"]["RAJ2000"].asString(),root["params"]["FCOL"].asInt(),root["params"]["FROW"].asInt(),root["params"]["Group"].asString(),root["params"]["GuidTarget"].asString(),root["params"]["IsMosaic"].asBool(),root["params"]["Note"].asString(),root["params"]["PA"].asString(),root["params"]["TILES"].asString(),root["params"]["TargetName"].asString(),root["params"]["angleAdj"].asBool(),root["params"]["overlap"].asInt());
+                RoboClipThread.detach();
                 thread_num++;
                 break;
             }
@@ -893,7 +906,7 @@ namespace AstroAir
                         }
                         #endif
                         default:
-                            UnknownDevice(304,"Unknown filter");		//未知滤镜轮返回错误信息
+                            UnknownDevice(304,_("Unknown filter"));		//未知滤镜轮返回错误信息
                     }
                     if(filter_ok == true)
                     {
@@ -904,21 +917,25 @@ namespace AstroAir
                         connect_ok = true;
                         break;
                     }
-                    if(i == 3&& filter_ok == false)
+                    else
                     {
-                        /*滤镜轮未连接成功，返回错误信息*/
-                        SetupConnectError(5);
-                        WebLog("Could not connect to "+Filter_name,3);
-                        connect_ok = false;
-                        break;
+                        if(i == 3)
+                        {
+                            /*滤镜轮未连接成功，返回错误信息*/
+                            SetupConnectError(5);
+                            WebLog("Could not connect to "+Filter_name,3);
+                            connect_ok = false;
+                            break;
+                        }
                     }
+                    
                     sleep(4);
                 }
             }
         }
         else
         {
-            WebLog(Filter_name+" had already connected",3);
+            WebLog(Filter_name+_(" had already connected"),3);
         }
         /*连接指定品牌的指定型号导星软件*/
         if(isGuideConnected == false)

@@ -1,5 +1,5 @@
 /*
- * air_eaf.h
+ * air_guider.h
  * 
  * Copyright (C) 2020-2021 Max Qian
  * 
@@ -25,44 +25,36 @@ Author:Max Qian
 
 E-mail:astro_air@126.com
  
-Date:2021-6-25
+Date:2021-6-26
  
-Description:EAF Focus offical port
+Description:Guider offical port
 
 **************************************************/
 
-#ifndef _AIR_EAF_H_
-#define _AIR_EAF_H_
+#ifndef _AIR_GUIDER_H_
+#define _AIR_GUIDER_H_
 
-#include "../../air_focus.h"
-
-#include <unistd.h>
-
-#include <libasi/EAF_focuser.h>
+#include <atomic>
+#include <string>
 
 namespace AstroAir
 {
-    class EAF:public AIRFOCUS
+    class AIRGUIDER
     {
-        public:
-            explicit EAF();
-            ~EAF();
-            virtual bool Connect(std::string Device_name)override;
-            virtual bool Disconnect()override;
-            std::string ReturnDeviceName()override;
-            virtual bool MoveTo(int TargetPosition)override;
-        protected:
-            void EAF_temperature_Thread();
-        private:
-            int EAF_count = 0;
-            int EAF_position_now = 0;
-            bool InMoving = false;
-            float EAF_temp = 0;
+    public:
+        explicit AIRGUIDER();
+        ~AIRGUIDER();
 
-            EAF_INFO EAFInfo;
-            EAF_ERROR_CODE errCode;
+        virtual bool Connect(std::string Device_name);      //连接导星软件
+		virtual bool Disconnect();                          //断开连接
+		virtual std::string ReturnDeviceName();             //返回设备名称
 
+    private:
+        
+    
     };
+    extern AIRGUIDER *GUIDE;
+    extern std::atomic_bool isGuideConnected;
 }
 
 #endif

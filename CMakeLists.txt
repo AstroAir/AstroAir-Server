@@ -321,27 +321,6 @@ else()
 	message("Please check setting,jsoncpp is one of the main library!")
 endif()
 
-#设置LIBXLS库
-option(HAS_LIBXLS "Using LibXLS Library" ON)
-if(HAS_LIBXLS)
-	find_path(PATH_LIBXLS xls.h /usr/include)
-	find_path(PATH_LIBXLS xls.h /usr/local/include)
-	find_library(PATH_LIBXLS_LIB libxlsreader.so /usr/lib)
-	find_library(PATH_LIBXLS_LIB libxlsreader.so /usr/local/lib)
-	if(PATH_LIBXLS AND PATH_LIBXLS_LIB)
-		message("-- Found LibXLS header file in ${PATH_LIBXLS} and library in ${PATH_LIBXLS_LIB}")
-		add_library(LIBS src/air_search.cpp)
-		target_link_libraries(airserver PUBLIC LIBS)
-		add_library(LIBXLS src/libxls.cpp)
-		target_link_libraries(airserver PUBLIC LIBXLS)
-		target_link_libraries(airserver PUBLIC libxlsreader.so)
-	else()
-		message("-- Could not found LibXLS library.Please build it before install!")
-	endif()
-else()
-	message("Please check setting,libxls is one of the main library!")
-endif()
-
 #----------------------------------------AstroAir-Server官方API文件----------------------------------------
 
 add_library(LIBCAMERA src/air_camera.cpp)		#相机
@@ -356,6 +335,10 @@ add_library(LIBFILTER src/air_filter.cpp)			#滤镜轮
 target_link_libraries(airserver PUBLIC LIBFILTER)
 add_library(LIBSOLVER src/air_solver.cpp)		#解析
 target_link_libraries(airserver PUBLIC LIBSOLVER)
+add_library(LIBGUIDER src/air_guider.cpp)		#导星
+target_link_libraries(airserver PUBLIC LIBGUIDER)
+add_library(LIBSEARCH src/air_search.cpp)		#搜索
+target_link_libraries(airserver PUBLIC LIBSEARCH)
 #add_library(LIBAUTOFOCUS src/air_autofocus.cpp)			#自动对焦
 #target_link_libraries(airserver PUBLIC LIBAUTOFOCUS)
 
