@@ -70,7 +70,7 @@ Using:JsonCpp<https://github.com/open-source-parsers/jsoncpp>
 #endif
 
 #ifdef HAS_IOPTRON
-    #include "telescope/ieqpro/ieqpro.h"
+    #include "telescope/ieqpro/air_ieqpro.h"
 #endif
 
 namespace AstroAir
@@ -742,7 +742,7 @@ namespace AstroAir
                         /*初始化iOptron赤道仪，并赋值MOUNT*/
                         #ifdef HAS_IOPTRON
                         case "iOptron"_hash:{
-                            IEQPro iOptronMount;
+                            IEQPRO iOptronMount;
                             MOUNT = &iOptronMount;
                             mount_ok = MOUNT->Connect(Mount_name);
                             break;

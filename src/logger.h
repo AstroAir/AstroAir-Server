@@ -76,6 +76,8 @@ namespace AstroAir
 	void IDLog(const char *fmt, ...);
 	/*输出服务器Debug日志*/
 	void IDLog_DEBUG(const char *fmt, ...);
+	/*在终端输出*/
+	void IDLog_Error(const char *fmt, ...);
 	/*输出客户端命令日志*/
 	void IDLog_CMDL(std::string message);
 	/*功能性函数*/

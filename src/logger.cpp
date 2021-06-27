@@ -56,6 +56,24 @@ namespace AstroAir
 		vfprintf(stderr, fmt, ap);
 		va_end(ap);
 	}
+
+	/*
+	 * name: IDLog_Error(const char *fmt, ...)
+	 * @param fmt：任意形式的字符输入
+	 * describe: Output program usage log
+	 * 描述：输出程序使用日志
+	 * calls:timestamp()
+	 */
+	void IDLog_Error(const char *fmt, ...)		//日志输出
+	{
+		char *a;
+		sprintf(a,"\033[31m%s\033[0m",fmt);
+		va_list ap;
+		fprintf (stderr, "\033[31m%s\033[0m ", timestamp());
+		va_start(ap, fmt);
+		vfprintf(stderr, a, ap);
+		va_end(ap);
+	}
 		
 	/*
 	 * name: IDLog_DEBUG(const char *fmt, ...)

@@ -32,6 +32,9 @@ Using:libnova<https://github.com/JohannesBuchner/libnova>
 
 **************************************************/
 
+#ifndef _LIBASTRO_H_
+#define _LIBASTRO_H_
+
 #include <libnova/utility.h>
 
 namespace AstroAir
@@ -49,4 +52,8 @@ namespace AstroAir
     double get_local_sidereal_time(double longitude);
     void get_hrz_from_equ(struct ln_equ_posn *object, struct ln_lnlat_posn *observer, double JD, struct ln_hrz_posn *position);
     void get_equ_from_hrz(struct ln_hrz_posn *object, struct ln_lnlat_posn *observer, double JD, struct ln_equ_posn *position);
+
+    extern LibAstro *NOVA;
 }
+
+#endif

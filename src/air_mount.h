@@ -57,6 +57,8 @@ namespace AstroAir
             virtual bool Cancel_Park();
             virtual bool Track();
             virtual bool Cancel_Track();
+            virtual double DecodeString(const char * data, size_t size, double factor);
+            virtual int DecodeString(const char *data, size_t size);
         private:
 
     };

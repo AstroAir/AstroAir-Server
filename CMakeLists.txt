@@ -195,21 +195,8 @@ endif()
 
 option(HAS_IOPTRON "Using IOPTRON Library" ON)
 if(HAS_IOPTRON)
-	add_library(LIBIOPTRON src/telescope/ieqpro/ieqpro.cpp)
+	add_library(LIBIOPTRON src/telescope/ieqpro/air_ieqpro.cpp)
 	target_link_libraries(airserver PUBLIC LIBIOPTRON)
-endif()
-
-option(HAS_COM "Using com system Library" ON)
-if(HAS_COM)
-	add_library(LIBCOM src/aircom.cpp)
-	target_link_libraries(airserver PUBLIC LIBCOM)
-endif()
-
-#设置日志系统库
-option(HAS_LOGGER "Using Logger system Library" ON)
-if(HAS_LOGGER)
-	add_library(LIBLOGGER src/logger.cpp)
-	target_link_libraries(airserver PUBLIC LIBLOGGER)
 endif()
 
 #设置Nova库
@@ -223,6 +210,8 @@ if(HAS_NOVA)
 		message("-- Found Nova header file in ${PATH_NOVA} and library in ${PATH_NOVA_LIB}")
 		add_library(LIBNOVA src/libastro.cpp)
 		target_link_libraries(airserver PUBLIC LIBNOVA)
+		add_library(LIBANOVA src/telescope/air_nova.cpp)
+		target_link_libraries(airserver PUBLIC LIBANOVA)
 		target_link_libraries(airserver PUBLIC libnova.so)
 	else()
 		message("-- Could not found Nova library.Try to build it!")
@@ -329,6 +318,8 @@ add_library(LIBMOUNT src/air_mount.cpp)			#赤道仪
 target_link_libraries(airserver PUBLIC LIBMOUNT)
 add_library(LIBSCRIPT src/air_script.cpp)			#脚本&序列
 target_link_libraries(airserver PUBLIC LIBSCRIPT)
+add_library(LIBLOGGER src/logger.cpp)
+target_link_libraries(airserver PUBLIC LIBLOGGER)
 add_library(LIBFOCUS src/air_focus.cpp)			#对焦
 target_link_libraries(airserver PUBLIC LIBFOCUS)
 add_library(LIBFILTER src/air_filter.cpp)			#滤镜轮
@@ -339,6 +330,8 @@ add_library(LIBGUIDER src/air_guider.cpp)		#导星
 target_link_libraries(airserver PUBLIC LIBGUIDER)
 add_library(LIBSEARCH src/air_search.cpp)		#搜索
 target_link_libraries(airserver PUBLIC LIBSEARCH)
+add_library(LIBCOM src/telescope/air_com.cpp)		#COM
+target_link_libraries(airserver PUBLIC LIBCOM)
 #add_library(LIBAUTOFOCUS src/air_autofocus.cpp)			#自动对焦
 #target_link_libraries(airserver PUBLIC LIBAUTOFOCUS)
 

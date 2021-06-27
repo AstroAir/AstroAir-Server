@@ -95,7 +95,7 @@ namespace AstroAir
 		CamNumber = ASIGetNumOfConnectedCameras();
 		if(CamNumber <= 0)
 		{
-			IDLog("ASI camera not found, please check the power supply or make sure the camera is connected.\n");
+			IDLog_Error(_("ASI camera not found, please check the power supply or make sure the camera is connected.\n"));
 			return false;
 		}
 		else
@@ -105,7 +105,7 @@ namespace AstroAir
 				/*获取相机信息*/
 				if((errCode = ASIGetCameraProperty(&ASICameraInfo, i)) != ASI_SUCCESS)
 				{
-					IDLog("Unable to get %s configuration information,the error code is %d,please check program permissions.\n",ASICameraInfo.Name,errCode);
+					IDLog_Error(_("Unable to get %s configuration information,the error code is %d,please check program permissions.\n"),ASICameraInfo.Name,errCode);
 					return false;
 				}
 				else
@@ -118,7 +118,7 @@ namespace AstroAir
 						/*打开相机*/
 						if((errCode = ASIOpenCamera(CamId)) != ASI_SUCCESS)		
 						{
-							IDLog("Unable to turn on the %s,error code is %d.\n",CamName[CamId],errCode);
+							IDLog_Error(_("Unable to turn on the %s,error code is %d.\n"),CamName[CamId],errCode);
 							return false;
 						}
 						else
@@ -126,7 +126,7 @@ namespace AstroAir
 							/*初始化相机*/
 							if((errCode = ASIInitCamera(CamId)) != ASI_SUCCESS)	
 							{
-								IDLog("Unable to initialize connection to camera,the error code is %d.\n",errCode);
+								IDLog_Error(_("Unable to initialize connection to camera,the error code is %d.\n"),errCode);
 								return false;
 							}
 							else 

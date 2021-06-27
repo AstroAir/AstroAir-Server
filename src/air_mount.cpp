@@ -25,7 +25,7 @@ Author:Max Qian
 
 E-mail:astro_air@126.com
  
-Date:2021-6-23
+Date:2021-6-26
  
 Description:Mount Offical Port
 
@@ -35,22 +35,41 @@ Description:Mount Offical Port
 #include "wsserver.h"
 #include "logger.h"
 
+static const uint8_t DRIVER_LEN { 64 };
 
 namespace AstroAir
 {
     AIRMOUNT *MOUNT;
     std::atomic_bool isMountConnected;
 
+    /*
+     * name: Connect()
+     * describe: Connect from camera
+     * 描述：连接（无任何实际用途，仅作为一个模板）
+	 * note:This function should not be executed normally
+     */
     bool AIRMOUNT::Connect(std::string Device_name)
     {
         return true;
     }
 
+    /*
+     * name: Disconnect()
+     * describe: Disconnect from camera
+     * 描述：断开连接（无任何实际用途，仅作为一个模板）
+	 * note:This function should not be executed normally
+     */
     bool AIRMOUNT::Disconnect()
     {
         return true;
     }
 
+    /*
+     * name: ReturnDeviceName()
+     * describe: Return device's name
+     * 描述：返回设备名称（无任何实际用途，仅作为一个模板）
+	 * note:This function should not be executed normally
+     */
     std::string AIRMOUNT::ReturnDeviceName()
     {
         return "None";
@@ -152,5 +171,18 @@ namespace AstroAir
     bool AIRMOUNT::Cancel_Track()
     { 
         return true;
+    }
+
+    double AIRMOUNT::DecodeString(const char * data, size_t size, double factor)
+    {
+        return DecodeString(data, size) / factor;
+    }
+
+    int AIRMOUNT::DecodeString(const char *data, size_t size)
+    {
+        char str[DRIVER_LEN / 2] = {0};
+        strncpy(str, data, size);
+        int iVal = atoi(str);
+        return iVal;
     }
 }

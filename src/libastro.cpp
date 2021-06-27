@@ -33,6 +33,7 @@ Using:libnova<https://github.com/JohannesBuchner/libnova>
 **************************************************/
 
 #include "libastro.h"
+#include "telescope/air_nova.h"
 
 #include <math.h>
 #include <libnova/precession.h>
@@ -45,15 +46,7 @@ Using:libnova<https://github.com/JohannesBuchner/libnova>
 
 namespace AstroAir
 {
-    double range24(double r)
-    {
-        double res = r;
-        while (res < 0.0)
-            res += 24.0;
-        while (res > 24.0)
-            res -= 24.0;
-        return res;
-    }
+    LibAstro *NOVA;
 
     void LibAstro::ObservedToJ2000(ln_equ_posn * observed, double jd, ln_equ_posn * J2000pos)
     {
