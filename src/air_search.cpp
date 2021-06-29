@@ -49,7 +49,7 @@ namespace AstroAir
 	 */
     void Search::SearchTarget(std::string TargetName)
     {
-        if(TargetName[0] == 'M' || TargetName[0] == 'm')
+        if(TargetName[0] == 'M' || TargetName[0] == 'm')        //梅西耶星表检索
         {
             /*检查星体数据库是否存在*/
             if(access( "StarBase/Messier.json", F_OK ) == -1)
@@ -71,19 +71,20 @@ namespace AstroAir
             json_read->parse(jsonStr.c_str(), jsonStr.c_str() + jsonStr.length(), &root,&errs);
             if(!root[TargetName].empty())
             {   
-                std::string ra,dec,oname,type,mag;
+                std::string ra,dec,oname,type,mag,conzh;
                 ra = root[TargetName]["RAJ2000"].asString();
                 dec = root[TargetName]["DECJ2000"].asString();
                 oname = root[TargetName]["NGC"].asString();
                 type = root[TargetName]["TYPE"].asString();
                 mag = root[TargetName]["VMAG"].asString();
-                SearchTargetSuccess(ra,dec,TargetName,oname,type,mag);
+                conzh = root[TargetName]["CONZH"].asString();
+                SearchTargetSuccess(ra,dec,TargetName,oname,type,mag,conzh);
                 return ;
             }
         }
         else
         {
-            if(access( "StarBase/NGCIC.json", F_OK ) == -1)
+            if(access( "StarBase/NGCIC.json", F_OK ) == -1)         //NGC星表检索
             {
                 SearchTargetError(2);
                 return;
@@ -92,7 +93,7 @@ namespace AstroAir
             std::ifstream in("StarBase/NGCIC.json", std::ios::binary);
             if (!in.is_open())
             {
-                IDLog(_("Unable to open star file\n"));
+                IDLog_Error(_("Unable to open star file\n"));
                 return ;
             }
             while (getline(in, line))
@@ -103,7 +104,7 @@ namespace AstroAir
             if(!root[TargetName].empty())
             {   
                 
-                std::string ra,dec,oname,type,mag;
+                std::string ra,dec,oname,type,mag,conzh;
                 if(root[TargetName]["NAMEZH"].empty())
                     oname = "None";
                 else
@@ -112,7 +113,8 @@ namespace AstroAir
                 dec = root[TargetName]["DECJ2000"].asString();
                 type = root[TargetName]["TYPE"].asString();
                 mag = root[TargetName]["VMAG"].asString();
-                SearchTargetSuccess(ra,dec,TargetName,oname,type,mag);
+                conzh = root[TargetName]["CONZH"].asString();
+                SearchTargetSuccess(ra,dec,TargetName,oname,type,mag,conzh);
                 return ;
             }
         }
@@ -132,7 +134,7 @@ namespace AstroAir
 	 * 描述：搜索天体成功
 	 * calls: send()
 	 */
-    void Search::SearchTargetSuccess(std::string RA,std::string DEC,std::string Name,std::string OtherName,std::string Type,std::string MAG)
+    void Search::SearchTargetSuccess(std::string RA,std::string DEC,std::string Name,std::string OtherName,std::string Type,std::string MAG,std::string CONZH)
     {
         Json::Value Root,info;
         Root["Event"] = Json::Value("RemoteActionResult");
@@ -146,14 +148,20 @@ namespace AstroAir
         Root["ParamRet"]["RAJ2000"] = Json::Value(RA);
         Root["ParamRet"]["DECJ2000"] = Json::Value(DEC);
         /*天体基础信息*/
-        info["Key"] = Json::Value("别称");     //天体别名
-        info["Value"] = Json::Value(OtherName);
+        info["Key"] = Json::Value(_("别称"));     //天体别名
+        if(OtherName.empty())
+            info["Value"] = Json::Value(_("None"));
+        else
+            info["Value"] = Json::Value(OtherName);
         Root["ParamRet"]["Info"].append(info);
-        info["Key"] = Json::Value("类型");      //天体类型
+        info["Key"] = Json::Value(_("类型"));      //天体类型
         info["Value"] = Json::Value(Type);
         Root["ParamRet"]["Info"].append(info);
-        info["Key"] = Json::Value("星等");      //天体星等
+        info["Key"] = Json::Value(_("星等"));      //天体星等
         info["Value"] = Json::Value(MAG);
+        Root["ParamRet"]["Info"].append(info);
+        info["Key"] = Json::Value(_("星座"));     //天体所在星座
+        info["Value"] = Json::Value(CONZH);
         Root["ParamRet"]["Info"].append(info);
 		ws.send(Root.toStyledString());
     }
@@ -178,7 +186,7 @@ namespace AstroAir
         else        //星体数据库无法打开
         {
             Root["ActionResultInt"] = Json::Value(5);
-            Root["Motivo"] = Json::Value("Could not open star base!");
+            Root["Motivo"] = Json::Value(_("Could not open star base!"));
         }
 		ws.send(Root.toStyledString());
     }
@@ -205,7 +213,7 @@ namespace AstroAir
         std::ifstream in("Roboclip/roboclip.json", std::ios::binary);
         if (!in.is_open())
         {
-            IDLog(_("Unable to open roboclip file\n"));
+            IDLog_Error(_("Unable to open roboclip file\n"));
             return;
         }
         std::string line, jsonStr;
@@ -239,7 +247,7 @@ namespace AstroAir
             TargetCount = root["target"].size();
             if(TargetCount == 0)
             {
-                IDLog(_("There is no target in the file\n"));
+                IDLog_Error(_("There is no target in the file\n"));
                 RoboClipGetTargetListError(4);
             }
             else
@@ -247,12 +255,11 @@ namespace AstroAir
                 IDLog(_("Found %d targets in the roboclip.json\n"),TargetCount);
                 IDLog(_("Get target list and send to client\n"));
                 RoboClipGetTargetListSuccess();
-            }
-                
+            } 
         }
         else
         {
-            IDLog(_("roboclip.json is an empty file\n"));
+            IDLog_Error(_("roboclip.json is an empty file\n"));
             RoboClipGetTargetListError(4);
             in.close();
             return ;

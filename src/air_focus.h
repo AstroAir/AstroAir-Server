@@ -62,6 +62,7 @@ namespace AstroAir
     };
     extern AIRFOCUS *FOCUS;
     extern std::atomic_bool isFocusConnected;
+    extern double FocusTemp;
+    extern std::atomic_int FocusPosition;
 }
-
 #endif

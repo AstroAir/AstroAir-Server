@@ -39,6 +39,8 @@ namespace AstroAir
 {
     AIRFOCUS *FOCUS;
     std::atomic_bool isFocusConnected;
+    double FocusTemp;
+    std::atomic_int FocusPosition;
     
     /*
      * name: AIRFOCUS()

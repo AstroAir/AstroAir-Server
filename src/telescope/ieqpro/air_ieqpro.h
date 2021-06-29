@@ -25,7 +25,7 @@ Author:Max Qian
 
 E-mail:astro_air@126.com
  
-Date:2021-6-27
+Date:2021-6-28
  
 Description:IEQ Mount Offical Port
 
@@ -49,6 +49,19 @@ namespace AstroAir
             virtual bool Connect(std::string Device_name)override;
             virtual bool Disconnect()override;
             std::string ReturnDeviceName()override;
+            virtual bool Goto(std::string Target_RA,std::string Target_DEC)override;
+            virtual bool Park()override;
+            virtual bool Unpark()override;
+            virtual bool Track(bool status)override;
+            virtual bool Abort(int status)override;
+
+            /*更新赤道仪的设置*/
+            bool UpdateMountConfigure();
+
+            /*--------------------赤道仪跟踪设置--------------------*/
+            virtual bool SetTrackMode(uint8_t mode);
+            virtual bool SetTrackRate(double raRate, double deRate);
+            virtual bool SetTrackEnabled(bool enabled);
 
         private:
             /*获取赤道仪名称*/
@@ -57,8 +70,7 @@ namespace AstroAir
             bool GetMainFirmware();
             /*获取赤道仪赤经赤纬电机固件版本*/
             bool GetRADECFirmware();
-            /*更新赤道仪的设置*/
-            bool UpdateMountConfigure();
+            
 
             AIRCOM *TTY;
 
@@ -67,6 +79,10 @@ namespace AstroAir
             static const uint8_t DRIVER_TIMEOUT { 3 };      //赤道仪超时时间
             static const uint8_t DRIVER_LEN { 64 };         //信息长度
             static const char DRIVER_STOP_CHAR { '#' };     //默认指令前置
+            TelescopeStatus TrackState{SCOPE_IDLE};
+
+            double currentRA = 0, currentDEC = 0;
+            double targetRA = 0, targetDEC = 0;
 
             bool canParkNatively = false;       //是否支持归位
             bool canFindHome = false;           //是否支持寻找归位位置
@@ -159,9 +175,21 @@ namespace AstroAir
             void hexDump(char * buf, const char * data, int size);
             virtual bool isCMDSupported(const std::string &command, bool silent = false);
 
+            /*--------------------设置赤道仪参数--------------------*/
+            virtual bool setRA(double ra);
+            virtual bool setDE(double dec);
+            virtual bool slew();
+
+            /*--------------------获取赤道仪信息--------------------*/
+            virtual bool getCoords(double *ra, double *dec);
             virtual bool getGuideRate(double *raRate, double *deRate);
             virtual bool getUTCDateTime(double *utc_hours, int *yy, int *mm, int *dd, int *hh, int *minute, int *ss);
             virtual bool getStatus(Info *info);
+
+            /*--------------------赤道仪跟踪设置--------------------*/
+            virtual bool setTrackMode(TrackRate rate);
+            virtual bool setCustomRATrackRate(double rate);
+            virtual bool setTrackEnabled(bool enabled);
 
             const FirmwareInfo &getFirmwareInfo() const
             {
@@ -170,6 +198,7 @@ namespace AstroAir
 
             const char * pierSideStr(IEQ_PIER_SIDE ps);
             virtual bool getPierSide(IEQ_PIER_SIDE *pierSide);
+            bool ReadScopeStatus();
 
             constexpr static const double ieqDegrees { 60.0 * 60.0 * 100.0 };
             constexpr static const double ieqHours { 60.0 * 60.0 * 1000.0 };

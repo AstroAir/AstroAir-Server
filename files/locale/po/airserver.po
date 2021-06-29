@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: AstroAirServer 1.0.0\n"
 "Report-Msgid-Bugs-To: qwdmax@qq.com\n"
-"POT-Creation-Date: 2021-06-25 16:33+0800\n"
+"POT-Creation-Date: 2021-06-29 02:45+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,279 +17,692 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: ../../src/wsserver.cpp:153
+#: ../../../src/main.cpp:56
+#, c-format
+msgid "Usage: %s [options]\n"
+msgstr ""
+
+#: ../../../src/main.cpp:57
+#, c-format
+msgid "Purpose: Start or stop the server\n"
+msgstr ""
+
+#: ../../../src/main.cpp:58
+#, c-format
+msgid "Options:\n"
+msgstr ""
+
+#: ../../../src/main.cpp:59
+#, c-format
+msgid " -v       : start server\n"
+msgstr ""
+
+#: ../../../src/main.cpp:60
+#, c-format
+msgid " -s       : stop server\n"
+msgstr ""
+
+#: ../../../src/main.cpp:61
+#, c-format
+msgid " -p p     : alternate IP port, default %d\n"
+msgstr ""
+
+#: ../../../src/main.cpp:62
+#, c-format
+msgid " -c       : write a configure file for server\n"
+msgstr ""
+
+#: ../../../src/wsserver.cpp:158
 #, c-format
 msgid "Successfully established connection with client path %s\n"
-msgstr "成功与路径为 %s 的服务器建立连接\n"
+msgstr ""
 
-#: ../../src/wsserver.cpp:171
+#: ../../../src/wsserver.cpp:176
 msgid "Disconnect from client\n"
-msgstr "与客户端断开连接\n"
+msgstr ""
 
-#: ../../src/wsserver.cpp:390 ../../src/wsserver.cpp:450
+#: ../../../src/wsserver.cpp:407 ../../../src/wsserver.cpp:467
 msgid "other exception"
-msgstr "其他原因"
+msgstr ""
 
-#: ../../src/wsserver.cpp:406
+#: ../../../src/wsserver.cpp:423
 msgid "Switched off by user."
-msgstr "被用户关闭"
+msgstr ""
 
-#: ../../src/wsserver.cpp:438
+#: ../../../src/wsserver.cpp:455
 #, c-format
 msgid "Start the server at port %d ...\n"
-msgstr "在%d端口启动服务器\n"
+msgstr ""
 
-#: ../../src/wsserver.cpp:466 ../../src/wsserver.cpp:608
-#: ../../src/wsserver.cpp:609
+#: ../../../src/wsserver.cpp:483 ../../../src/wsserver.cpp:630
+#: ../../../src/wsserver.cpp:631
 msgid "Unable to open configuration file\n"
-msgstr "无法打开配置文件\n"
+msgstr ""
 
-#: ../../src/wsserver.cpp:532
+#: ../../../src/wsserver.cpp:548
 msgid "Cound not found any configration files,please check it\n"
-msgstr "未找到任何配置文件，请检查文件夹\n"
+msgstr ""
 
-#: ../../src/wsserver.cpp:534
+#: ../../../src/wsserver.cpp:550
 msgid "Cound not found any configration files"
-msgstr "未发现任何配置文件"
+msgstr ""
 
-#: ../../src/wsserver.cpp:542 ../../src/wsserver.cpp:549
+#: ../../../src/wsserver.cpp:558 ../../../src/wsserver.cpp:565
 #, c-format
 msgid "Found configure file named %s\n"
-msgstr "发现名为%s的配置文件\n"
+msgstr ""
 
-#: ../../src/wsserver.cpp:568
+#: ../../../src/wsserver.cpp:583
 #, c-format
 msgid "Change the configuration file to %s\n"
-msgstr "将配置文件改为%s\n"
+msgstr ""
 
-#: ../../src/wsserver.cpp:684
+#: ../../../src/wsserver.cpp:618
+msgid "No file!\n"
+msgstr ""
+
+#: ../../../src/wsserver.cpp:619
+msgid "No file list!"
+msgstr ""
+
+#: ../../../src/wsserver.cpp:706
 msgid "Unknown camera"
-msgstr "未知的相机"
+msgstr ""
 
-#: ../../src/wsserver.cpp:690
+#: ../../../src/wsserver.cpp:712
 msgid "Connect to "
-msgstr "连接"
+msgstr ""
 
-#: ../../src/wsserver.cpp:690
+#: ../../../src/wsserver.cpp:712
 msgid " successfully"
-msgstr "成功"
+msgstr ""
 
-#: ../../src/wsserver.cpp:699 ../../src/wsserver.cpp:769
+#: ../../../src/wsserver.cpp:721 ../../../src/wsserver.cpp:791
 msgid "Could not connect to "
-msgstr "无法连接"
+msgstr ""
 
-#: ../../src/wsserver.cpp:709
+#: ../../../src/wsserver.cpp:731 ../../../src/wsserver.cpp:943
 msgid " had already connected"
-msgstr "已经连接"
+msgstr ""
 
-#: ../../src/wsserver.cpp:754
+#: ../../../src/wsserver.cpp:776
 msgid "Unknown mount"
-msgstr "未知的赤道仪"
+msgstr ""
 
-#: ../../src/wsserver.cpp:823
+#: ../../../src/wsserver.cpp:845
 msgid "Unknown focus"
-msgstr "未知的电动调焦座"
+msgstr ""
 
-#: ../../src/wsserver.cpp:990
+#: ../../../src/wsserver.cpp:915
+msgid "Unknown filter"
+msgstr ""
+
+#: ../../../src/wsserver.cpp:976
+msgid "Unknown guide server"
+msgstr ""
+
+#: ../../../src/wsserver.cpp:1005
+#, c-format
+msgid "Connecting to device took %g seconds\n"
+msgstr ""
+
+#: ../../../src/wsserver.cpp:1018
 msgid "All devices connected successfully"
-msgstr "所有设备连接成功"
+msgstr ""
 
-#: ../../src/wsserver.cpp:995
+#: ../../../src/wsserver.cpp:1025
 msgid "There were some errors in connecting the device"
-msgstr "连接设备时发生错误"
+msgstr ""
 
-#: ../../src/wsserver.cpp:1049
+#: ../../../src/wsserver.cpp:1080
 msgid "Successfully disconnected from all devices"
-msgstr "成功与所有设备断开连接"
+msgstr ""
 
-#: ../../src/air_camera.cpp:125
+#: ../../../src/air_camera.cpp:126
 msgid "Exposure time is less than 0, please input a reasonable data\n"
-msgstr "曝光时间小于0，请输入一个合理的数据\n"
+msgstr ""
 
-#: ../../src/air_camera.cpp:126
+#: ../../../src/air_camera.cpp:127
 msgid "Exposure time is less than 0, please input a reasonable data"
-msgstr "曝光时间小于0，请输入一个合理的数据"
+msgstr ""
 
-#: ../../src/air_camera.cpp:140
+#: ../../../src/air_camera.cpp:141
 msgid "Start exposure"
-msgstr "开始曝光"
+msgstr ""
 
-#: ../../src/air_camera.cpp:146
+#: ../../../src/air_camera.cpp:147
 msgid ""
 "Unable to start the exposure of the camera. Please check the connection of "
 "the camera. If you have any problems, please contact the developer\n"
-msgstr "无法开始曝光，请检查与相机的连接。如果你有任何问题，请联系开发人员\n"
+msgstr ""
 
-#: ../../src/air_camera.cpp:147
+#: ../../../src/air_camera.cpp:148
 msgid "Unable to start the exposure of the camera"
-msgstr "相机无法曝光"
+msgstr ""
 
-#: ../../src/air_camera.cpp:417
+#: ../../../src/air_camera.cpp:423
 #, c-format
 msgid "Progress image took %g seconds\n"
-msgstr "处理图像花费了%g秒\n"
+msgstr ""
 
-#: ../../src/air_focus.cpp:113 ../../src/air_filter.cpp:85
-#: ../../src/filter/air-efw/air_efw.cpp:145
-#: ../../src/focus/air-eaf/air_eaf.cpp:171
+#: ../../../src/air_mount.cpp:97 ../../../src/air_mount.cpp:133
+#: ../../../src/air_mount.cpp:146 ../../../src/air_mount.cpp:190
+#: ../../../src/air_mount.cpp:232
+msgid "The equator doesn't work properly\n"
+msgstr ""
+
+#: ../../../src/air_mount.cpp:98
+msgid "The equator doesn't work properly"
+msgstr ""
+
+#: ../../../src/air_mount.cpp:134 ../../../src/air_mount.cpp:191
+msgid "赤道仪无法正常工作"
+msgstr ""
+
+#: ../../../src/air_mount.cpp:138 ../../../src/air_mount.cpp:151
+msgid "The equator moves to the designated position\n"
+msgstr ""
+
+#: ../../../src/air_mount.cpp:139
+msgid "赤道仪归位"
+msgstr ""
+
+#: ../../../src/air_mount.cpp:147
+msgid "赤道仪无法解除归位"
+msgstr ""
+
+#: ../../../src/air_mount.cpp:152
+msgid "赤道仪解除归位状态"
+msgstr ""
+
+#: ../../../src/air_mount.cpp:196
+msgid "The equator started tracking\n"
+msgstr ""
+
+#: ../../../src/air_mount.cpp:197
+msgid "赤道仪开始跟踪"
+msgstr ""
+
+#: ../../../src/air_mount.cpp:202 ../../../src/air_mount.cpp:238
+msgid "The equator stopped tracking\n"
+msgstr ""
+
+#: ../../../src/air_mount.cpp:203 ../../../src/air_mount.cpp:239
+msgid "赤道仪停止跟踪"
+msgstr ""
+
+#: ../../../src/air_mount.cpp:233
+msgid "赤道仪无法停止"
+msgstr ""
+
+#: ../../../src/air_mount.cpp:243
+msgid "The equator stopped\n"
+msgstr ""
+
+#: ../../../src/air_mount.cpp:244
+msgid "赤道仪停止"
+msgstr ""
+
+#: ../../../src/air_focus.cpp:115 ../../../src/air_filter.cpp:85
+#: ../../../src/filter/air-cfw/qhy_cfw.cpp:118
+#: ../../../src/filter/air-efw/air_efw.cpp:145
+#: ../../../src/focus/air-eaf/air_eaf.cpp:171
 msgid "Target position is less than 0, please input a reasonable data\n"
-msgstr "目标位置小于0，请输入一个合理的数据\n"
+msgstr ""
 
-#: ../../src/air_focus.cpp:114 ../../src/air_filter.cpp:86
+#: ../../../src/air_focus.cpp:116 ../../../src/air_filter.cpp:86
 msgid "Are you kidding me?!"
-msgstr "你是在开玩笑的吗？！"
+msgstr ""
 
-#: ../../src/air_focus.cpp:121 ../../src/air_focus.cpp:184
+#: ../../../src/air_focus.cpp:123 ../../../src/air_focus.cpp:186
 msgid "Focus is moving,try again later!\n"
-msgstr "电动调焦座正在运动中，请稍后再尝试！\n"
+msgstr ""
 
-#: ../../src/air_focus.cpp:122 ../../src/air_focus.cpp:185
+#: ../../../src/air_focus.cpp:124 ../../../src/air_focus.cpp:187
 msgid "Focus is moving,try again later!"
-msgstr "电动调焦座正在运动中，请稍后再尝试！"
+msgstr ""
 
-#: ../../src/air_focus.cpp:129
+#: ../../../src/air_focus.cpp:131
 #, c-format
 msgid "The focus failed to move to %d\n"
-msgstr "电动调焦座无法移动至%d\n"
+msgstr ""
 
-#: ../../src/air_focus.cpp:130
+#: ../../../src/air_focus.cpp:132
 msgid "The focus failed to move to."
-msgstr "电动调焦座无法移动至指定位置"
+msgstr ""
 
-#: ../../src/air_focus.cpp:136
+#: ../../../src/air_focus.cpp:138
 msgid "Focus move to  ok"
-msgstr "电动调焦座移动完成"
+msgstr ""
 
-#: ../../src/air_focus.cpp:192
+#: ../../../src/air_focus.cpp:194
 #, c-format
 msgid "The focus failed to move %d\n"
-msgstr "电动调焦座移动至%d失败\n"
+msgstr ""
 
-#: ../../src/air_focus.cpp:193
+#: ../../../src/air_focus.cpp:195
 msgid "The focus failed to move."
-msgstr "电动调焦座移动失败"
+msgstr ""
 
-#: ../../src/air_focus.cpp:199
+#: ../../../src/air_focus.cpp:201
 msgid "Focus move ok"
-msgstr "电动调焦座移动完成"
+msgstr ""
 
-#: ../../src/air_filter.cpp:93
+#: ../../../src/air_filter.cpp:93
 msgid "Filter is moving,try again later!\n"
-msgstr "滤镜轮正在运动中，请稍后再尝试！\n"
+msgstr ""
 
-#: ../../src/air_filter.cpp:94
+#: ../../../src/air_filter.cpp:94
 msgid "Filter is moving,try again later!"
-msgstr "滤镜轮正在运动中，请稍后再尝试！"
+msgstr ""
 
-#: ../../src/air_filter.cpp:101
+#: ../../../src/air_filter.cpp:101
 #, c-format
 msgid "The filter failed to move to %d\n"
-msgstr "滤镜无法运动至%d\n"
+msgstr ""
 
-#: ../../src/air_filter.cpp:102
+#: ../../../src/air_filter.cpp:102
 msgid "The filter failed to move to."
-msgstr "滤镜轮无法移动至指定位置。"
+msgstr ""
 
-#: ../../src/air_filter.cpp:108
+#: ../../../src/air_filter.cpp:108
 msgid "Filter move to  ok"
-msgstr "滤镜轮转至指定位置"
+msgstr ""
 
-#: ../../src/air_script.cpp:304
+#: ../../../src/air_script.cpp:304
 msgid "Run script successfully\n"
-msgstr "成功运行脚本\n"
+msgstr ""
 
-#: ../../src/air_script.cpp:305
+#: ../../../src/air_script.cpp:305
 msgid "Run script successfully"
-msgstr "成功运行脚本"
+msgstr ""
 
-#: ../../src/air_script.cpp:309
+#: ../../../src/air_script.cpp:309
 msgid "Failed to run script\n"
-msgstr "运行脚本失败\n"
+msgstr ""
 
-#: ../../src/air_script.cpp:310
+#: ../../../src/air_script.cpp:310
 msgid "Failed to run script"
-msgstr "运行脚本失败"
+msgstr ""
 
-#: ../../src/filter/air-efw/air_efw.cpp:84
+#: ../../../src/air_search.cpp:64 ../../../src/air_search.cpp:96
+msgid "Unable to open star file\n"
+msgstr ""
+
+#: ../../../src/air_search.cpp:151
+msgid "别称"
+msgstr ""
+
+#: ../../../src/air_search.cpp:153
+msgid "None"
+msgstr ""
+
+#: ../../../src/air_search.cpp:157
+msgid "类型"
+msgstr ""
+
+#: ../../../src/air_search.cpp:160
+msgid "星等"
+msgstr ""
+
+#: ../../../src/air_search.cpp:163
+msgid "星座"
+msgstr ""
+
+#: ../../../src/air_search.cpp:189
+msgid "Could not open star base!"
+msgstr ""
+
+#: ../../../src/air_search.cpp:216
+msgid "Unable to open roboclip file\n"
+msgstr ""
+
+#: ../../../src/air_search.cpp:250
+msgid "There is no target in the file\n"
+msgstr ""
+
+#: ../../../src/air_search.cpp:255
+#, c-format
+msgid "Found %d targets in the roboclip.json\n"
+msgstr ""
+
+#: ../../../src/air_search.cpp:256
+msgid "Get target list and send to client\n"
+msgstr ""
+
+#: ../../../src/air_search.cpp:262
+msgid "roboclip.json is an empty file\n"
+msgstr ""
+
+#: ../../../src/air_solver.cpp:82
+msgid "Not found any avilible solver\n"
+msgstr ""
+
+#: ../../../src/air_solver.cpp:83
+msgid "Couldn't found solver"
+msgstr ""
+
+#: ../../../src/air_solver.cpp:96
+#, c-format
+msgid "Could not solve this image,the error code is %s\n"
+msgstr ""
+
+#: ../../../src/air_solver.cpp:120
+msgid "Solver complete."
+msgstr ""
+
+#: ../../../src/camera/air-asi/asi_ccd.cpp:97
+msgid ""
+"ASI camera not found, please check the power supply or make sure the camera "
+"is connected.\n"
+msgstr ""
+
+#: ../../../src/camera/air-asi/asi_ccd.cpp:107
+#, c-format
+msgid ""
+"Unable to get %s configuration information,the error code is %d,please check "
+"program permissions.\n"
+msgstr ""
+
+#: ../../../src/camera/air-asi/asi_ccd.cpp:120
+#, c-format
+msgid "Unable to turn on the %s,error code is %d.\n"
+msgstr ""
+
+#: ../../../src/camera/air-asi/asi_ccd.cpp:128
+#, c-format
+msgid "Unable to initialize connection to camera,the error code is %d.\n"
+msgstr ""
+
+#: ../../../src/camera/air-asi/asi_ccd.cpp:348
+#, c-format
+msgid "Blinking %ld time(s) before exposure\n"
+msgstr ""
+
+#: ../../../src/camera/air-asi/asi_ccd.cpp:351
+#, c-format
+msgid "Failed to set blink exposure to %ldus, error %d\n"
+msgstr ""
+
+#: ../../../src/camera/air-asi/asi_ccd.cpp:365
+#, c-format
+msgid "Failed to start blink exposure, error %d,try it again\n"
+msgstr ""
+
+#: ../../../src/camera/air-asi/asi_ccd.cpp:394
+msgid "Could not save image correctly,please check the config\n"
+msgstr ""
+
+#: ../../../src/camera/air-asi/asi_ccd.cpp:484
+#, c-format
+msgid "ASIGetDataAfterExp error (%d)\n"
+msgstr ""
+
+#: ../../../src/camera/air-asi/asi_ccd.cpp:487
+msgid "Download from camera completely.\n"
+msgstr ""
+
+#: ../../../src/filter/air-cfw/qhy_cfw.cpp:68
+msgid "Could not found any qhy filter active\n"
+msgstr ""
+
+#: ../../../src/filter/air-cfw/qhy_cfw.cpp:74
+msgid "Could not get filter's infomation\n"
+msgstr ""
+
+#: ../../../src/filter/air-cfw/qhy_cfw.cpp:113
+msgid "Filter has already moved to target position\n"
+msgstr ""
+
+#: ../../../src/filter/air-cfw/qhy_cfw.cpp:126
+msgid "Filter could not move!\n"
+msgstr ""
+
+#: ../../../src/filter/air-cfw/qhy_cfw.cpp:133
+#, c-format
+msgid "Filter move to %d position\n"
+msgstr ""
+
+#: ../../../src/filter/air-cfw/qhy_cfw.cpp:139
+#, c-format
+msgid "Changing filter failed (%d)"
+msgstr ""
+
+#: ../../../src/filter/air-efw/air_efw.cpp:84
 msgid "No filter connected\n"
-msgstr "没有滤镜轮连接\n"
+msgstr ""
 
-#: ../../src/filter/air-efw/air_efw.cpp:91
-#: ../../src/focus/air-eaf/air_eaf.cpp:89
+#: ../../../src/filter/air-efw/air_efw.cpp:91
+#: ../../../src/focus/air-eaf/air_eaf.cpp:89
 #, c-format
 msgid ""
 "Unable to get information,the error code is %d,please check program "
 "permissions.\n"
-msgstr "无法获取信息，错误代码是%d,请检查程序。\n"
+msgstr ""
 
-#: ../../src/filter/air-efw/air_efw.cpp:96
-#: ../../src/focus/air-eaf/air_eaf.cpp:94
+#: ../../../src/filter/air-efw/air_efw.cpp:96
+#: ../../../src/focus/air-eaf/air_eaf.cpp:94
 #, c-format
 msgid "Find %s"
-msgstr "发现%s"
+msgstr ""
 
-#: ../../src/filter/air-efw/air_efw.cpp:99
+#: ../../../src/filter/air-efw/air_efw.cpp:99
 msgid "Could not open the filter!\n"
 msgstr ""
 
-#: ../../src/filter/air-efw/air_efw.cpp:103
+#: ../../../src/filter/air-efw/air_efw.cpp:103
 msgid "Filter turned on successfully!\n"
 msgstr ""
 
-#: ../../src/filter/air-efw/air_efw.cpp:123
+#: ../../../src/filter/air-efw/air_efw.cpp:123
 #, c-format
 msgid "Failed to close Filter with error code %d"
 msgstr ""
 
-#: ../../src/filter/air-efw/air_efw.cpp:139
+#: ../../../src/filter/air-efw/air_efw.cpp:139
 msgid "Filter is busy\n"
 msgstr ""
 
-#: ../../src/filter/air-efw/air_efw.cpp:151
+#: ../../../src/filter/air-efw/air_efw.cpp:151
 msgid "Filter failed to move\n"
 msgstr ""
 
-#: ../../src/filter/air-efw/air_efw.cpp:163
+#: ../../../src/filter/air-efw/air_efw.cpp:163
 msgid "Filter's moving finished\n"
 msgstr ""
 
-#: ../../src/filter/air-efw/air_efw.cpp:167
+#: ../../../src/filter/air-efw/air_efw.cpp:167
 msgid "Filter has something wrong!\n"
 msgstr ""
 
-#: ../../src/focus/air-eaf/air_eaf.cpp:82
+#: ../../../src/focus/air-eaf/air_eaf.cpp:82
 msgid "No focuser connected\n"
 msgstr ""
 
-#: ../../src/focus/air-eaf/air_eaf.cpp:97
+#: ../../../src/focus/air-eaf/air_eaf.cpp:97
 msgid "Could not open the focuser!\n"
 msgstr ""
 
-#: ../../src/focus/air-eaf/air_eaf.cpp:101
+#: ../../../src/focus/air-eaf/air_eaf.cpp:101
 msgid "Focuser turned on successfully!\n"
 msgstr ""
 
-#: ../../src/focus/air-eaf/air_eaf.cpp:124
+#: ../../../src/focus/air-eaf/air_eaf.cpp:124
 msgid "Could not stop focuser\n"
 msgstr ""
 
-#: ../../src/focus/air-eaf/air_eaf.cpp:130
+#: ../../../src/focus/air-eaf/air_eaf.cpp:130
 #, c-format
 msgid "Failed to close focuser with error code %d"
 msgstr ""
 
-#: ../../src/focus/air-eaf/air_eaf.cpp:165
+#: ../../../src/focus/air-eaf/air_eaf.cpp:165
 msgid "Focuser is busy\n"
 msgstr ""
 
-#: ../../src/focus/air-eaf/air_eaf.cpp:177
+#: ../../../src/focus/air-eaf/air_eaf.cpp:177
 msgid "Focuser failed to move\n"
 msgstr ""
 
-#: ../../src/focus/air-eaf/air_eaf.cpp:191
+#: ../../../src/focus/air-eaf/air_eaf.cpp:191
 msgid "Focuser's moving finished\n"
 msgstr ""
 
-#: ../../src/focus/air-eaf/air_eaf.cpp:195
+#: ../../../src/focus/air-eaf/air_eaf.cpp:195
 msgid "Focuser has something wrong!\n"
+msgstr ""
+
+#: ../../../src/telescope/ieqpro/air_ieqpro.cpp:94
+#, c-format
+msgid "Found %s\n"
+msgstr ""
+
+#: ../../../src/telescope/ieqpro/air_ieqpro.cpp:106
+#, c-format
+msgid ""
+"Main board firmware is %s while minimum required firmware is %s. Please "
+"upgrade the mount firmware."
+msgstr ""
+
+#: ../../../src/telescope/ieqpro/air_ieqpro.cpp:112
+#, c-format
+msgid "Could not found %s,please make sure you've already connected mount\n"
+msgstr ""
+
+#: ../../../src/telescope/ieqpro/air_ieqpro.cpp:118
+msgid "Could not get mount's name\n"
+msgstr ""
+
+#: ../../../src/telescope/ieqpro/air_ieqpro.cpp:150
+#, c-format
+msgid "Mount UTC offset is %s. UTC time is %s"
+msgstr ""
+
+#: ../../../src/telescope/ieqpro/air_ieqpro.cpp:159
+#, c-format
+msgid "Mount Longitude %g Latitude %g"
+msgstr ""
+
+#: ../../../src/telescope/ieqpro/air_ieqpro.cpp:164
+msgid "Get pire side successfully\n"
+msgstr ""
+
+#: ../../../src/telescope/ieqpro/air_ieqpro.cpp:186
+msgid "Error setting RA/DEC.\n"
+msgstr ""
+
+#: ../../../src/telescope/ieqpro/air_ieqpro.cpp:191
+msgid "Failed to slew.\n"
+msgstr ""
+
+#: ../../../src/telescope/ieqpro/air_ieqpro.cpp:205
+#, c-format
+msgid "Slewing to RA: %s - DEC: %s\n"
+msgstr ""
+
+#: ../../../src/telescope/ieqpro/air_ieqpro.cpp:210
+msgid "Mount status failed to update to slewing.\n"
+msgstr ""
+
+#: ../../../src/telescope/ieqpro/air_ieqpro.cpp:311
+msgid "Manual parking complete. Shut the mount down.\n"
+msgstr ""
+
+#: ../../../src/telescope/ieqpro/air_ieqpro.cpp:321
+msgid "Slew complete, tracking...\n"
+msgstr ""
+
+#: ../../../src/telescope/ieqpro/air_ieqpro.cpp:323
+msgid "Meridian flip complete, tracking...\n"
+msgstr ""
+
+#: ../../../src/telescope/ieqpro/air_ieqpro.cpp:414
+msgid "Custom Declination tracking rate is not implemented yet.\n"
+msgstr ""
+
+#: ../../../src/telescope/ieqpro/air_ieqpro.cpp:487
+#, c-format
+msgid "Mount with code %s is not recognized."
+msgstr ""
+
+#: ../../../src/telescope/ieqpro/air_ieqpro.cpp:679
+msgid "EAST"
+msgstr ""
+
+#: ../../../src/telescope/ieqpro/air_ieqpro.cpp:681
+msgid "WEST"
+msgstr ""
+
+#: ../../../src/telescope/ieqpro/air_ieqpro.cpp:683
+msgid "UNKNOWN"
+msgstr ""
+
+#: ../../../src/telescope/ieqpro/air_ieqpro.cpp:685
+msgid "UNCERTAIN"
+msgstr ""
+
+#: ../../../src/telescope/ieqpro/air_ieqpro.cpp:687
+msgid "Impossible"
+msgstr ""
+
+#: ../../../src/telescope/ieqpro/air_ieqpro.cpp:724
+msgid "Hour Angle"
+msgstr ""
+
+#: ../../../src/telescope/ieqpro/air_ieqpro.cpp:733
+msgid "pole angle"
+msgstr ""
+
+#: ../../../src/telescope/ieqpro/air_ieqpro.cpp:738
+msgid "uncertain"
+msgstr ""
+
+#: ../../../src/telescope/ieqpro/air_ieqpro.cpp:741
+#, c-format
+msgid ""
+"getPierSide pole Axis %f, haAxis %f, axisHa %f, ha %f, decPa %f, %s pierSide "
+"%s"
+msgstr ""
+
+#: ../../../src/telescope/ieqpro/air_ieqpro.cpp:767
+msgid "Finding home is only supported on CEM40, GEM45 and CEM60 mounts."
+msgstr ""
+
+#: ../../../src/telescope/ieqpro/air_ieqpro.cpp:776
+msgid "Tracking rate is not supported on Altitude-Azimuth mounts."
+msgstr ""
+
+#: ../../../src/telescope/ieqpro/air_ieqpro.cpp:785
+msgid "Guide rate is not supported on Altitude-Azimuth mounts."
+msgstr ""
+
+#: ../../../src/telescope/ieqpro/air_ieqpro.cpp:797
+msgid ""
+"Parking only supported on CEM40, GEM45, CEM60, iEQPro 30 and iEQ Pro 45."
+msgstr ""
+
+#: ../../../src/telescope/ieqpro/air_ieqpro.cpp:829
+#: ../../../src/telescope/ieqpro/air_ieqpro.cpp:834
+#, c-format
+msgid "CMD <%s>"
+msgstr ""
+
+#: ../../../src/telescope/ieqpro/air_ieqpro.cpp:841
+#, c-format
+msgid "Serial write error: %s."
+msgstr ""
+
+#: ../../../src/telescope/ieqpro/air_ieqpro.cpp:854
+#, c-format
+msgid "Serial read error: %s."
+msgstr ""
+
+#: ../../../src/tools/ImgFitsIO.cpp:53
+#, c-format
+msgid "Failed to allocate memory: %lu"
+msgstr ""
+
+#: ../../../src/tools/ImgFitsIO.cpp:120
+#, c-format
+msgid "FITS Error: %s"
 msgstr ""

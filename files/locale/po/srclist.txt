@@ -1,22 +1,26 @@
-../../src/main.cpp
+../../../src/main.cpp
 
-../../src/wsserver.cpp
-../../src/air_camera.cpp
-../../src/air_mount.cpp
-../../src/air_focus.cpp
-../../src/air_filter.cpp
-../../src/air_script.cpp
-../../src/air_search.cpp
-../../src/air_solver.cpp
+../../../src/wsserver.cpp
+../../../src/air_camera.cpp
+../../../src/air_mount.cpp
+../../../src/air_focus.cpp
+../../../src/air_filter.cpp
+../../../src/air_guider.cpp
+../../../src/air_script.cpp
+../../../src/air_search.cpp
+../../../src/air_solver.cpp
 
-../../src/camera/air-asi/asi_ccd.cpp
-../../src/camera/air-gphoto2/gphoto2_ccd.cpp
-../../src/camera/air-qhy/qhy_ccd.cpp
+../../../src/camera/air-asi/asi_ccd.cpp
+../../../src/camera/air-gphoto2/gphoto2_ccd.cpp
+../../../src/camera/air-qhy/qhy_ccd.cpp
 
-../../src/filter/air-cfw/qhy_cfw.cpp
-../../src/filter/air-efw/air_efw.cpp
+../../../src/filter/air-cfw/qhy_cfw.cpp
+../../../src/filter/air-efw/air_efw.cpp
 
-../../src/focus/air-eaf/air_eaf.cpp
-../../src/focus/air-grus/air_grus.cpp
+../../../src/focus/air-eaf/air_eaf.cpp
+../../../src/focus/air-grus/air_grus.cpp
 
-../../src/telescope/ieqpro/ieqpro.cpp
+../../../src/telescope/ieqpro/air_ieqpro.cpp
+
+../../../src/tools/ImgFitsIO.cpp
+../../../src/tools/ImgTools.cpp

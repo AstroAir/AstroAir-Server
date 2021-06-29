@@ -25,7 +25,7 @@ Author:Max Qian
 
 E-mail:astro_air@126.com
  
-Date:2021-6-23
+Date:2021-6-28
  
 Description:Camera Offical Port
 
@@ -40,8 +40,9 @@ namespace AstroAir
 {
     AIRCAMERA *CCD;
     std::atomic_bool isCameraConnected;
+    std::atomic_bool isCameraCoolingOn;
 
-    std::string CameraImageName;
+    std::string CameraImageName,img_data;
     int Image_Height,Image_Width,StarIndex;
     double HFD;
     /*
@@ -241,13 +242,13 @@ namespace AstroAir
     }
     
     /*
-     * name: Cooling(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF,int CamTemp)
-     * describe: Camera Cooling Settings
-     * 描述：相机制冷设置
+     * name: CoolingServer(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF,int CamTemp)
+     * describe: Camera Cooling Settings (Server)
+     * 描述：相机制冷设置 （服务器）
      * calls: IDLog(const char *fmt, ...)
      * calls: Cooling()
      */
-    bool AIRCAMERA::Cooling(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF,int CamTemp)
+    bool AIRCAMERA::CoolingServer(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF,int CamTemp)
     {
         bool camera_ok = false;
         CameraTemp = CamTemp;
@@ -255,7 +256,7 @@ namespace AstroAir
         {
             if((camera_ok = CCD->Cooling(false,false,false,false,true,CamTemp)) != true)
             {
-                IDLog("Unable to turn off the camera cooling mode, please check the condition of the device\n");
+                IDLog_Error("Unable to turn off the camera cooling mode, please check the condition of the device\n");
                 return false;
             }
         }
@@ -263,7 +264,7 @@ namespace AstroAir
         {
             if((camera_ok = CCD->Cooling(true,false,false,false,false,CamTemp)) != true)
             {
-                IDLog("Unable to turn on the camera cooling mode, please check the condition of the device\n");
+                IDLog_Error("Unable to turn on the camera cooling mode, please check the condition of the device\n");
                 return false;
             }
         }
@@ -271,7 +272,7 @@ namespace AstroAir
 		{
 			if((camera_ok = CCD->Cooling(false,true,false,false,false,CamTemp)) != true)
 			{
-				IDLog("The camera can't cool down normally, please check the condition of the equipment\n");
+				IDLog_Error("The camera can't cool down normally, please check the condition of the equipment\n");
 				return false;
 			}
 		}
@@ -279,12 +280,17 @@ namespace AstroAir
 		{
 			if((camera_ok = CCD->Cooling(false,false,false,true,false,CamTemp)) != true)
 			{
-				IDLog("The camera can't warm up normally, please check the condition of the equipment\n");
+				IDLog_Error("The camera can't warm up normally, please check the condition of the equipment\n");
 				return false;
 			}
 		}
         IDLog("Camera cooling set successfully\n");
         return true;
+    }
+
+    bool AIRCAMERA::Cooling(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF,int CamTemp)
+    {
+        return false;
     }
 
     /*
@@ -333,7 +339,7 @@ namespace AstroAir
 	 */
     void AIRCAMERA::StartExposureError()
     {
-		IDLog("Unable to start exposure\n");
+		IDLog_Error("Unable to start exposure\n");
 		IDLog_DEBUG("Unable to start exposure\n");
 		/*整合信息并发送至客户端*/
         Json::Value Root;
@@ -353,7 +359,7 @@ namespace AstroAir
 	 */
     void AIRCAMERA::AbortExposureError()
     {
-		IDLog("Unable to stop camera exposure\n");
+		IDLog_Error("Unable to stop camera exposure\n");
 		IDLog_DEBUG("Unable to stop camera exposure\n");
 		/*整合信息并发送至客户端*/
 		Json::Value Root;

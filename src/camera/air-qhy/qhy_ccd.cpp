@@ -32,8 +32,9 @@ Description:QHY camera driver
 **************************************************/
 
 #include "qhy_ccd.h"
+#include "../../tools/ImgTools.h"
+
 #include "../../logger.h"
-#include "../../opencv.h"
 
 #include <fitsio.h>
 
@@ -142,6 +143,7 @@ namespace AstroAir
 							else
 							{
 								isConnected = true;
+								isCameraConnected = true;
 								IDLog("Camera turned on successfully\n");
 								/*获取连接相机配置信息，并存入参数*/
 								UpdateCameraConfig();
@@ -490,8 +492,7 @@ namespace AstroAir
 				fits_report_error(stderr, FitsStatus);		//如果有错则返回错误信息
 			#endif
 			#ifdef HAS_OPENCV
-				OPENCV::SaveImage(imgBuf,FitsName,isColorCamera,CamHeight,CamWidth);
-				OPENCV::clacHistogram(imgBuf,isColorCamera,CamHeight,CamWidth);
+				img_data = "data:image/jpg;base64," + ImageTools::ConvertUCto64(imgBuf,isColorCamera,CamHeight,CamWidth);
 			#endif
 			if(imgBuf)
 				delete[] imgBuf;		//删除图像缓存

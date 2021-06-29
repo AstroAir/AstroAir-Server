@@ -58,6 +58,24 @@ namespace AstroAir
 	}
 
 	/*
+	 * name: IDLog_Warning(const char *fmt, ...)
+	 * @param fmt：任意形式的字符输入
+	 * describe: Output program usage log
+	 * 描述：输出程序使用日志
+	 * calls:timestamp()
+	 */
+	void IDLog_Warning(const char *fmt, ...)		//警告日志输出
+	{
+		char *a;
+		sprintf(a,"\033[33m%s\033[0m",fmt);
+		va_list ap;
+		fprintf (stderr, "\033[33m%s\033[0m ", timestamp());
+		va_start(ap, fmt);
+		vfprintf(stderr, a, ap);
+		va_end(ap);
+	}
+
+	/*
 	 * name: IDLog_Error(const char *fmt, ...)
 	 * @param fmt：任意形式的字符输入
 	 * describe: Output program usage log
@@ -222,4 +240,28 @@ namespace AstroAir
 		}
 		return li;
 	}
+
+	char* DeleteCharacters(char *str, char *s) 
+	{
+		if (str == NULL&&s == NULL) 
+		{
+			return str;
+		}
+		int Cur = 0;
+		int Hash[256] = { 0 };
+		for (int j = 0; j < strlen(s); j++) 
+		{
+			Hash[s[j]] = 1;
+		}
+		for (int i = 0; i < strlen(str); i++) 
+		{
+			if (!Hash[str[i]]) 
+			{
+				str[Cur++] = str[i];
+			}
+		}
+		str[Cur] = '\0';
+		return str;
+	}
+
 }

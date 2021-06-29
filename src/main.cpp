@@ -37,7 +37,7 @@ Description:Main program of astroair server
 #include <thread>
 
 #include "wsserver.h"
-#include "check.h"
+#include "tools/AutoUpdate.h"
 #include "logger.h"
 
 using namespace AstroAir;
@@ -53,13 +53,13 @@ int port = AIRPORT;
  */
 void usage(char *me)
 {
-    fprintf(stderr, "Usage: %s [options]\n", me);
-    fprintf(stderr, "Purpose: Start or stop the server\n");
-    fprintf(stderr, "Options:\n");
-    fprintf(stderr, " -v       : start server\n");
-	fprintf(stderr, " -s       : stop server\n");
-    fprintf(stderr, " -p p     : alternate IP port, default %d\n", AIRPORT);
-	fprintf(stderr, " -c       : write a configure file for server\n");
+    fprintf(stderr, _("Usage: %s [options]\n"), me);
+    fprintf(stderr, _("Purpose: Start or stop the server\n"));
+    fprintf(stderr, _("Options:\n"));
+    fprintf(stderr, _(" -v       : start server\n"));
+	fprintf(stderr, _(" -s       : stop server\n"));
+    fprintf(stderr, _(" -p p     : alternate IP port, default %d\n"), AIRPORT);
+	fprintf(stderr, _(" -c       : write a configure file for server\n"));
     exit(2);
 }
 

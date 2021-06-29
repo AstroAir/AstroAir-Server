@@ -90,6 +90,9 @@ namespace AstroAir
 			int CamId;
 			char *CamName[MAXDEVICENUM];
 			int CamBin;
+			int CamExpo;
+			int CamOffset;
+			int CamGain;
 			
 			double ExposureRequest;
 			double TemperatureRequest;

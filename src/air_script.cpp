@@ -137,7 +137,7 @@ namespace AstroAir
         /*打开文件*/
         if (!in.is_open())
         {
-            IDLog("Unable to open sequence file\n");
+            IDLog_Error("Unable to open sequence file\n");
             IDLog_DEBUG("Unable to open sequence file\n");
             return;
         }
@@ -164,7 +164,7 @@ namespace AstroAir
             }
             else        //赤道仪无法运动到指定位置
             {
-                IDLog("The equator could not moved to the designated position\n");
+                IDLog_Error("The equator could not moved to the designated position\n");
                 WebLog("赤道仪无法运动到指定位置 RA:"+TargetRA+" DEC:"+TargetDEC,3);
                 RunSequenceError("赤道仪无法运动到指定位置");
                 return;
@@ -179,7 +179,7 @@ namespace AstroAir
             }
             else        //滤镜轮无法运动到指定位置
             {
-                IDLog("The equator could not moved to the designated position\n");
+                IDLog_Error("The equator could not moved to the designated position\n");
                 WebLog(Filter_name+" 无法运动到指定位置 " + Root["Filter"]["TargetPosition"].asString(),3);
                 RunSequenceError("滤镜轮无法运动到指定位置");
                 return;
@@ -194,7 +194,7 @@ namespace AstroAir
             }
             else        //电动调焦座无法运动到指定位置
             {
-                IDLog("The equator could not moved to the designated position\n");
+                IDLog_Error("The equator could not moved to the designated position\n");
                 WebLog(Focus_name+" 无法运动到指定位置: " + Root["Focus"]["TargetPosition"].asString(),3);
                 RunSequenceError("电动调焦座无法运动到指定位置");
                 return;
@@ -306,7 +306,7 @@ namespace AstroAir
         }
         else
         {
-            IDLog(_("Failed to run script\n"));
+            IDLog_Error(_("Failed to run script\n"));
             WebLog(_("Failed to run script"),3);
         }
     }

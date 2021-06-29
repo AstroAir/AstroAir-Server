@@ -57,4 +57,5 @@ namespace AstroAir
             std::atomic_bool IsSolving;
     };
     extern AIRSOLVER *SOLVER;
+    extern std::atomic_bool isSolverConnected;
 }

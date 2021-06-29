@@ -71,6 +71,9 @@ Description:Nova Offical Port
 
 namespace AstroAir
 {
+
+    int fs_sexa(char *out, double a, int w, int fracbase);
+    
     /**
      * @brief rangeHA Limits the hour angle value to be between -12 ---> 12
      * @param r current hour angle value

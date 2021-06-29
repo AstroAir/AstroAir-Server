@@ -39,6 +39,8 @@ Description:IEQ Mount Offical Port
 
 #include <string.h>
 #include <libnova/julian_day.h>
+#include <chrono>
+#include <thread>
 
 #define MAXRBUF 2048
 
@@ -51,7 +53,8 @@ namespace AstroAir
 
     IEQPRO::~IEQPRO()
     {
-
+        if(isMountConnected)
+            Disconnect();
     }
 
 
@@ -96,6 +99,7 @@ namespace AstroAir
                             if(m_FirmwareInfo.MainBoardFirmware >= oneMount.firmware)      //判断版本是否低于最低版本
                             {
                                 UpdateMountConfigure();
+                                isMountConnected = true;
                                 return true;
                             }    
                             else
@@ -117,6 +121,7 @@ namespace AstroAir
 
     bool IEQPRO::Disconnect()
     {
+        isMountConnected = false;
         return true;
     }
 
@@ -144,7 +149,317 @@ namespace AstroAir
             snprintf(utcOffset, 8, "%4.2f", utc_offset);
             IDLog(_("Mount UTC offset is %s. UTC time is %s"), utcOffset, isoDateTime);
         }
+        double longitude = 0, latitude = 0;
+        if(getStatus(&info))
+        {
+            longitude = info.longitude;
+            latitude = info.latitude;
+            if (longitude < 0)
+                longitude += 360;
+            IDLog(_("Mount Longitude %g Latitude %g"), longitude, latitude);
+        }
+        IEQ_PIER_SIDE pierSide = IEQ_PIER_UNKNOWN;
+        if(getPierSide(&pierSide) && pierSide != IEQ_PIER_UNKNOWN)
+        {
+            IDLog(_("Get pire side successfully\n"));
+        }
         return true;
+    }
+
+    //----------------------------------------赤道仪Goto----------------------------------------
+
+    bool IEQPRO::Goto(std::string Target_RA,std::string Target_DEC)
+    {
+        int temp_h,temp_m,temp_s;
+        RAConvert(Target_RA,&temp_h,&temp_m,&temp_s);
+        int r = (temp_h *3600 + temp_m * 60 + temp_s) * 1000;
+        DECConvert(Target_DEC,&temp_h,&temp_m,&temp_s);
+        int d = (temp_h *3600 + temp_m * 60 + temp_s) * 1000;
+
+        targetRA  = r;
+        targetDEC = d;
+        char RAStr[64] = {0}, DecStr[64] = {0};
+        fs_sexa(RAStr, targetRA, 2, 3600);
+        fs_sexa(DecStr, targetDEC, 2, 3600);
+        if (setRA(r) == false || setDE(d) == false)
+        {
+            IDLog_Error(_("Error setting RA/DEC.\n"));
+            return false;
+        }
+        if (slew() == false)
+        {
+            IDLog_Error(_("Failed to slew.\n"));
+            return false;
+        }
+        Info newInfo;
+        for (int i = 0; i < 5; i++)
+        {
+            bool rc = getStatus(&newInfo);
+            if (rc && newInfo.systemStatus == ST_SLEWING)
+                break;
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        if (newInfo.systemStatus == ST_SLEWING)
+        {
+            TrackState = SCOPE_SLEWING;
+            IDLog(_("Slewing to RA: %s - DEC: %s\n"), RAStr, DecStr);
+            return true;
+        }
+        else
+        {
+            IDLog_Error(_("Mount status failed to update to slewing.\n"));
+            return false;
+        }
+    }
+
+    bool IEQPRO::slew()
+    {
+        char res[DRIVER_LEN] = {0};
+        if (SendCMD(":MS#", res, -1, 1))
+        {
+            return res[0] == '1';
+        }
+        return false;
+    }
+
+
+    bool IEQPRO::setRA(double ra)
+    {
+        char cmd[DRIVER_LEN] = {0};
+        char res[DRIVER_LEN] = {0};
+        int ieqValue = static_cast<int>(ra * 60 * 60 * 1000);
+        snprintf(cmd, DRIVER_LEN, ":Sr%08d#", ieqValue);
+        return SendCMD(cmd, res, -1, 1);
+    }
+
+    bool IEQPRO::setDE(double dec)
+    {
+        char cmd[DRIVER_LEN] = {0};
+        char res[DRIVER_LEN] = {0};
+        int ieqValue = static_cast<int>(fabs(dec) * 60 * 60 * 100);
+        snprintf(cmd, DRIVER_LEN, ":Sd%c%08d#", (dec >= 0) ? '+' : '-', ieqValue);
+        return SendCMD(cmd, res, -1, 1);
+    }
+
+    //----------------------------------------赤道仪动作----------------------------------------
+
+    bool IEQPRO::Park()
+    {
+        if(!isCMDSupported("MP1"))      //判断是否支持归位
+            return false;
+        char res[DRIVER_LEN] = {0};
+        if (SendCMD(":MP1#", res, -1, 1))
+            return res[0] == '1';
+        return false;
+    }
+
+    bool IEQPRO::Unpark()
+    {
+        if (!isCMDSupported("MP0"))
+        return false;
+        char res[DRIVER_LEN] = {0};
+        return SendCMD(":MP0#", res, -1, 1);
+    }
+
+    bool IEQPRO::Track(bool status)
+    {
+        return SetTrackEnabled(status);
+    }
+
+    bool IEQPRO::Abort(int status)
+    {
+        if(status == 1)
+        {
+            return SetTrackEnabled(false);
+        }
+        char res[DRIVER_LEN] = {0};
+        return SendCMD(":Q#", res, -1, 1);
+    }
+
+    //----------------------------------------读取赤道仪状态----------------------------------------
+
+    bool IEQPRO::ReadScopeStatus()
+    {
+        Info newInfo;
+        if(getStatus(&newInfo))
+        {
+            switch (newInfo.systemStatus)
+            {
+                case ST_STOPPED:
+                    if (canParkNatively || TrackState != SCOPE_PARKED)
+                        TrackState    = SCOPE_IDLE;
+                    break;
+                case ST_PARKED:
+                    TrackState    = SCOPE_PARKED;
+                    break;
+                case ST_HOME:
+                    TrackState    = SCOPE_IDLE;
+                    break;
+                case ST_SLEWING:
+                case ST_MERIDIAN_FLIPPING:
+                    slewDirty = true;
+                    if (TrackState != SCOPE_SLEWING && TrackState != SCOPE_PARKING)
+                        TrackState = SCOPE_SLEWING;
+                    break;
+                case ST_TRACKING_PEC_OFF:
+                case ST_TRACKING_PEC_ON:
+                case ST_GUIDING:
+                    if (TrackState == SCOPE_PARKING && canParkNatively == false)
+                    {
+                        if (slewDirty)
+                        {
+                            IDLog(_("Manual parking complete. Shut the mount down.\n"));
+                            TrackState    = SCOPE_PARKED;
+                            SetTrackEnabled(false);
+                            slewDirty = false;
+                        }
+                    }
+                    else
+                    {
+                        TrackState    = SCOPE_TRACKING;
+                        if (info.systemStatus == ST_SLEWING)
+                            IDLog(_("Slew complete, tracking...\n"));
+                        else if (info.systemStatus == ST_MERIDIAN_FLIPPING)
+                            IDLog(_("Meridian flip complete, tracking...\n"));
+                    }
+                    break;
+            }
+            info = newInfo;
+        }
+        IEQ_PIER_SIDE pierSide;
+        if (getPierSide(&pierSide))
+        {
+            TelescopePierSide tps = PIER_UNKNOWN;
+            switch (pierSide)
+            {
+            case IEQ_PIER_UNKNOWN:
+            case IEQ_PIER_UNCERTAIN:
+                tps = PIER_UNKNOWN;
+                break;
+            case IEQ_PIER_EAST:
+                tps = PIER_EAST;
+                break;
+            case IEQ_PIER_WEST:
+                tps = PIER_WEST;
+                break;
+            }
+        }
+        return getCoords(&currentRA, &currentDEC);
+    }
+
+    //----------------------------------------赤道仪跟踪设置----------------------------------------
+
+    /*
+	 * name: setTrackMode(TrackRate rate)
+     * @param rate: 跟踪速率
+	 * describe: Set track rate
+	 * 描述：设置赤道仪跟踪速率
+	 */
+    bool IEQPRO::setTrackMode(TrackRate rate)
+    {
+        char cmd[DRIVER_LEN] = {0};
+        char res[DRIVER_LEN] = {0};
+        switch (rate)
+        {
+            case TR_SIDEREAL:
+                strcpy(cmd, ":RT0#");       //恒星跟踪速率
+                break;
+            case TR_LUNAR:
+                strcpy(cmd, ":RT1#");       //月亮跟踪速度
+                break;
+            case TR_SOLAR:
+                strcpy(cmd, ":RT2#");       //太阳跟踪速率
+                break;
+            case TR_KING:
+                strcpy(cmd, ":RT3#");       
+                break;
+            case TR_CUSTOM:
+                strcpy(cmd, ":RT4#");       //自定义跟踪速率
+                break;
+        }
+        return SendCMD(cmd, res, -1, 1);
+    }
+
+    /*
+	 * name: SetTrackMode(uint8_t mode)
+     * @param mode: 跟踪模式
+	 * describe: Set track mode
+	 * 描述：设置赤道仪跟踪模式
+     * calls: setTrackMode()
+	 */
+    bool IEQPRO::SetTrackMode(uint8_t mode)
+    {
+        TrackRate rate = static_cast<TrackRate>(mode);
+        if (setTrackMode(rate))
+            return true;
+        return false;
+    }
+
+    /*
+	 * name: SetTrackRate(double raRate, double deRate)
+     * @param raRate: RA轴跟踪速率
+     * @param deRate: DEC轴跟踪速率
+	 * describe: Set track rate
+	 * 描述：设置赤道仪跟踪速率
+     * calls: IDLog_Warning()
+     * calls: setCustomRATrackRate()
+	 */
+    bool IEQPRO::SetTrackRate(double raRate, double deRate)
+    {
+        static bool deRateWarning = true;
+        double ieqRARate = raRate - TRACKRATE_SIDEREAL;     // 转换为arcsecs/s到+/-0.0100接受
+        if (deRate != 0 && deRateWarning)
+        {
+            deRateWarning = false;
+            IDLog_Warning(_("Custom Declination tracking rate is not implemented yet.\n"));
+        }
+        if (setCustomRATrackRate(ieqRARate))
+            return true;
+        return false;
+    }
+
+    /*
+	 * name: setCustomRATrackRate(double rate)
+     * @param rate: 设置自定义跟踪速度
+	 * describe: Set custom track rate
+	 * 描述：设置自定义赤道仪跟踪速率
+     * calls: isCMDSupported()
+     * calls: SendCMD()
+	 */
+    bool IEQPRO::setCustomRATrackRate(double rate)
+    {
+        if (!isCMDSupported("RR"))
+            return false;
+        rate = std::max(0.5, std::min(rate, 1.5));
+        char cmd[DRIVER_LEN] = {0};
+        char res[DRIVER_LEN] = {0};
+        snprintf(cmd, DRIVER_LEN, ":RR%05d#", static_cast<int>(rate * 1e5));
+        return SendCMD(cmd, res, -1, 1);
+    }
+
+    /*
+	 * name: SetTrackEnabled(bool enabled)
+     * @param rate: 开启跟踪模式
+	 * describe: Enable track mode
+	 * 描述：开启跟踪模式
+     * calls: setTrackEnabled()
+	 */
+    bool IEQPRO::SetTrackEnabled(bool enabled)
+    {
+        return setTrackEnabled(enabled);
+    }
+
+    /*
+	 * name: setTrackEnabled(bool enabled)
+     * @param rate: 开启跟踪模式
+	 * describe: Enable track mode
+	 * 描述：开启跟踪模式
+     * calls: SendCMD()
+	 */
+    bool IEQPRO::setTrackEnabled(bool enabled)
+    {
+        char res[DRIVER_LEN] = {0};
+        return SendCMD(enabled ? ":ST1#" : ":ST0#", res, -1, 1);
     }
 
     /*
@@ -292,6 +607,29 @@ namespace AstroAir
             *hh = utcTime.hours;
             *minute = utcTime.minutes;
             *ss = static_cast<int>(utcTime.seconds);
+            return true;
+        }
+        return false;
+    }
+
+    /*
+     * name: getCoords(double *ra, double *dec)
+     * @param ra: RA轴
+     * @param dec: DEC轴
+     * describe: Get coords
+     * 描述： 获取赤道仪坐标
+     * calls: SendCMD()
+     * calls: DecodeString()
+     * @return true: Get coordinate successfully
+     * @return false: Failed to get coordinate information
+     */
+    bool IEQPRO::getCoords(double *ra, double *dec)
+    {
+        char res[DRIVER_LEN] = {0};
+        if (SendCMD(":GEC#", res))
+        {
+            *ra = Ra = DecodeString(res + 9, 8, ieqHours);
+            *dec = Dec = DecodeString(res, 9, ieqDegrees);
             return true;
         }
         return false;

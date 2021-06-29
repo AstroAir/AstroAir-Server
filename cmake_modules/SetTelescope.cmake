@@ -1,0 +1,5 @@
+option(HAS_IOPTRON "Using IOPTRON Library" ON)
+if(HAS_IOPTRON)
+	add_library(LIBIOPTRON src/telescope/ieqpro/air_ieqpro.cpp)
+	target_link_libraries(airserver PUBLIC LIBIOPTRON)
+endif()

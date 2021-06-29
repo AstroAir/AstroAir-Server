@@ -32,11 +32,10 @@ Description:ZWO camera driver
 **************************************************/
 
 #include "asi_ccd.h"
-#include "../../logger.h"
-#include "../../opencv.h"
-#include "../../base64.h"
 
-#include <fitsio.h>
+#include "../../logger.h"
+#include "../../config.h"
+
 #include <unistd.h>
 #include <json/json.h>
 #include <fstream>
@@ -343,27 +342,27 @@ namespace AstroAir
      */
     bool ASICCD::StartExposure(int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset)
     {
-		std::unique_lock<std::mutex> guard(condMutex);
 		const long blink_duration = exp * 1000000;
 		CamBin = bin;
-		IDLog("Blinking %ld time(s) before exposure\n", blink_duration);
+		CamExpo = exp;
+		IDLog(_("Blinking %ld time(s) before exposure\n"), blink_duration);
 		if((errCode = ASISetControlValue(CamId, ASI_EXPOSURE, blink_duration, ASI_FALSE)) != ASI_SUCCESS)
 		{
-			IDLog("Failed to set blink exposure to %ldus, error %d\n", blink_duration, errCode);
+			IDLog_Error(_("Failed to set blink exposure to %ldus, error %d\n"), blink_duration, errCode);
 			return false;
 		}
 		else
 		{
 			if(SetCameraConfig(bin,Gain,Offset) != true)
 			{
-				IDLog("Failed to set camera configure\n");
+				IDLog_Error("Failed to set camera configure\n");
 				return false;
 			}
 			else
 			{
 				if((errCode = ASIStartExposure(CamId, ASI_FALSE)) != ASI_SUCCESS)
 				{
-					IDLog("Failed to start blink exposure, error %d,try it again\n", errCode);
+					IDLog_Error(_("Failed to start blink exposure, error %d,try it again\n"), errCode);
 					AbortExposure();
 					return false;
 				}
@@ -374,7 +373,6 @@ namespace AstroAir
 					{
 						usleep(10000);
 						errCode = ASIGetExpStatus(CamId, &expStatus);
-						
 					}
 					while (errCode == ASI_SUCCESS && expStatus == ASI_EXP_WORKING);
 					if (errCode != ASI_SUCCESS)
@@ -387,13 +385,13 @@ namespace AstroAir
                 }
             }
         }
-		guard.unlock();
         if(IsSave == true)
         {
+			CameraImageName = FitsName;
 			IDLog("Finished exposure and save image locally\n");
 			if(SaveImage(FitsName) != true)
 			{
-				IDLog("Could not save image correctly,please check the config\n");
+				IDLog_Error(_("Could not save image correctly,please check the config\n"));
 				return false;
 			}
 			else
@@ -475,60 +473,24 @@ namespace AstroAir
     bool ASICCD::SaveImage(std::string FitsName)
     {
 		if(InExposure == false && InVideo == false)
-		{	
-			std::unique_lock<std::mutex> guard(ccdBufferLock);
+		{
 			long imgSize = CamWidth*CamHeight*(1 + (Image_type==ASI_IMG_RAW16));		//设置图像大小
 			unsigned char * imgBuf = new unsigned char[imgSize];		//图像缓冲区大小
-			long naxis = 2;
+			
 			/*曝光后获取图像信息*/
 			if ((errCode = ASIGetDataAfterExp(CamId, imgBuf, imgSize)) != ASI_SUCCESS)
 			{
 				/*获取图像失败*/
-				IDLog("ASIGetDataAfterExp error (%d)\n",errCode);
+				IDLog_Error(_("ASIGetDataAfterExp error (%d)\n"),errCode);
 				return false;
 			}
-			guard.unlock();
-			IDLog("Download complete.\n");
+			IDLog(_("Download from camera completely.\n"));
 			/*将图像写入本地文件*/
 			#ifdef HAS_FITSIO
-				char datatype[40];		//相机品牌
-				char keywords[40];		//相机品牌
-				char value[20];		//相机名称
-				char description[40];		//相机描述
-				strcpy(datatype, "TSTRING");
-				strcpy(keywords, "Camera");
-				strcpy(value,CamName[CamId]);
-				strcpy(description,"ZWOASI");
-
-				fitsfile *fptr;		//cFitsIO定义
-				int FitsStatus;		//cFitsio状态
-				long naxes[2] = {CamWidth,CamHeight};
-				long nelements;
-				long fpixel = 1;
-
-				fits_create_file(&fptr, FitsName.c_str(), &FitsStatus);		//创建Fits文件
-				if(Image_type == 1)		//创建Fits图像
-					fits_create_img(fptr, USHORT_IMG, naxis, naxes, &FitsStatus);		//16位
-				else
-					fits_create_img(fptr, BYTE_IMG,   naxis, naxes, &FitsStatus);		//8位或12位
-				if(strcmp(datatype, "TSTRING") == 0)		//写入Fits图像头文件
-				{
-					fits_update_key(fptr, TSTRING, keywords, value, description, &FitsStatus);
-				}
-				if(Image_type == 1)		//将缓存图像写入SD卡
-					fits_write_img(fptr, TUSHORT, fpixel, imgSize, &imgBuf[0], &FitsStatus);		//16位
-				else
-					fits_write_img(fptr, TBYTE, fpixel, imgSize, &imgBuf[0], &FitsStatus);		//8位或12位
-				fits_close_file(fptr, &FitsStatus);		//关闭Fits图像
-				fits_report_error(stderr, FitsStatus);		//如果有错则返回错误信息
+				FitsIO::SaveFitsImage(imgBuf,FitsName.c_str(),Image_type,isColorCamera,CamHeight,CamWidth,CamName[CamId],CamExpo,CamBin,CamOffset,CamGain,0);
 			#endif
 			#ifdef HAS_OPENCV
-				img_data = "data:image/png;base64," + OPENCV::SaveImage(imgBuf,FitsName,isColorCamera,CamHeight,CamWidth);
-				OPENCV::clacHistogram(imgBuf,isColorCamera,CamHeight,CamWidth);
-				//std::vector<unsigned char> vctBuf(&imgBuf[0], imgSize);
-				//std::string strBuf(vctBuf.begin(), vctBuf.end());
-				//img_data = base64Encode(reinterpret_cast<const unsigned char*>(strBuf.c_str()),strBuf.length());
-				//ws.send(img_data);
+				img_data = "data:image/jpg;base64," + ImageTools::ConvertUCto64(imgBuf,isColorCamera,CamHeight,CamWidth);
 			#endif
 			if(imgBuf)
 				delete[] imgBuf;		//删除图像缓存

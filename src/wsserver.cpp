@@ -25,7 +25,7 @@ Author:Max Qian
 
 E-mail:astro_air@126.com
  
-Date:2021-2-27
+Date:2021-6-28
  
 Description:Main framework of astroair server
 
@@ -37,7 +37,6 @@ Using:JsonCpp<https://github.com/open-source-parsers/jsoncpp>
 
 #include "wsserver.h"
 #include "logger.h"
-#include "opencv.h"
 
 #include "air_search.h"
 #include "air_camera.h"
@@ -76,13 +75,13 @@ Using:JsonCpp<https://github.com/open-source-parsers/jsoncpp>
 namespace AstroAir
 {
     WSSERVER ws;
-    std::string img_data,SequenceTarget;
+    std::string SequenceTarget;
     
     /*服务器配置参数*/
 	int MaxUsedTime = 0;		//解析最长时间
 	int MaxThreadNumber = 0;		//最多能同时处理的事件数量
 	int	MaxClientNumber = 0;		//最大客户端数量
-    int thread_num = 0;
+    std::atomic_int thread_num = 0;
     std::string TargetRA,TargetDEC,MountAngle;
 
     std::string Camera,Mount,Focus,Filter,Guide;
@@ -119,6 +118,9 @@ namespace AstroAir
         isFocusConnected = false;       //电动调焦座连接状态
         isFilterConnected = false;      //滤镜轮连接状态
         isGuideConnected = false;       //导星软件连接状态
+        isCameraCoolingOn = false;      //相机制冷状态
+        isSolverConnected = false;      //解析器连接状态
+        isMountSlewing = false;         //赤道仪运动状态
     }
     
     /*
@@ -139,6 +141,7 @@ namespace AstroAir
         delete [] FOCUS;
         delete [] FILTER;
         delete [] GUIDE;
+        Running = false;
     }
 
     /*
@@ -190,9 +193,7 @@ namespace AstroAir
      */
     void WSSERVER::on_message(websocketpp::connection_hdl hdl,message_ptr msg)
     {
-        std::string message = msg->get_payload();
-        /*处理信息*/
-        readJson(message);
+        readJson(msg->get_payload());
     }
 
     /*以下三个函数均是用于switch支持string*/
@@ -282,7 +283,7 @@ namespace AstroAir
 				break;
             /*相机制冷*/
             case "RemoteCooling"_hash:{
-                std::thread CoolingThread(&AIRCAMERA::Cooling,CCD,root["params"]["IsSetPoint"].asBool(),root["params"]["IsCoolDown"].asBool(),root["params"]["IsASync"].asBool(),root["params"]["IsWarmup"].asBool(),root["params"]["IsCoolerOFF"].asBool(),root["params"]["Temperature"].asInt());
+                std::thread CoolingThread(&AIRCAMERA::CoolingServer,CCD,root["params"]["IsSetPoint"].asBool(),root["params"]["IsCoolDown"].asBool(),root["params"]["IsASync"].asBool(),root["params"]["IsWarmup"].asBool(),root["params"]["IsCoolerOFF"].asBool(),root["params"]["Temperature"].asInt());
                 CoolingThread.detach();
                 thread_num++;
                 break;
@@ -479,7 +480,7 @@ namespace AstroAir
         std::ifstream in("config/config.json", std::ios::binary);
         if (!in.is_open())
         {
-            IDLog(_("Unable to open configuration file\n"));
+            IDLog_Error(_("Unable to open configuration file\n"));
             return false;
         }
         while (getline(in, line))
@@ -507,8 +508,7 @@ namespace AstroAir
 		Root["code"] = Json::Value();
 		Root["Event"] = Json::Value("Version");
 		Root["AIRVersion"] = Json::Value("2.0.0");
-		json_message = Root.toStyledString();
-		send(json_message);
+		send(Root.toStyledString());
 	}
 
     /*
@@ -545,7 +545,7 @@ namespace AstroAir
         Root["UID"] = Json::Value("RemoteGetAstroAirProfiles");
         if(files.begin() == files.end())
         {
-            IDLog(_("Cound not found any configration files,please check it\n"));
+            IDLog_Error(_("Cound not found any configration files,please check it\n"));
             Root["ActionResultInt"] = Json::Value(5);
             Root["Motivo"] = Json::Value(_("Cound not found any configration files"));
         }
@@ -566,8 +566,7 @@ namespace AstroAir
             }
         }
         /*整合信息并发送至客户端*/
-        json_message = Root.toStyledString();
-        send(json_message);
+        send(Root.toStyledString());
     }
 
     /*
@@ -596,8 +595,8 @@ namespace AstroAir
             profile["name"] = Json::Value(FileBuf[i]);
             Root["ParamRet"]["list"].append(profile);
         }
-        json_message = Root.toStyledString();
-        send(json_message);
+        send(Root.toStyledString());
+        thread_num--;
     }
 
     /*
@@ -614,6 +613,13 @@ namespace AstroAir
      */
     void WSSERVER::SetupConnect(int timeout)
     {
+        if(FileName.empty())
+        {
+            IDLog_Error(_("No file!\n"));
+            WebLog(_("No file list!"),3);
+            SetupConnectError(8);
+            return ;
+        }
         /*读取config.air配置文件，并且存入参数中*/
         std::string line,jsonStr,path;
         path = "config/" + FileName;
@@ -621,7 +627,7 @@ namespace AstroAir
         /*打开文件*/
         if (!in.is_open())
         {
-            IDLog(_("Unable to open configuration file\n"));
+            IDLog_Error(_("Unable to open configuration file\n"));
             IDLog_DEBUG(_("Unable to open configuration file\n"));
             return;
         }
@@ -928,7 +934,6 @@ namespace AstroAir
                             break;
                         }
                     }
-                    
                     sleep(4);
                 }
             }
@@ -968,7 +973,7 @@ namespace AstroAir
                         }
                         #endif
                         default:
-                            UnknownDevice(305,"Unknown guide server");		//未知导星软件返回错误信息
+                            UnknownDevice(305,_("Unknown guide server"));		//未知导星软件返回错误信息
                     }
                     if(guide_ok == true)
                     {
@@ -997,10 +1002,11 @@ namespace AstroAir
         }
         auto end = std::chrono::high_resolution_clock::now();       //停止计时
         std::chrono::duration<double> diff = end - start;
-        IDLog("Connecting to device took %g seconds\n", diff.count());
+        IDLog(_("Connecting to device took %g seconds\n"), diff.count());
         if(diff.count() >= 20)
         {
             SetupConnectError(8);
+            thread_num--;
             return;
         }
         /*判断设备是否完全连接成功*/
@@ -1008,13 +1014,17 @@ namespace AstroAir
         {
             SetupConnectSuccess();		//将连接上的设备列表发送给客户端
             EnvironmentDataSend();
+            Running = true;
             WebLog(_("All devices connected successfully"),2);
+            std::thread ControlDataThread(&WSSERVER::ControlDataSend,this);
+            ControlDataThread.detach();
         }
         else
         {
             SetupConnectError(5);
             WebLog(_("There were some errors in connecting the device"),3);
         }
+        thread_num--;
         return;
     }
     
@@ -1070,6 +1080,7 @@ namespace AstroAir
             WebLog(_("Successfully disconnected from all devices"),2);
             SetupDisconnectSuccess();
         }
+        thread_num--;
     }
 
     /*
@@ -1085,8 +1096,7 @@ namespace AstroAir
         Root["Event"] = Json::Value("RemoteActionResult");
         Root["UID"] = Json::Value("RemoteGetFilterConfiguration");
         Root["ActionResultInt"] = Json::Value(4);
-        json_message = Root.toStyledString();
-        send(json_message);
+        send(Root.toStyledString());
     }
 
     /*
@@ -1104,57 +1114,66 @@ namespace AstroAir
         Root["ActionResultInt"] = Json::Value(4);
         for(int i = 0;i<DeviceNum;i++)
             Root["ParamRet"].append(DeviceBuf[i]);
-        json_message = Root.toStyledString();
-        send(json_message);
+        send(Root.toStyledString());
     }
 
-    /*
-     * name: Connect(std::string Device_name)
-     * @param Device_name:连接相机名称
-     * describe: Connect the camera
-     * 描述： 连接相机
-     * calls: IDLog(const char *fmt, ...)
-     * calls: IDLog_DEBUG(const char *fmt, ...)
-	 * note:This function should not be executed normally
-     */
-    bool WSSERVER::Connect(std::string Device_name)
+    void WSSERVER::ControlDataSend()
     {
-		/*默认情况下不应该执行这个函数*/
-        IDLog("Try to establish a connection with %s,Should never get here.\n",Device_name.c_str());
-        IDLog_DEBUG("Try to establish a connection with %s,Should never get here.\n",Device_name.c_str());
-        return true;
-    }
-    
-    /*
-     * name: Disconnect()
-     * describe: Disconnect from camera
-     * 描述：与相机断开连接
-     * calls: IDLog(const char *fmt, ...)
-     * calls: IDLog_DEBUG(const char *fmt, ...)
-     * note: This function should not be executed normally
-     */
-    bool WSSERVER::Disconnect()
-    {
-		/*默认情况下不应该执行这个函数*/
-        IDLog("Try to disconnect from %s,Should never get here.\n",Camera_name.c_str());
-        IDLog_DEBUG("Try to disconnect from %s,Should never get here.\n",Camera_name.c_str());
-        return true;
-    }
-
-    /*
-     * name: ReturnDeviceName()
-     * describe: Get device name
-     * 描述：获取设备名称
-     * calls: IDLog(const char *fmt, ...)
-     * calls: IDLog_DEBUG(const char *fmt, ...)
-     * note: This function should not be executed normally
-     */
-    std::string WSSERVER::ReturnDeviceName()
-    {
-		/*默认情况下不应该执行这个函数*/
-        IDLog("Try to disconnect from %s,Should never get here.\n",Camera_name.c_str());
-        IDLog_DEBUG("Try to disconnect from %s,Should never get here.\n",Camera_name.c_str());
-        return "False";
+        while(Running)
+        {
+            Json::Value Root;
+            Root["Event"] = Json::Value("ControlData");
+            if(isCameraConnected)
+                Root["CCDCONN"] = Json::Value(1);
+            else
+                Root["CCDCONN"] = Json::Value(0);
+            Root["PLACONN"] = Json::Value(1);
+            if(isCameraCoolingOn)
+                Root["CCDCOOL"] = Json::Value(1);
+            else
+                Root["CCDCOOL"] = Json::Value(0);
+            if(isGuideConnected)
+                Root["GUIDECONN"] = Json::Value(1);
+            else
+                Root["GUIDECONN"] = Json::Value(0);
+            if(isFocusConnected)
+                Root["AFCONN"] = Json::Value(1);
+            else
+                Root["AFCONN"] = Json::Value(0);
+            Root["SETUPCONN"] = Json::Value(1);
+            if(isSolverConnected)
+                Root["PSCONN"] = Json::Value(1);
+            else
+                Root["PSCONN"] = Json::Value(0);
+            if(isMountTracking)
+                Root["MNTTRACK"] = Json::Value(1);
+            else
+                Root["MNTTRACK"] = Json::Value(0);
+            if(isMountParked)
+                Root["MNTPARK"] = Json::Value(1);
+            else
+                Root["MNTPARK"] = Json::Value(0);
+            Root["MNTTFLIP"] = Json::Value(1);
+            if(isMountSlewing)
+                Root["MNTSLEW"] = Json::Value(1);
+            else
+                Root["MNTSLEW"] = Json::Value(0);
+            Root["AFTEMP"] = Json::Value(FocusTemp);
+            Root["AFPOS"] = Json::Value(FocusPosition);
+            Root["CCDSTAT"] = Json::Value(1);
+            if(thread_num == 0)
+                Root["AIRSTAT"] = Json::Value(1);
+            else
+                Root["AIRSTAT"] = Json::Value(0);
+            Root["RUNSEQ"] = Json::Value("");
+            Root["RUNDS"] = Json::Value("");
+            if(isMountConnected)
+                Root["MNTCONN"] = Json::Value(1);
+            else
+                Root["MNTCONN"] = Json::Value(0);
+            send(Root.toStyledString());
+            sleep(1);
+        }
     }
 
     /*
@@ -1172,8 +1191,8 @@ namespace AstroAir
         Root["Event"] = Json::Value("RemoteActionResult");
         Root["UID"] = Json::Value("RemoteSetupConnect");
         Root["ActionResultInt"] = Json::Value(4);
-        json_message = Root.toStyledString();
-        send(json_message);
+        send(Root.toStyledString());
+        isConnected = true;
     }
     
     /*
@@ -1186,15 +1205,14 @@ namespace AstroAir
      */
     void WSSERVER::SetupConnectError(int id)
     {
-        IDLog("Unable to connect device\n");
+        IDLog_Error("Unable to connect device\n");
         IDLog_DEBUG("Unable to connect device\n");
         /*整合信息并发送至客户端*/
         Json::Value Root;
         Root["Event"] = Json::Value("RemoteActionResult");
         Root["UID"] = Json::Value("RemoteSetupConnect");
         Root["ActionResultInt"] = Json::Value(id);
-        json_message = Root.toStyledString();
-        send(json_message);
+        send(Root.toStyledString());
     }
 
     /*
@@ -1215,8 +1233,8 @@ namespace AstroAir
         Root["Event"] = Json::Value("RemoteActionResult");
         Root["UID"] = Json::Value("RemoteSetupDisconnect");
         Root["ActionResultInt"] = Json::Value(4);
-        json_message = Root.toStyledString();
-        send(json_message);
+        send(Root.toStyledString());
+        isConnected = false;
     }
 
 //----------------------------------------日志----------------------------------------
@@ -1236,8 +1254,7 @@ namespace AstroAir
         Root["Type"] = Json::Value(type);
         Root["Text"] = Json::Value(message);
         Root["TimeInfo"] = Json::Value(timestamp());
-        std::string json_message = Root.toStyledString();
-        ws.send(json_message);
+        ws.send(Root.toStyledString());
     }
 
 //----------------------------------------错误代码----------------------------------------
@@ -1253,7 +1270,7 @@ namespace AstroAir
      */
     void WSSERVER::UnknownMsg()
     {
-        IDLog("An unknown message was received from the client\n");
+        IDLog_Error("An unknown message was received from the client\n");
         IDLog_DEBUG("An unknown message was received from the client\n");
         /*整合信息并发送至客户端*/
         Json::Value Root,error;
@@ -1262,8 +1279,7 @@ namespace AstroAir
         Root["id"] = Json::Value(403);
         error["message"] = Json::Value("Unknown information");
         Root["error"] = error;
-        json_message = Root.toStyledString();
-        send(json_message);
+        send(Root.toStyledString());
     }
     
     /*
@@ -1276,7 +1292,7 @@ namespace AstroAir
      */
     void WSSERVER::UnknownDevice(int id,std::string message)
     {
-        IDLog("An unknown device was found,please check the connection\n");
+        IDLog_Error("An unknown device was found,please check the connection\n");
         /*整合信息并发送至客户端*/
         Json::Value Root,error;
         Root["result"] = Json::Value(1);
@@ -1284,13 +1300,12 @@ namespace AstroAir
         Root["id"] = Json::Value(id);
         error["message"] = Json::Value(message);
         Root["error"] = error;
-        json_message = Root.toStyledString();
-        send(json_message);
+        send(Root.toStyledString());
     }
 
     void WSSERVER::ClientNumError()
     {
-        IDLog("There are too many clients connected with server\n");
+        IDLog_Error("There are too many clients connected with server\n");
         /*整合信息并发送至客户端*/
         Json::Value Root,error;
         Root["result"] = Json::Value(1);
@@ -1298,8 +1313,7 @@ namespace AstroAir
         Root["id"] = Json::Value(601);
         error["message"] = Json::Value("客户端数量过多");
         Root["error"] = error;
-        json_message = Root.toStyledString();
-        send(json_message);
+        send(Root.toStyledString());
     }
     
     void WSSERVER::ErrorCode()
@@ -1320,8 +1334,6 @@ namespace AstroAir
         Root["result"] = Json::Value(1);
 		Root["code"] = Json::Value();
         Root["Event"] = Json::Value("Polling");
-        json_message = Root.toStyledString();
-        send(json_message);
+        send(Root.toStyledString());
     }
-        
 }

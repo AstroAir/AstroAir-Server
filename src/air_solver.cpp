@@ -39,6 +39,7 @@ Description:Solve engine
 namespace AstroAir
 {
     AIRSOLVER *SOLVER;
+    std::atomic_bool isSolverConnected;
 
     /*
      * name: AIRSOLVER()()
@@ -47,6 +48,10 @@ namespace AstroAir
      */
     AIRSOLVER::AIRSOLVER()
     {
+        if(access( "/usr/bin/solve-field", F_OK ) == -1 && access( "/usr/local/bin/solve-field", F_OK ) == -1)
+            isSolverConnected = false;
+        else
+            isSolverConnected = true;
         IsSolving = false;
     }
 
@@ -72,6 +77,13 @@ namespace AstroAir
 	 */
     void AIRSOLVER::SolveActualPosition(bool IsBlind,bool IsSync)
     {
+        if(!isSolverConnected)
+        {
+            IDLog_Error(_("Not found any avilible solver\n"));
+            WebLog(_("Couldn't found solver"),2);
+            SolveActualPositionError();
+            return ;
+        }
         IsSolving = true;
         char cmd[2048] = {0},line[256]={0},parity_str[8]={0};
         int UsedTime = 0;
@@ -81,7 +93,7 @@ namespace AstroAir
         FILE *handle = popen(cmd, "r");
         if (handle == nullptr)
         {
-            IDLog("Could not solve this image,the error code is %s\n",strerror(errno));
+            IDLog_Error(_("Could not solve this image,the error code is %s\n"),strerror(errno));
             return;
         }
         while (fgets(line, sizeof(line), handle) != nullptr && UsedTime <= MaxUsedTime && IsSolving == true)
@@ -105,7 +117,7 @@ namespace AstroAir
                 // Astrometry.net J2000 DEC in degrees
                 TargetDEC = dec;
                 fclose(handle);
-                IDLog("Solver complete.");
+                IDLog(_("Solver complete."));
                 SolveActualPositionSuccess();
                 IsSolving = false;
                 return;
@@ -157,9 +169,6 @@ namespace AstroAir
      * @param IsSync：是否同步
 	 * describe: Start the parser
 	 * 描述：启动解析器
-     * calls: IDLog()
-     * calls: SolveActualPositionSuccess()
-	 * calls: SolveActualPositionError()
 	 */
     void AIRSOLVER::SolveActualPositionOnline(bool IsBlind,bool IsSync)
     {

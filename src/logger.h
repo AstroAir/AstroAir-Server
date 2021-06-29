@@ -76,7 +76,9 @@ namespace AstroAir
 	void IDLog(const char *fmt, ...);
 	/*输出服务器Debug日志*/
 	void IDLog_DEBUG(const char *fmt, ...);
-	/*在终端输出*/
+	/*在终端输出警告信息*/
+	void IDLog_Warning(const char *fmt, ...);
+	/*在终端输出错误信息*/
 	void IDLog_Error(const char *fmt, ...);
 	/*输出客户端命令日志*/
 	void IDLog_CMDL(std::string message);
@@ -89,6 +91,7 @@ namespace AstroAir
 	bool setSystemTime(TIME *_time);
 
 	StringList splitstr(const std::string& str, char tag);
+	char* DeleteCharacters(char *str, char *s);
 }
 
 #endif

@@ -25,7 +25,7 @@ Author:Max Qian
 
 E-mail:astro_air@126.com
  
-Date:2021-2-27
+Date:2021-6-28
  
 Description:Main framework of astroair server
  
@@ -39,7 +39,7 @@ Description:Main framework of astroair server
 #include "config.h"
 
 #ifdef HAS_WEBSOCKET
-	#include <websocketpp/config/asio.hpp>
+	#include <websocketpp/config/asio_no_tls.hpp>
 	#include <websocketpp/server.hpp>
 #endif
 
@@ -87,10 +87,6 @@ namespace AstroAir
 			virtual bool is_running();
 			/*运行服务器*/
 			virtual void run(int port);
-		public:
-			virtual bool Connect(std::string Device_name);
-			virtual bool Disconnect();
-			virtual std::string ReturnDeviceName();
 		protected:
 			/*转化Json信息*/
 			void readJson(std::string message);
@@ -107,6 +103,7 @@ namespace AstroAir
 			void SetupConnectSuccess();
 			void SetupDisconnectSuccess();
 			void EnvironmentDataSend();
+			void ControlDataSend();
 			/*处理错误信息函数*/
 			void SetupConnectError(int id);
 			
@@ -134,11 +131,12 @@ namespace AstroAir
 			std::string DeviceBuf[5];
 			/*服务器设备连接状态参数*/
 			std::atomic_bool isConnected;
+			std::atomic_bool Running;
 	};
 	extern WSSERVER ws;
-	extern std::string img_data,SequenceTarget;
+	extern std::string SequenceTarget;
 	void WebLog(std::string message,int type);
-	extern int thread_num;		//线程数量	
+	extern std::atomic_int thread_num;		//线程数量	
 	/*服务器配置参数*/
 	extern int MaxUsedTime,MaxThreadNumber,MaxClientNumber;		//解析最长时间,最多能同时处理的事件数量,最大客户端数量
 	extern std::string TargetRA,TargetDEC,MountAngle;

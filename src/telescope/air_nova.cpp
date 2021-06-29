@@ -33,8 +33,67 @@ Description:Nova Offical Port
 
 #include "air_nova.h"
 
+#define MAXINDIFORMAT  64
+
+#include <iostream>
+
 namespace AstroAir
 {
+
+    int fs_sexa(char *out, double a, int w, int fracbase)
+    {
+        char *out0 = out;
+        unsigned long n;
+        int d;
+        int f;
+        int m;
+        int s;
+        int isneg;
+        /* save whether it's negative but do all the rest with a positive */
+        isneg = (a < 0);
+        if (isneg)
+            a = -a;
+        /* convert to an integral number of whole portions */
+        n = (unsigned long)(a * fracbase + 0.5);
+        d = n / fracbase;
+        f = n % fracbase;
+        /* form the whole part; "negative 0" is a special case */
+        if (isneg && d == 0)
+            out += snprintf(out, MAXINDIFORMAT, "%*s-0", w - 2, "");
+        else
+            out += snprintf(out, MAXINDIFORMAT, "%*d", w, isneg ? -d : d);
+        /* do the rest */
+        switch (fracbase)
+        {
+            case 60: /* dd:mm */
+                m = f / (fracbase / 60);
+                out += snprintf(out, MAXINDIFORMAT, ":%02d", m);
+                break;
+            case 600: /* dd:mm.m */
+                out += snprintf(out, MAXINDIFORMAT, ":%02d.%1d", f / 10, f % 10);
+                break;
+            case 3600: /* dd:mm:ss */
+                m = f / (fracbase / 60);
+                s = f % (fracbase / 60);
+                out += snprintf(out, MAXINDIFORMAT, ":%02d:%02d", m, s);
+                break;
+            case 36000: /* dd:mm:ss.s*/
+                m = f / (fracbase / 60);
+                s = f % (fracbase / 60);
+                out += snprintf(out, MAXINDIFORMAT, ":%02d:%02d.%1d", m, s / 10, s % 10);
+                break;
+            case 360000: /* dd:mm:ss.ss */
+                m = f / (fracbase / 60);
+                s = f % (fracbase / 60);
+                out += snprintf(out, MAXINDIFORMAT, ":%02d:%02d.%02d", m, s / 100, s % 100);
+                break;
+            default:
+                printf("fs_sexa: unknown fracbase: %d\n", fracbase);
+                return -1;
+        }
+        return (out - out0);
+    }
+    
     double rangeHA(double r)
     {
         double res = r;

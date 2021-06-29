@@ -37,6 +37,9 @@ Description:Camera Offical Port
 #include <string>
 #include <atomic>
 
+#include "tools/ImgTools.h"
+#include "tools/ImgFitsIO.h"
+
 namespace AstroAir
 {
     class AIRCAMERA
@@ -53,6 +56,7 @@ namespace AstroAir
             virtual void ImagineThread();
             virtual bool AbortExposure();
             virtual bool Cooling(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF,int CamTemp);
+            virtual bool CoolingServer(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF,int CamTemp);
             virtual void StartExposureSuccess();
             virtual void AbortExposureSuccess();
             virtual void StartExposureError();
@@ -72,8 +76,9 @@ namespace AstroAir
     };
     extern AIRCAMERA *CCD;
     extern std::atomic_bool isCameraConnected;
+    extern std::atomic_bool isCameraCoolingOn;
     
-    extern std::string CameraImageName;
+    extern std::string CameraImageName,img_data;
     extern int Image_Height,Image_Width,StarIndex;
     extern double HFD;
 }

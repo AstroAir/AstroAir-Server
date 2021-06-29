@@ -43,7 +43,7 @@ namespace AstroAir
         public:
             /*搜索天体目标*/
             void SearchTarget(std::string TargetName);
-            void SearchTargetSuccess(std::string RA,std::string DEC,std::string Name,std::string OtherName,std::string Type,std::string MAG);
+            void SearchTargetSuccess(std::string RA,std::string DEC,std::string Name,std::string OtherName,std::string Type,std::string MAG,std::string CONZH);
             void SearchTargetError(int id);
 
             void RoboClipGetTargetList(std::string FilterGroup,std::string FilterName,std::string FilterNote,int order);
