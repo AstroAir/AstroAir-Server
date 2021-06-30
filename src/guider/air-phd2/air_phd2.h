@@ -35,6 +35,9 @@ Description:PD2 offical port
 #define _AIR_PHD2_H_
 
 #include "../../air_guider.h"
+#include "../../tools/TcpSocket.h"
+
+#include <json/json.h>
 
 namespace AstroAir
 {
@@ -46,8 +49,45 @@ namespace AstroAir
             virtual bool Connect(std::string Device_name)override;      //连接PHD2
 		    virtual bool Disconnect()override;                          //断开连接
 		    virtual std::string ReturnDeviceName()override;             //返回设备名称
+            virtual bool StartGuiding()override;
+            virtual bool AbortGuiding()override;
+            virtual bool Dither()override;
+        protected:
+            void UpdatePHD2Info();
+            void GetInfoFromPHD2();
+            void ReadJson(std::string message);
         private:
+            void SendToPHD2(std::string message);
+            void ReadFromPHD2();
+            TCP *PHD2TCP;
+            Json::Value root;
+			Json::String errs;
+			Json::CharReaderBuilder reader;
+            std::atomic_bool IsCalibrating;
 
+            struct PHD2Info
+            {
+                bool IsConnected;
+                std::string Profile[64];
+                std::string State;
+                int FrameWidth;
+                int FrameHeight;
+                bool IsMountConnected;
+                std::string MountName;
+                double RA;
+                double DEC;
+            }Info;
+
+            std::string cmd[6] = 
+            {
+                "get_connected",
+                "get_current_equipment",
+                "get_exposure",
+                "get_camera_frame_size",
+                "get_app_state",
+                "get_star_image"
+            };
+            //std::atomic_bool IsGuiding;
     };
 }
 

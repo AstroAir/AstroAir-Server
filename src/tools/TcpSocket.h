@@ -1,5 +1,5 @@
 /*
- * air_guider.h
+ * TcpSocket.h
  * 
  * Copyright (C) 2020-2021 Max Qian
  * 
@@ -25,45 +25,45 @@ Author:Max Qian
 
 E-mail:astro_air@126.com
  
-Date:2021-6-26
+Date:2021-6-29
  
-Description:Guider offical port
-
+Description:Socket Tools
+ 
 **************************************************/
 
-#ifndef _AIR_GUIDER_H_
-#define _AIR_GUIDER_H_
+#ifndef _TCP_SOCKET_H_
+#define _TCP_SOCKET_H_
 
-#include <atomic>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <stdio.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <string.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <sys/shm.h>
+
 #include <string>
 
 namespace AstroAir
 {
-    class AIRGUIDER
+    class TCP
     {
         public:
-            explicit AIRGUIDER();
-            ~AIRGUIDER();
-
-            virtual bool Connect(std::string Device_name);      //连接导星软件
-            virtual bool Disconnect();                          //断开连接
-            virtual std::string ReturnDeviceName();             //返回设备名称
-
-            virtual bool StartGuidingServer();
-            virtual bool StartGuiding();
-            virtual bool AbortGuidingServer();
-            virtual bool AbortGuiding();
-            virtual bool DitherServer();
-            virtual bool Dither();
-        
-        private:
+            explicit TCP();
+            ~TCP();
+            bool Connect(const char * TcpHost,int TcpPort);
+            bool Disconnect();
+            std::string ReadMessage();
+            bool SendMessage(const char * message);
+        private:    
             
-    
     };
-    extern AIRGUIDER *GUIDE;
-    extern std::atomic_bool isGuideConnected;
-    extern std::atomic_bool IsGuiding;
-    extern double Guide_RA,Guide_DEC;
+    
+
+    
 }
 
 #endif

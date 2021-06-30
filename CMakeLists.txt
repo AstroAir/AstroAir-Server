@@ -60,6 +60,8 @@ include(FindQHY)
 include(FindGPHOTO2)
 #赤道仪
 include(SetTelescope)
+#导星
+include(FindPHD2)
 #依赖库
 include(FindIMGTOOLS)
 include(FindJSONCPP)
@@ -91,6 +93,8 @@ target_link_libraries(airserver PUBLIC LIBCOM)
 #target_link_libraries(airserver PUBLIC LIBAUTOFOCUS)
 add_library(LIBAUTOUPDATE src/tools/AutoUpdate.cpp)				#自动检查更新
 target_link_libraries(airserver PUBLIC LIBAUTOUPDATE)
+add_library(LIBTCP src/tools/TcpSocket.cpp)				#自动检查更新
+target_link_libraries(airserver PUBLIC LIBTCP)
 
 set(LINK_DIR /usr/lib)
 link_directories(${LINK_DIR})

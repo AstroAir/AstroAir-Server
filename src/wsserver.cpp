@@ -72,15 +72,19 @@ Using:JsonCpp<https://github.com/open-source-parsers/jsoncpp>
     #include "telescope/ieqpro/air_ieqpro.h"
 #endif
 
+#ifdef HAS_PHD2
+    #include "guider/air-phd2/air_phd2.h"
+#endif
+
 namespace AstroAir
 {
     WSSERVER ws;
     std::string SequenceTarget;
     
     /*服务器配置参数*/
-	int MaxUsedTime = 0;		//解析最长时间
-	int MaxThreadNumber = 0;		//最多能同时处理的事件数量
-	int	MaxClientNumber = 0;		//最大客户端数量
+	std::atomic_int MaxUsedTime = 0;		//解析最长时间
+	std::atomic_int MaxThreadNumber = 0;		//最多能同时处理的事件数量
+	std::atomic_int	MaxClientNumber = 0;		//最大客户端数量
     std::atomic_int thread_num = 0;
     std::string TargetRA,TargetDEC,MountAngle;
 
@@ -232,14 +236,13 @@ namespace AstroAir
         json_read->parse(message.c_str(), message.c_str() + message.length(), &root,&errs);
         /*将string格式转化为const char*/
         method = root["method"].asString();
-        const char* road = method.c_str();
         /*将接收到的信息写入文件*/
         #ifdef DEBUG_MODE
             if(method != "Polling")
                 IDLog_CMDL(message.c_str());
         #endif
         /*判断客户端需要执行的命令*/
-        switch(hash_(road))
+        switch(hash_(method.c_str()))
         {
             /*返回服务器版本号*/
             case "RemoteSetDashboardMode"_hash:
@@ -370,6 +373,23 @@ namespace AstroAir
                 thread_num++;
                 break;
             }
+            /*连接导星软件*/
+            case "RemoteConnectToGuider"_hash:{
+                GUIDE->Connect("PHD2");
+                break;
+            }
+            case "RemoteStartGuiding"_hash:{
+                GUIDE->StartGuidingServer();
+                break;
+            }
+            case "RemoteDither"_hash:{
+                GUIDE->DitherServer();
+                break;
+            }
+            case "RemoteAbortGuiding"_hash:{
+                GUIDE->AbortGuidingServer();
+                break;
+            }
             /*轮询，保持连接*/
             case "Polling"_hash:
                 Polling();
@@ -377,6 +397,7 @@ namespace AstroAir
             /*默认返回未知信息*/
             default:
                 UnknownMsg();
+                break;
         }
     }
     
@@ -704,6 +725,7 @@ namespace AstroAir
                         #endif
                         default:
                             UnknownDevice(301,_("Unknown camera"));		//未知相机返回错误信息
+                            break;
                     }
                     if(camera_ok == true)
                     {
@@ -774,6 +796,7 @@ namespace AstroAir
                         #endif
                         default:
                             UnknownDevice(302,_("Unknown mount"));		//未知赤道仪返回错误信息
+                            break;
                     }
                     if(mount_ok == true)
                     {
@@ -843,6 +866,7 @@ namespace AstroAir
                         #endif
                         default:
                             UnknownDevice(303,_("Unknown focus"));		//未知电动调焦座返回错误信息
+                            break;
                     }
                     if(focus_ok == true)
                     {
@@ -913,6 +937,7 @@ namespace AstroAir
                         #endif
                         default:
                             UnknownDevice(304,_("Unknown filter"));		//未知滤镜轮返回错误信息
+                            break;
                     }
                     if(filter_ok == true)
                     {
@@ -960,7 +985,8 @@ namespace AstroAir
                         /*Max：事实上我们一般只会使用PHD2，所以LinGuider可以等其他做好以后再做*/
                         #ifdef HAS_PHD2
                         case "PHD2"_hash:{
-                            GUIDE = &PHD2;
+                            PHD2 *PHD2Guider = new PHD2();
+                            GUIDE = PHD2Guider;
                             guide_ok = GUIDE->Connect(Guide_name);
                             break;
                         }
@@ -974,6 +1000,7 @@ namespace AstroAir
                         #endif
                         default:
                             UnknownDevice(305,_("Unknown guide server"));		//未知导星软件返回错误信息
+                            break;
                     }
                     if(guide_ok == true)
                     {
@@ -1003,7 +1030,7 @@ namespace AstroAir
         auto end = std::chrono::high_resolution_clock::now();       //停止计时
         std::chrono::duration<double> diff = end - start;
         IDLog(_("Connecting to device took %g seconds\n"), diff.count());
-        if(diff.count() >= 20)
+        if(diff.count() >= 50)
         {
             SetupConnectError(8);
             thread_num--;
@@ -1136,6 +1163,11 @@ namespace AstroAir
                 Root["GUIDECONN"] = Json::Value(1);
             else
                 Root["GUIDECONN"] = Json::Value(0);
+            if(IsGuiding)
+            {
+                Root["GUIDEX"] = Json::Value(Guide_RA);
+                Root["GUIDEY"] = Json::Value(Guide_DEC);
+            }
             if(isFocusConnected)
                 Root["AFCONN"] = Json::Value(1);
             else

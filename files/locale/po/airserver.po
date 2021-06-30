@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: AstroAirServer 1.0.0\n"
 "Report-Msgid-Bugs-To: qwdmax@qq.com\n"
-"POT-Creation-Date: 2021-06-29 02:45+0800\n"
+"POT-Creation-Date: 2021-07-01 00:48+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -52,109 +52,109 @@ msgstr ""
 msgid " -c       : write a configure file for server\n"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:158
+#: ../../../src/wsserver.cpp:162
 #, c-format
 msgid "Successfully established connection with client path %s\n"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:176
+#: ../../../src/wsserver.cpp:180
 msgid "Disconnect from client\n"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:407 ../../../src/wsserver.cpp:467
+#: ../../../src/wsserver.cpp:415 ../../../src/wsserver.cpp:475
 msgid "other exception"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:423
+#: ../../../src/wsserver.cpp:431
 msgid "Switched off by user."
 msgstr ""
 
-#: ../../../src/wsserver.cpp:455
+#: ../../../src/wsserver.cpp:463
 #, c-format
 msgid "Start the server at port %d ...\n"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:483 ../../../src/wsserver.cpp:630
-#: ../../../src/wsserver.cpp:631
+#: ../../../src/wsserver.cpp:491 ../../../src/wsserver.cpp:638
+#: ../../../src/wsserver.cpp:639
 msgid "Unable to open configuration file\n"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:548
+#: ../../../src/wsserver.cpp:556
 msgid "Cound not found any configration files,please check it\n"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:550
+#: ../../../src/wsserver.cpp:558
 msgid "Cound not found any configration files"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:558 ../../../src/wsserver.cpp:565
+#: ../../../src/wsserver.cpp:566 ../../../src/wsserver.cpp:573
 #, c-format
 msgid "Found configure file named %s\n"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:583
+#: ../../../src/wsserver.cpp:591
 #, c-format
 msgid "Change the configuration file to %s\n"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:618
+#: ../../../src/wsserver.cpp:626
 msgid "No file!\n"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:619
+#: ../../../src/wsserver.cpp:627
 msgid "No file list!"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:706
+#: ../../../src/wsserver.cpp:714
 msgid "Unknown camera"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:712
+#: ../../../src/wsserver.cpp:720
 msgid "Connect to "
 msgstr ""
 
-#: ../../../src/wsserver.cpp:712
+#: ../../../src/wsserver.cpp:720
 msgid " successfully"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:721 ../../../src/wsserver.cpp:791
+#: ../../../src/wsserver.cpp:729 ../../../src/wsserver.cpp:799
 msgid "Could not connect to "
 msgstr ""
 
-#: ../../../src/wsserver.cpp:731 ../../../src/wsserver.cpp:943
+#: ../../../src/wsserver.cpp:739 ../../../src/wsserver.cpp:951
 msgid " had already connected"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:776
+#: ../../../src/wsserver.cpp:784
 msgid "Unknown mount"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:845
+#: ../../../src/wsserver.cpp:853
 msgid "Unknown focus"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:915
+#: ../../../src/wsserver.cpp:923
 msgid "Unknown filter"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:976
+#: ../../../src/wsserver.cpp:985
 msgid "Unknown guide server"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:1005
+#: ../../../src/wsserver.cpp:1014
 #, c-format
 msgid "Connecting to device took %g seconds\n"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:1018
+#: ../../../src/wsserver.cpp:1027
 msgid "All devices connected successfully"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:1025
+#: ../../../src/wsserver.cpp:1034
 msgid "There were some errors in connecting the device"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:1080
+#: ../../../src/wsserver.cpp:1089
 msgid "Successfully disconnected from all devices"
 msgstr ""
 

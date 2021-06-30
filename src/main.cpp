@@ -200,8 +200,6 @@ int main(int argc, char *argv[])
 		switch (opt) 
 		{    
 			case 'v':{
-				std::thread t1(start_server);
-				t1.join();
 				sleep(1);
 				break;
 			}
@@ -218,6 +216,8 @@ int main(int argc, char *argv[])
 				usage(argv[0]);
 		}
     }
+	std::thread t1(start_server);
+	t1.join();
     return 0;
 }
 

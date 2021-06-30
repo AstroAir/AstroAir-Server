@@ -119,7 +119,7 @@ namespace AstroAir
 			Json::Value root;
 			Json::String errs;
 			Json::CharReaderBuilder reader;
-			std::string method,json_message,Image_Name;
+			std::string method,Image_Name;
 
 			mutex mtx,mtx_action;
 			condition_variable m_server_cond,m_server_action;
@@ -138,7 +138,7 @@ namespace AstroAir
 	void WebLog(std::string message,int type);
 	extern std::atomic_int thread_num;		//线程数量	
 	/*服务器配置参数*/
-	extern int MaxUsedTime,MaxThreadNumber,MaxClientNumber;		//解析最长时间,最多能同时处理的事件数量,最大客户端数量
+	extern std::atomic_int MaxUsedTime,MaxThreadNumber,MaxClientNumber;		//解析最长时间,最多能同时处理的事件数量,最大客户端数量
 	extern std::string TargetRA,TargetDEC,MountAngle;
 	extern std::string Camera,Mount,Focus,Filter,Guide;
 	extern std::string Camera_name,Mount_name,Focus_name,Filter_name,Guide_name;

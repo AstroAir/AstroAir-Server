@@ -17,4 +17,7 @@
 #define HAS_ASIEFW @HAS_ASIEFW@
 //#define HAS_INDI @HAS_INDI@
 #define HAS_GPhoto2 @HAS_GPhoto2@
+
 #define HAS_IOPTRON @HAS_IOPTRON@
+
+#define HAS_PHD2 @HAS_PHD2@
