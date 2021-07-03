@@ -93,7 +93,7 @@ namespace AstroAir
     {
         if(isGuideConnected && IsGuiding == false)
         {
-            if(GUIDE->StartGuiding() != false)
+            if(GUIDE->StartGuiding())
             {
                 IDLog_Error(_("Could not start guiding\n"));
                 WebLog(_("Could not start guiding!"),3);

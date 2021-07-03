@@ -25,30 +25,10 @@
 
 #  E-mail:astro_air@126.com
  
-#  Date:2021-6-29
+#  Date:2021-7-4
  
-#  Description: Websocketpp Cmake Tool
+#  Description: Dear Imgui Library
 
 ################################################## 
 
-option(HAS_WEBSOCKET "Using Websocketpp Library" ON)
-if(HAS_WEBSOCKET)
-	find_path(PATH_WEBSOCKET server.hpp /usr/include/websocketpp)
-	find_path(PATH_WEBSOCKET server.hpp /usr/local/include/websocketpp)
-	if(PATH_WEBSOCKET)
-		message("-- Found Websocketpp library in ${PATH_WEBSOCKET}")
-		add_library(LIBWEBSOCKET src/wsserver.cpp)
-		target_link_libraries(airserver PUBLIC LIBWEBSOCKET)
-		target_link_libraries(airserver PUBLIC libpthread.so)
-	else()
-		message("-- Could not found websocketpp library.Try to build it!")
-		add_custom_command(
-			TARGET LIBWEBSOCKET
-			PRE_BUILD
-			COMMAND sudo apt install libasio-dev libwebsocketpp-dev -y
-			COMMENT "Downloaded and Building WebSocketpp Library"
-		)
-	endif()
-else()
-	message("Please check setting,websocketpp is one of the main library!")
-endif()
+option(IMGUI "Dear Imgui Library" ON)

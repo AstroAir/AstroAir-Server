@@ -66,6 +66,8 @@ include(FindPHD2)
 include(FindIMGTOOLS)
 include(FindJSONCPP)
 include(FindNOVA)
+#GUI
+include(FindIMGUI)
 
 ########################################AstroAir-Server官方API文件########################################
 

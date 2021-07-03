@@ -21,3 +21,5 @@
 #define HAS_IOPTRON @HAS_IOPTRON@
 
 #define HAS_PHD2 @HAS_PHD2@
+
+#define IMGUI @IMGUI@

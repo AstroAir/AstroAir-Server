@@ -1,5 +1,5 @@
 /*
- * check.h
+ * AutoUpdate.h
  * 
  * Copyright (C) 2020-2021 Max Qian
  * 
