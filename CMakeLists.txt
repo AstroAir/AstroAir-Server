@@ -25,7 +25,7 @@ if(USE_C++20)
 	set(CMAKE_CXX_STANDARD 20)		#默认C++风格为20
 	message("-- Using c++ 20 as building style")
 else()
-	set(CMAKE_CXX_STANDARD 11)		#默认C++风格为20
+	set(CMAKE_CXX_STANDARD 11)
 	message("-- Using c++ 11 as building style")
 endif()
 

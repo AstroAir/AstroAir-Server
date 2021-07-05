@@ -1,0 +1,55 @@
+language: cpp
+sudo: required
+os:
+  - linux
+dist: focal
+compiler:
+  - clang
+branches:
+  only:
+  - master
+
+before_install:
+  - sudo apt update && sudo apt upgrade
+  - echo "Update and Upgrade\n"
+
+before_script:
+  - echo "Prepare to run the script"
+after_script:
+  - echo "Finish running script"
+
+script:
+  - echo "Start Building..."
+  - mkdir build && cd build
+  - cmake ..
+  - make -j4
+  - cmake clean
+  - echo "Finish Building..."
+
+after_success:
+  - echo "Building successfully without error!"
+after_failure:
+  - echo "Unable to build!"
+
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+      - sourceline: 'ppa:mutlaqja/ppa'
+    packages:
+      - make
+      - cmake
+      - indi-full
+      - clang-11
+      - libwebsocketpp-dev
+      - libjsoncpp-dev
+      - libasio-dev
+      - libopencv-dev
+      - libcfitsio-dev
+      - libccfits-dev
+      - libssl-dev
+  hosts:
+    - ci.astroair.cn
+    
+notifications:
+  email: false
