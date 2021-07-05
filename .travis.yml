@@ -36,6 +36,7 @@ addons:
     sources:
       - ubuntu-toolchain-r-test
       - sourceline: 'ppa:mutlaqja/ppa'
+      - sourceline: 'ppa:pch/phd2'
     packages:
       - make
       - cmake
@@ -50,7 +51,7 @@ addons:
       - libccfits-dev
       - libssl-dev
       - libnova-dev
-      
+
   hosts:
     - ci.astroair.cn
 
