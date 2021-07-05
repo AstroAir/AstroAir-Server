@@ -17,5 +17,5 @@ else
 fi
 
 if [ ! -f "/usr/include/libqhy/config.h" ]; then
-    sudo cp config.h /usr/include/libqhy
+    sudo cp ~/build/AstroAir-Develop-Team/AstroAir-Server/scripts/config.h /usr/include/libqhy
 fi
