@@ -102,6 +102,8 @@ set(LINK_DIR /usr/lib)
 link_directories(${LINK_DIR})
 set(LINK_DIR /usr/local/lib)
 link_directories(${LINK_DIR})
+set(LINK_DIR /usr/local/lib/x86_64-linux-gnu)
+link_directories(${LINK_DIR})
 
 #头文件
 target_include_directories(airserver PUBLIC
