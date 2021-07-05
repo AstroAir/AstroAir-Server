@@ -1,5 +1,10 @@
 #!/bin/bash
 
+sudo add-apt-repository ppa:pch/phd2 -y
+
+sudo apt update -y && sudo apt upgrade -y 
+sudo apt install make cmake indi-full phd2 clang-11 libwebsocketpp-dev libasio-dev libopencv-dev libcfitsio-dev libccfits-dev libssl-dev libnova-dev libgphoto2-dev libboost-dev libusb-1.0-0-dev libgsl-dev -y
+
 if [ ! -d "/usr/include/opencv2" ]; then
     sudo mv /usr/include/opencv4/opencv2 /usr/include
 fi
@@ -18,6 +23,15 @@ else
     echo "Jsoncpp Library has already built"
 fi
 
-if [ ! -f "/usr/include/libqhy/config.h" ]; then
-    sudo cp ~/build/AstroAir-Develop-Team/AstroAir-Server/scripts/config.h /usr/include/libqhy
-fi
+project_path=$(cd `dirname $0`; pwd)
+echo $project_path
+sudo cp $project_path/scripts/config.h /usr/include/libqhy
+
+echo "Start Builing..."
+mkdir build && cd build
+cmake ..
+make -j4
+echo "Finished!"
+make clean
+
+

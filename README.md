@@ -1,6 +1,7 @@
 AstroAir Server
 ===============
 [![Build Status](https://app.travis-ci.com/AstroAir-Develop-Team/AstroAir-Server.svg?branch=master)](https://app.travis-ci.com/AstroAir-Develop-Team/AstroAir-Server)
+[![CircleCI](https://circleci.com/gh/AstroAir-Develop-Team/AstroAir-Server/tree/master.svg?style=svg)](https://circleci.com/gh/AstroAir-Develop-Team/AstroAir-Server/tree/master)
 # Introduction
 - Astroair is a new generation of astronomical photography terminal based on the Internet. It adopts Raspberrypi(now we are tyring to build it on Ubuntu) platform and has good software and device compatibility. It can control most of the devices and take pre fast and convenient astronomical photography. Our goal is to make astronomical photography simple.<br>
 # Features
