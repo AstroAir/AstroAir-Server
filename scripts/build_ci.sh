@@ -1,7 +1,7 @@
 #!/bin/bash
 
 sudo add-apt-repository ppa:pch/phd2 -y
-
+sudo apt-add-repository ppa:mutlaqja/ppa -y
 sudo apt update -y && sudo apt upgrade -y 
 sudo apt install make cmake indi-full phd2 clang-11 libwebsocketpp-dev libasio-dev libopencv-dev libcfitsio-dev libccfits-dev libssl-dev libnova-dev libgphoto2-dev libboost-dev libusb-1.0-0-dev libgsl-dev -y
 

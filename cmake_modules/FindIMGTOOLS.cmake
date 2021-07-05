@@ -48,7 +48,7 @@ if(HAS_FITSIO)
 	else()
 		message("-- Could not found CFitsIO library.Try to build it!")
 		add_custom_command(
-			TARGET LIBFITSIO
+			TARGET airserver
 			PRE_BUILD 
 			COMMAND sudo apt install libcfitsio-dev libccfits-dev -y
 			COMMENT "Downloaded and Building CFitsIO Library"
