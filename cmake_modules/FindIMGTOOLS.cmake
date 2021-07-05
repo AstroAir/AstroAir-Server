@@ -76,7 +76,7 @@ if(HAS_OPENCV AND HAS_BASE64)
 	else()
 		message("-- Could not found OPENCV library.Try to build it!")
 		add_custom_command(
-			TARGET LIBOPENCV
+			TARGET airserver
 			PRE_BUILD 
 			COMMAND sudo apt install libopencv-dev -y
 			COMMENT "Downloaded and Building OPENCV Library"

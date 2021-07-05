@@ -42,7 +42,7 @@ if(HAS_PHD2)
 	else()
 		message("-- Could not found PHD2.Please build it before intall!")
 		add_custom_command(
-			TARGET LIBPHD2
+			TARGET airserver
 			PRE_BUILD 
 			COMMAND sudo apt install phd2 -y
 			COMMENT "Downloaded and Building PHD2"

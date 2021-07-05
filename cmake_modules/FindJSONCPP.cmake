@@ -33,8 +33,8 @@
 
 option(HAS_JSONCPP "Using JsonCpp Library" ON)
 if(HAS_JSONCPP)
-	find_path(PATH_JSONCPP json.h /usr/include/json)
-	find_path(PATH_JSONCPP json.h /usr/local/include/json)
+	find_path(PATH_JSONCPP json.h /usr/include)
+	find_path(PATH_JSONCPP json.h /usr/local/include)
 	find_library(PATH_JSONCPP_LIB libjsoncpp.so /usr/lib)
 	find_library(PATH_JSONCPP_LIB libjsoncpp.so /usr/local/lib)
 	if(PATH_JSONCPP AND PATH_JSONCPP_LIB)

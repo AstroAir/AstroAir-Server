@@ -12,6 +12,13 @@ branches:
 before_install:
   - sudo apt update && sudo apt upgrade
   - echo "Update and Upgrade\n"
+  - git clone https://github.com/open-source-parsers/jsoncpp
+  - cd jsoncpp
+  - mkdir build && cd build
+  - cmake -DCMAKE_INSTALL_PREFIX=/usr ..
+  - make -j4
+  - cd ../..
+  - echo "Build newest Jsoncpp library"
 
 before_script:
   - echo "Prepare to run the script"
@@ -19,6 +26,7 @@ after_script:
   - echo "Finish running script"
 
 script:
+  - sudo mv /usr/include/opencv4/opencv2 /usr/include
   - echo "Start Building..."
   - mkdir build && cd build
   - cmake ..
@@ -44,13 +52,13 @@ addons:
       - phd2
       - clang-11
       - libwebsocketpp-dev
-      - libjsoncpp-dev
       - libasio-dev
       - libopencv-dev
       - libcfitsio-dev
       - libccfits-dev
       - libssl-dev
       - libnova-dev
+      - libgphoto2-dev
 
   hosts:
     - ci.astroair.cn

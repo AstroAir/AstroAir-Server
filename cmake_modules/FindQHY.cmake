@@ -47,7 +47,7 @@ if(HAS_QHY)
 	else()
 		message("-- Could not found QHY library.Please build it before intall!")
 		add_custom_command(
-			TARGET LIBQHY
+			TARGET airserver
 			PRE_BUILD 
 			COMMAND sudo apt install libqhy -y
 			COMMENT "Downloaded and Building QHY Library"

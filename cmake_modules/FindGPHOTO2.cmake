@@ -46,7 +46,7 @@ if(HAS_GPhoto2)
 	else()
 		message("-- Could not found GPhoto2 camera library.Please build it before intall!")
 		add_custom_command(
-			TARGET LIBGPhoto2
+			TARGET airserver
 			PRE_BUILD 
 			COMMAND sudo apt install libgphoto2-dev -y
 			COMMENT "Downloaded and Building GPhoto2 Library"

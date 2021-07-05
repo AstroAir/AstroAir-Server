@@ -43,7 +43,7 @@ if(HAS_WEBSOCKET)
 	else()
 		message("-- Could not found websocketpp library.Try to build it!")
 		add_custom_command(
-			TARGET LIBWEBSOCKET
+			TARGET airserver
 			PRE_BUILD
 			COMMAND sudo apt install libasio-dev libwebsocketpp-dev -y
 			COMMENT "Downloaded and Building WebSocketpp Library"

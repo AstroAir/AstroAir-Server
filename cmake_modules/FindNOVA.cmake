@@ -47,7 +47,7 @@ if(HAS_NOVA)
 	else()
 		message("-- Could not found Nova library.Try to build it!")
 		add_custom_command(
-			TARGET LIBNOVA
+			TARGET airserver
 			PRE_BUILD 
 			COMMAND sudo apt install libnova-dev -y
 			COMMENT "Downloaded and Building Nova Library"

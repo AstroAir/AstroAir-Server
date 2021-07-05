@@ -46,7 +46,7 @@ if(HAS_ASI_CAMERA)
 	else()
 		message("-- Could not found ASI camera library.Please build it before intall!")
 		add_custom_command(
-			TARGET LIBASI_CAMERA
+			TARGET airserver
 			PRE_BUILD 
 			COMMAND sudo apt install libasi -y
 			COMMENT "Downloaded and Building ASI Camera Library"
@@ -69,7 +69,7 @@ if(HAS_ASI_FOCUSER)
 	else()
 		message("-- Could not found ASI focuser library.Please build it before intall!")
 		add_custom_command(
-			TARGET LIBASI_FOCUSER
+			TARGET airserver
 			PRE_BUILD 
 			COMMAND sudo apt install libasi -y
 			COMMENT "Downloaded and Building ASI Focuser Library"
@@ -92,7 +92,7 @@ if(HAS_ASI_FILTER)
 	else()
 		message("-- Could not found ASI filter library.Please build it before intall!")
 		add_custom_command(
-			TARGET LIBASI_FILTER
+			TARGET airserver
 			PRE_BUILD 
 			COMMAND sudo apt install libasi -y
 			COMMENT "Downloaded and Building ASI Filter Library"
