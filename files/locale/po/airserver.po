@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: AstroAirServer 1.0.0\n"
 "Report-Msgid-Bugs-To: qwdmax@qq.com\n"
-"POT-Creation-Date: 2021-07-01 00:48+0800\n"
+"POT-Creation-Date: 2021-07-06 02:18+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,170 +17,298 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: ../../../src/main.cpp:56
+#: ../../../src/main.cpp:53
 #, c-format
 msgid "Usage: %s [options]\n"
 msgstr ""
 
-#: ../../../src/main.cpp:57
+#: ../../../src/main.cpp:54
 #, c-format
 msgid "Purpose: Start or stop the server\n"
 msgstr ""
 
-#: ../../../src/main.cpp:58
+#: ../../../src/main.cpp:55
 #, c-format
 msgid "Options:\n"
 msgstr ""
 
-#: ../../../src/main.cpp:59
+#: ../../../src/main.cpp:56
 #, c-format
 msgid " -v       : start server\n"
 msgstr ""
 
-#: ../../../src/main.cpp:60
-#, c-format
-msgid " -s       : stop server\n"
-msgstr ""
-
-#: ../../../src/main.cpp:61
+#: ../../../src/main.cpp:57
 #, c-format
 msgid " -p p     : alternate IP port, default %d\n"
 msgstr ""
 
-#: ../../../src/main.cpp:62
+#: ../../../src/main.cpp:58
 #, c-format
 msgid " -c       : write a configure file for server\n"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:162
+#: ../../../src/wsserver.cpp:161
 #, c-format
 msgid "Successfully established connection with client path %s\n"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:180
-msgid "Disconnect from client\n"
+#: ../../../src/wsserver.cpp:179
+msgid "Disconnect from client,goodbye\n"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:415 ../../../src/wsserver.cpp:475
+#: ../../../src/wsserver.cpp:425 ../../../src/wsserver.cpp:485
 msgid "other exception"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:431
+#: ../../../src/wsserver.cpp:441
 msgid "Switched off by user."
 msgstr ""
 
-#: ../../../src/wsserver.cpp:463
+#: ../../../src/wsserver.cpp:443
+msgid "Stop the server..\n"
+msgstr ""
+
+#: ../../../src/wsserver.cpp:473
 #, c-format
 msgid "Start the server at port %d ...\n"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:491 ../../../src/wsserver.cpp:638
-#: ../../../src/wsserver.cpp:639
+#: ../../../src/wsserver.cpp:501 ../../../src/wsserver.cpp:648
 msgid "Unable to open configuration file\n"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:556
+#: ../../../src/wsserver.cpp:566
 msgid "Cound not found any configration files,please check it\n"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:558
+#: ../../../src/wsserver.cpp:568
 msgid "Cound not found any configration files"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:566 ../../../src/wsserver.cpp:573
+#: ../../../src/wsserver.cpp:576 ../../../src/wsserver.cpp:583
 #, c-format
 msgid "Found configure file named %s\n"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:591
+#: ../../../src/wsserver.cpp:601
 #, c-format
 msgid "Change the configuration file to %s\n"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:626
-msgid "No file!\n"
+#: ../../../src/wsserver.cpp:636
+msgid "No file found in default direction!\n"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:627
+#: ../../../src/wsserver.cpp:637
 msgid "No file list!"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:714
+#: ../../../src/wsserver.cpp:720
 msgid "Unknown camera"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:720
-msgid "Connect to "
-msgstr ""
-
-#: ../../../src/wsserver.cpp:720
-msgid " successfully"
-msgstr ""
-
-#: ../../../src/wsserver.cpp:729 ../../../src/wsserver.cpp:799
+#: ../../../src/wsserver.cpp:731 ../../../src/wsserver.cpp:803
+#: ../../../src/wsserver.cpp:1002
 msgid "Could not connect to "
 msgstr ""
 
-#: ../../../src/wsserver.cpp:739 ../../../src/wsserver.cpp:951
+#: ../../../src/wsserver.cpp:741 ../../../src/wsserver.cpp:1012
+msgid "Connect to "
+msgstr ""
+
+#: ../../../src/wsserver.cpp:741 ../../../src/wsserver.cpp:1012
+msgid " successfully"
+msgstr ""
+
+#: ../../../src/wsserver.cpp:753 ../../../src/wsserver.cpp:969
+#: ../../../src/wsserver.cpp:1024
 msgid " had already connected"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:784
+#: ../../../src/wsserver.cpp:792
 msgid "Unknown mount"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:853
+#: ../../../src/wsserver.cpp:864
 msgid "Unknown focus"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:923
+#: ../../../src/wsserver.cpp:936
 msgid "Unknown filter"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:985
+#: ../../../src/wsserver.cpp:990
 msgid "Unknown guide server"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:1014
+#: ../../../src/wsserver.cpp:1029
 #, c-format
 msgid "Connecting to device took %g seconds\n"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:1027
+#: ../../../src/wsserver.cpp:1042
 msgid "All devices connected successfully"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:1034
+#: ../../../src/wsserver.cpp:1049
 msgid "There were some errors in connecting the device"
 msgstr ""
 
-#: ../../../src/wsserver.cpp:1089
+#: ../../../src/wsserver.cpp:1070 ../../../src/wsserver.cpp:1079
+#: ../../../src/wsserver.cpp:1088 ../../../src/wsserver.cpp:1097
+#: ../../../src/wsserver.cpp:1106
+msgid "Disconnect from "
+msgstr ""
+
+#: ../../../src/wsserver.cpp:1072 ../../../src/wsserver.cpp:1081
+#: ../../../src/wsserver.cpp:1090 ../../../src/wsserver.cpp:1099
+#: ../../../src/wsserver.cpp:1108
+msgid "Could not Disconnect from "
+msgstr ""
+
+#: ../../../src/wsserver.cpp:1114
 msgid "Successfully disconnected from all devices"
 msgstr ""
 
-#: ../../../src/air_camera.cpp:126
+#: ../../../src/wsserver.cpp:1227
+msgid "Successfully connect device\n"
+msgstr ""
+
+#: ../../../src/wsserver.cpp:1247
+msgid "Unable to connect device\n"
+msgstr ""
+
+#: ../../../src/wsserver.cpp:1268
+msgid "Successfully disconnect from devices\n"
+msgstr ""
+
+#: ../../../src/wsserver.cpp:1311
+msgid "An unknown message was received from the client\n"
+msgstr ""
+
+#: ../../../src/wsserver.cpp:1317
+msgid "Unknown information"
+msgstr ""
+
+#: ../../../src/wsserver.cpp:1332
+msgid "An unknown device was found,please check the connection\n"
+msgstr ""
+
+#: ../../../src/wsserver.cpp:1345
+msgid "There are too many clients connected with server\n"
+msgstr ""
+
+#: ../../../src/wsserver.cpp:1351
+msgid "Too many client!"
+msgstr ""
+
+#: ../../../src/air_camera.cpp:124
 msgid "Exposure time is less than 0, please input a reasonable data\n"
 msgstr ""
 
-#: ../../../src/air_camera.cpp:127
+#: ../../../src/air_camera.cpp:125
 msgid "Exposure time is less than 0, please input a reasonable data"
 msgstr ""
 
-#: ../../../src/air_camera.cpp:141
-msgid "Start exposure"
+#: ../../../src/air_camera.cpp:138
+msgid "Start exposure!"
 msgstr ""
 
-#: ../../../src/air_camera.cpp:147
+#: ../../../src/air_camera.cpp:144
 msgid ""
 "Unable to start the exposure of the camera. Please check the connection of "
 "the camera. If you have any problems, please contact the developer\n"
 msgstr ""
 
-#: ../../../src/air_camera.cpp:148
+#: ../../../src/air_camera.cpp:145
 msgid "Unable to start the exposure of the camera"
 msgstr ""
 
-#: ../../../src/air_camera.cpp:423
+#: ../../../src/air_camera.cpp:159
+msgid ""
+"There seems to be some unknown mistakes here.Maybe you need to check the "
+"camera connection\n"
+msgstr ""
+
+#: ../../../src/air_camera.cpp:221 ../../../src/air_camera.cpp:232
+msgid "Unable to stop the exposure of the camera"
+msgstr ""
+
+#: ../../../src/air_camera.cpp:222
+msgid ""
+"Unable to stop the exposure of the camera. Please check the connection of "
+"the camera. If you have any problems, please contact the developer\n"
+msgstr ""
+
+#: ../../../src/air_camera.cpp:228
+msgid "Abort exposure successfully"
+msgstr ""
+
+#: ../../../src/air_camera.cpp:233
+msgid "Try to stop exposure,Should never get here.\n"
+msgstr ""
+
+#: ../../../src/air_camera.cpp:252
+msgid ""
+"Unable to turn off the camera cooling mode, please check the condition of "
+"the device\n"
+msgstr ""
+
+#: ../../../src/air_camera.cpp:253
+msgid "Unable to turn off the camera cooling mode"
+msgstr ""
+
+#: ../../../src/air_camera.cpp:261
+msgid ""
+"Unable to turn on the camera cooling mode, please check the condition of the "
+"device\n"
+msgstr ""
+
+#: ../../../src/air_camera.cpp:262
+msgid "Unable to turn on the camera cooling mode"
+msgstr ""
+
+#: ../../../src/air_camera.cpp:270
+msgid ""
+"The camera can't cool down normally, please check the condition of the "
+"equipment\n"
+msgstr ""
+
+#: ../../../src/air_camera.cpp:271
+msgid "The camera can't cool down normally"
+msgstr ""
+
+#: ../../../src/air_camera.cpp:279
+msgid ""
+"The camera can't warm up normally, please check the condition of the "
+"equipment\n"
+msgstr ""
+
+#: ../../../src/air_camera.cpp:280
+msgid "The camera can't warm up normally"
+msgstr ""
+
+#: ../../../src/air_camera.cpp:284
+msgid "Camera cooling set successfully\n"
+msgstr ""
+
+#: ../../../src/air_camera.cpp:308
+msgid "Successfully exposure\n"
+msgstr ""
+
+#: ../../../src/air_camera.cpp:326
+msgid "Successfully stop exposure\n"
+msgstr ""
+
+#: ../../../src/air_camera.cpp:345
+msgid "Unable to start exposure\n"
+msgstr ""
+
+#: ../../../src/air_camera.cpp:364
+msgid "Unable to stop camera exposure\n"
+msgstr ""
+
+#: ../../../src/air_camera.cpp:424
 #, c-format
 msgid "Progress image took %g seconds\n"
 msgstr ""
@@ -309,19 +437,109 @@ msgstr ""
 msgid "Filter move to  ok"
 msgstr ""
 
-#: ../../../src/air_script.cpp:304
+#: ../../../src/air_guider.cpp:98
+msgid "Could not start guiding\n"
+msgstr ""
+
+#: ../../../src/air_guider.cpp:99
+msgid "Could not start guiding!"
+msgstr ""
+
+#: ../../../src/air_guider.cpp:121
+msgid "Could not stop Guider,you telescope is in danger!!!\n"
+msgstr ""
+
+#: ../../../src/air_guider.cpp:122
+msgid "Could not stop Guider!"
+msgstr ""
+
+#: ../../../src/air_guider.cpp:143
+msgid "Failed to dither\n"
+msgstr ""
+
+#: ../../../src/air_guider.cpp:144
+msgid "Failed to Dither"
+msgstr ""
+
+#: ../../../src/air_script.cpp:96
+msgid "Cound not found any avalaible sequence files,please check it\n"
+msgstr ""
+
+#: ../../../src/air_script.cpp:98
+msgid "Cound not found any avalaible sequence files"
+msgstr ""
+
+#: ../../../src/air_script.cpp:106
+#, c-format
+msgid "Found avalaible sequence file named %s\n"
+msgstr ""
+
+#: ../../../src/air_script.cpp:131 ../../../src/air_script.cpp:332
+msgid "Could not found file"
+msgstr ""
+
+#: ../../../src/air_script.cpp:140 ../../../src/air_script.cpp:141
+msgid "Unable to open sequence file\n"
+msgstr ""
+
+#: ../../../src/air_script.cpp:195
+msgid "Filter has not connected\n"
+msgstr ""
+
+#: ../../../src/air_script.cpp:196
+msgid "Filter not connnected,please reconnect!"
+msgstr ""
+
+#: ../../../src/air_script.cpp:218
+msgid "Focus has not connected\n"
+msgstr ""
+
+#: ../../../src/air_script.cpp:219
+msgid "Focus not connnected,please reconnect!"
+msgstr ""
+
+#: ../../../src/air_script.cpp:236
+msgid "Camera not connected,how do you exposure?\n"
+msgstr ""
+
+#: ../../../src/air_script.cpp:237
+msgid "Camera not connected,how do you exposure?"
+msgstr ""
+
+#: ../../../src/air_script.cpp:243
+msgid "There is no camera been selected"
+msgstr ""
+
+#: ../../../src/air_script.cpp:244
+msgid "未指定相机，无法进行计划拍摄"
+msgstr ""
+
+#: ../../../src/air_script.cpp:292
+msgid "Cound not found any avalaible drag script,please check it\n"
+msgstr ""
+
+#: ../../../src/air_script.cpp:294
+msgid "Cound not found any avalaible drag script files"
+msgstr ""
+
+#: ../../../src/air_script.cpp:302
+#, c-format
+msgid "Found avalaible drag script file named %s\n"
+msgstr ""
+
+#: ../../../src/air_script.cpp:339
 msgid "Run script successfully\n"
 msgstr ""
 
-#: ../../../src/air_script.cpp:305
+#: ../../../src/air_script.cpp:340
 msgid "Run script successfully"
 msgstr ""
 
-#: ../../../src/air_script.cpp:309
+#: ../../../src/air_script.cpp:344
 msgid "Failed to run script\n"
 msgstr ""
 
-#: ../../../src/air_script.cpp:310
+#: ../../../src/air_script.cpp:345
 msgid "Failed to run script"
 msgstr ""
 
@@ -391,55 +609,245 @@ msgstr ""
 msgid "Solver complete."
 msgstr ""
 
-#: ../../../src/camera/air-asi/asi_ccd.cpp:97
+#: ../../../src/camera/air-asi/asi_ccd.cpp:107
 msgid ""
 "ASI camera not found, please check the power supply or make sure the camera "
 "is connected.\n"
 msgstr ""
 
-#: ../../../src/camera/air-asi/asi_ccd.cpp:107
+#: ../../../src/camera/air-asi/asi_ccd.cpp:117
 #, c-format
 msgid ""
 "Unable to get %s configuration information,the error code is %d,please check "
 "program permissions.\n"
 msgstr ""
 
-#: ../../../src/camera/air-asi/asi_ccd.cpp:120
+#: ../../../src/camera/air-asi/asi_ccd.cpp:130
 #, c-format
 msgid "Unable to turn on the %s,error code is %d.\n"
 msgstr ""
 
-#: ../../../src/camera/air-asi/asi_ccd.cpp:128
+#: ../../../src/camera/air-asi/asi_ccd.cpp:138
 #, c-format
 msgid "Unable to initialize connection to camera,the error code is %d.\n"
 msgstr ""
 
-#: ../../../src/camera/air-asi/asi_ccd.cpp:348
-#, c-format
-msgid "Blinking %ld time(s) before exposure\n"
+#: ../../../src/camera/air-asi/asi_ccd.cpp:232
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:262
+msgid "Camera information obtained successfully.\n"
 msgstr ""
 
-#: ../../../src/camera/air-asi/asi_ccd.cpp:351
+#: ../../../src/camera/air-asi/asi_ccd.cpp:352
+#, c-format
+msgid "Blinking %ld time(ms) before exposure\n"
+msgstr ""
+
+#: ../../../src/camera/air-asi/asi_ccd.cpp:355
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:291
 #, c-format
 msgid "Failed to set blink exposure to %ldus, error %d\n"
 msgstr ""
 
-#: ../../../src/camera/air-asi/asi_ccd.cpp:365
+#: ../../../src/camera/air-asi/asi_ccd.cpp:362
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:298
+msgid "Failed to set camera configure\n"
+msgstr ""
+
+#: ../../../src/camera/air-asi/asi_ccd.cpp:369
 #, c-format
 msgid "Failed to start blink exposure, error %d,try it again\n"
 msgstr ""
 
-#: ../../../src/camera/air-asi/asi_ccd.cpp:394
+#: ../../../src/camera/air-asi/asi_ccd.cpp:398
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:322
 msgid "Could not save image correctly,please check the config\n"
 msgstr ""
 
-#: ../../../src/camera/air-asi/asi_ccd.cpp:484
+#: ../../../src/camera/air-asi/asi_ccd.cpp:444
+#, c-format
+msgid "Unable to set camera gain,error code is %d\n"
+msgstr ""
+
+#: ../../../src/camera/air-asi/asi_ccd.cpp:449
+#: ../../../src/camera/air-asi/asi_ccd.cpp:457
+#, c-format
+msgid "Unable to set camera offset,error code is %d\n"
+msgstr ""
+
+#: ../../../src/camera/air-asi/asi_ccd.cpp:488
 #, c-format
 msgid "ASIGetDataAfterExp error (%d)\n"
 msgstr ""
 
-#: ../../../src/camera/air-asi/asi_ccd.cpp:487
+#: ../../../src/camera/air-asi/asi_ccd.cpp:491
 msgid "Download from camera completely.\n"
+msgstr ""
+
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:109
+#, c-format
+msgid ""
+"Unable to initialize SDK settings,error code is %d please check system "
+"settings\n"
+msgstr ""
+
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:114
+msgid "Init SDK successfully!\n"
+msgstr ""
+
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:118
+msgid ""
+"QHY camera not found, please check the power supply or make sure the camera "
+"is connected.\n"
+msgstr ""
+
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:129
+msgid "Unable to get camera ID, please check connection\n"
+msgstr ""
+
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:136
+#, c-format
+msgid "Find %s.\n"
+msgstr ""
+
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:140
+#, c-format
+msgid "Unable to turn on the %s.\n"
+msgstr ""
+
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:148
+msgid "This camera doesn't support single frame shooting\n"
+msgstr ""
+
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:154
+msgid "Unable to initialize connection to camera.\n"
+msgstr ""
+
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:161
+msgid "Camera turned on successfully\n"
+msgstr ""
+
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:169
+msgid "The specified camera was not found. Please check the camera connection"
+msgstr ""
+
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:194
+msgid "Unable to stop video capture, please try again.\n"
+msgstr ""
+
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:197
+msgid "Stop video capture.\n"
+msgstr ""
+
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:203
+msgid "Unable to stop exposure, please try again.\n"
+msgstr ""
+
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:206
+msgid "Stop exposure.\n"
+msgstr ""
+
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:213
+msgid "Unable to turn off the camera, please try again"
+msgstr ""
+
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:218
+#, c-format
+msgid "Cannot release SDK resources, error %d.\n"
+msgstr ""
+
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:222
+msgid "SDK resources released.\n"
+msgstr ""
+
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:224
+msgid "Disconnect from camera\n"
+msgstr ""
+
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:257
+msgid "Unable to get camera parameters, please check the connection\n"
+msgstr ""
+
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:288
+#, c-format
+msgid "Blinking %ld time(s) before exposure\n"
+msgstr ""
+
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:310
+#, c-format
+msgid "Blink exposure failed, error code is %d\n"
+msgstr ""
+
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:319
+msgid "Finished exposure and save image locally\n"
+msgstr ""
+
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:327
+#, c-format
+msgid "Saved Fits and JPG images %s successfully in locally\n"
+msgstr ""
+
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:344
+msgid "Aborting camera exposure...\n"
+msgstr ""
+
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:347
+#, c-format
+msgid "Unable to stop camera exposure,error id is %d,please try again.\n"
+msgstr ""
+
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:369
+#, c-format
+msgid "Unable to set camera USBTRAFFIC failure, error code is  %d\n"
+msgstr ""
+
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:376
+#, c-format
+msgid "Unable to set camera GAIN failure, error code is  %d\n"
+msgstr ""
+
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:383
+#, c-format
+msgid "Unable to set camera OFFSET failure, error code is  %d\n"
+msgstr ""
+
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:391
+#, c-format
+msgid "Unable to set camera BIN MODE failure, error code is  %d\n"
+msgstr ""
+
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:398
+#, c-format
+msgid "Unable to set camera frame size failure, error code is  %d\n"
+msgstr ""
+
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:415
+#, c-format
+msgid "Unable to set camera speed failure, error code is  %d\n"
+msgstr ""
+
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:423
+#, c-format
+msgid "Unable to set camera 16 bits mode failure, error code is  %d\n"
+msgstr ""
+
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:431
+#, c-format
+msgid "Unable to set camera 8 bits mode failure, error code is  %d\n"
+msgstr ""
+
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:464
+#, c-format
+msgid "GetQHYCCDSingleFrame error (%d)\n"
+msgstr ""
+
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:467
+msgid "Download complete.\n"
+msgstr ""
+
+#: ../../../src/camera/air-qhy/qhy_ccd.cpp:489
+msgid ""
+"This is not a cooling camera. The cooling mode cannot be turned on. Please "
+"choose another camera\n"
 msgstr ""
 
 #: ../../../src/filter/air-cfw/qhy_cfw.cpp:68
@@ -705,4 +1113,12 @@ msgstr ""
 #: ../../../src/tools/ImgFitsIO.cpp:120
 #, c-format
 msgid "FITS Error: %s"
+msgstr ""
+
+#: ../../../src/tools/TcpSocket.cpp:68
+msgid "Failed to connect to TCP Server\n"
+msgstr ""
+
+#: ../../../src/tools/TcpSocket.cpp:102
+msgid "Failed to read message from server\n"
 msgstr ""

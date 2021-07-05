@@ -38,13 +38,11 @@ Description:Camera Offical Port
 
 namespace AstroAir
 {
-    AIRCAMERA *CCD;
-    std::atomic_bool isCameraConnected;
-    std::atomic_bool isCameraCoolingOn;
-
-    std::string CameraImageName,img_data;
-    int Image_Height,Image_Width,StarIndex;
-    double HFD;
+    AIRCAMERA *CCD = nullptr;
+    CameraInfo NEW;
+    CameraInfo *AIRCAMINFO = &NEW;
+    ImageInfo NEW1;
+    ImageInfo *IMGINFO = &NEW1;
     /*
      * name: AIRCAMERA()
      * describe: Constructor for initializing camera parameters
@@ -52,7 +50,7 @@ namespace AstroAir
      */
     AIRCAMERA::AIRCAMERA()
     {
-        InExposure = false;
+        AIRCAMINFO->InExposure = false;
         InSequenceRun = false;
     }
 
@@ -63,9 +61,9 @@ namespace AstroAir
      */
     AIRCAMERA::~AIRCAMERA()
     {
-        if(InExposure == true || InSequenceRun == true)
+        if(AIRCAMINFO->InExposure|| InSequenceRun)
             CCD->AbortExposure();
-        InExposure = false;
+        AIRCAMINFO->InExposure = false;
         InSequenceRun = false;
     }
 
@@ -129,28 +127,27 @@ namespace AstroAir
             ShotRunningSend(0,4);
             return false;
         }
-		if(isCameraConnected == true)
+		if(AIRCAMINFO->isCameraConnected)
 		{
-            Image_Name = FitsName;
-            CameraBin = bin;
-            CameraExpo = exp;
-            CameraImageName = FitsName;
-            InExposure = true;
+            AIRCAMINFO->LastImageName = FitsName;
+            AIRCAMINFO->Bin = bin;
+            AIRCAMINFO->Exposure = exp;
+            AIRCAMINFO->InExposure = true;
             std::thread CameraCountThread(&AIRCAMERA::ImagineThread,this);
             CameraCountThread.detach();
-            WebLog(_("Start exposure"),2);
-			if(CCD->StartExposure(exp, bin, IsSave, FitsName, Gain, Offset) != true)
+            WebLog(_("Start exposure!"),2);
+			if(!CCD->StartExposure(exp, bin, IsSave, FitsName, Gain, Offset))
 			{
 				/*返回曝光错误的原因*/
 				StartExposureError();
                 ShotRunningSend(0,4);
 				IDLog(_("Unable to start the exposure of the camera. Please check the connection of the camera. If you have any problems, please contact the developer\n"));
                 WebLog(_("Unable to start the exposure of the camera"),3);
-				InExposure = false;
+				AIRCAMINFO->InExposure = false;
                 /*如果函数执行不成功返回false*/
 				return false;
 			}
-            InExposure = false;
+            AIRCAMINFO->InExposure = false;
 			/*将拍摄成功的消息返回至客户端*/
 			StartExposureSuccess();
             WebLog("Successfully exposure",2);
@@ -159,7 +156,7 @@ namespace AstroAir
 		}
 		else
 		{
-			IDLog("There seems to be some unknown mistakes here.Maybe you need to check the camera connection\n");
+			IDLog_Error(_("There seems to be some unknown mistakes here.Maybe you need to check the camera connection\n"));
 			return false;
         }
         return true;
@@ -197,14 +194,13 @@ namespace AstroAir
      */
     void AIRCAMERA::ImagineThread()
     {
-        while(CameraExpoUsed < CameraExpo && InExposure == true)
+        while(AIRCAMINFO->ExposureUsed < AIRCAMINFO->Exposure && AIRCAMINFO->InExposure)
         {
-            double a = CameraExpoUsed,b = CameraExpo;
             sleep(1);
-            CameraExpoUsed++;
-            ShotRunningSend((a/b)*100,1);
+            AIRCAMINFO->ExposureUsed++;
+            ShotRunningSend((AIRCAMINFO->ExposureUsed/AIRCAMINFO->Exposure)*100,1);
         }
-        CameraExpoUsed = 0;
+        AIRCAMINFO->ExposureUsed = 0;
     }
 
     /*
@@ -216,26 +212,25 @@ namespace AstroAir
      */
     bool AIRCAMERA::AbortExposure()
     {
-		if(isCameraConnected == true)
+		if(AIRCAMINFO->isCameraConnected)
 		{
-			bool camera_ok = false;
-			if ((camera_ok = CCD->AbortExposure()) != true)
+			if (!CCD->AbortExposure())
 			{
 				/*返回曝光错误的原因*/
 				AbortExposureError();
-                WebLog("Unable to stop the exposure of the camera",3);
-				IDLog("Unable to stop the exposure of the camera. Please check the connection of the camera. If you have any problems, please contact the developer\n");
+                WebLog(_("Unable to stop the exposure of the camera"),3);
+				IDLog_Error(_("Unable to stop the exposure of the camera. Please check the connection of the camera. If you have any problems, please contact the developer\n"));
 				/*如果函数执行不成功返回false*/
 				return false;
 			}
 			/*将拍摄成功的消息返回至客户端*/
 			AbortExposureSuccess();
-            WebLog("Abort exposure successfully",2);
+            WebLog(_("Abort exposure successfully"),2);
 		}
 		else
 		{
-            WebLog("Unable to stop the exposure of the camera",3);
-			IDLog("Try to stop exposure,Should never get here.\n");
+            WebLog(_("Unable to stop the exposure of the camera"),3);
+			IDLog_Error(_("Try to stop exposure,Should never get here.\n"));
 			return false;
         }
         return true;
@@ -250,44 +245,52 @@ namespace AstroAir
      */
     bool AIRCAMERA::CoolingServer(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF,int CamTemp)
     {
-        bool camera_ok = false;
-        CameraTemp = CamTemp;
-        if(CoolerOFF == true)
+        if(CoolerOFF)
         {
-            if((camera_ok = CCD->Cooling(false,false,false,false,true,CamTemp)) != true)
+            if(!CCD->Cooling(false,false,false,false,true,CamTemp))
             {
-                IDLog_Error("Unable to turn off the camera cooling mode, please check the condition of the device\n");
+                IDLog_Error(_("Unable to turn off the camera cooling mode, please check the condition of the device\n"));
+                WebLog(_("Unable to turn off the camera cooling mode"),3);
                 return false;
             }
         }
-        if(CoolerOFF == false)
+        if(CoolerOFF)
         {
-            if((camera_ok = CCD->Cooling(true,false,false,false,false,CamTemp)) != true)
+            if(!CCD->Cooling(true,false,false,false,false,CamTemp))
             {
-                IDLog_Error("Unable to turn on the camera cooling mode, please check the condition of the device\n");
+                IDLog_Error(_("Unable to turn on the camera cooling mode, please check the condition of the device\n"));
+                WebLog(_("Unable to turn on the camera cooling mode"),3);
                 return false;
             }
         }
-		if(CoolDown == true)
+		if(CoolDown)
 		{
-			if((camera_ok = CCD->Cooling(false,true,false,false,false,CamTemp)) != true)
+			if(CCD->Cooling(false,true,false,false,false,CamTemp) != true)
 			{
-				IDLog_Error("The camera can't cool down normally, please check the condition of the equipment\n");
-				return false;
+				IDLog_Error(_("The camera can't cool down normally, please check the condition of the equipment\n"));
+				WebLog(_("The camera can't cool down normally"),3);
+                return false;
 			}
 		}
-		if(Warmup == true)
+		if(Warmup)
 		{
-			if((camera_ok = CCD->Cooling(false,false,false,true,false,CamTemp)) != true)
+			if(!CCD->Cooling(false,false,false,true,false,CamTemp))
 			{
-				IDLog_Error("The camera can't warm up normally, please check the condition of the equipment\n");
-				return false;
+				IDLog_Error(_("The camera can't warm up normally, please check the condition of the equipment\n"));
+				WebLog(_("The camera can't warm up normally"),3);
+                return false;
 			}
 		}
-        IDLog("Camera cooling set successfully\n");
+        IDLog(_("Camera cooling set successfully\n"));
         return true;
     }
 
+    /*
+     * name: Cooling(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF,int CamTemp)
+     * describe: Camera Cooling Settings
+     * 描述：相机制冷设置,只是一个模板
+     * note:This function should not be executed normally
+     */
     bool AIRCAMERA::Cooling(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF,int CamTemp)
     {
         return false;
@@ -302,7 +305,7 @@ namespace AstroAir
      */
 	void AIRCAMERA::StartExposureSuccess()
 	{
-        IDLog("Successfully exposure\n");
+        IDLog(_("Successfully exposure\n"));
         /*整合信息并发送至客户端*/
         Json::Value Root;
         Root["Event"] = Json::Value("RemoteActionResult");
@@ -320,7 +323,7 @@ namespace AstroAir
      */
 	void AIRCAMERA::AbortExposureSuccess()
 	{
-		IDLog("Successfully stop exposure\n");
+		IDLog(_("Successfully stop exposure\n"));
         /*整合信息并发送至客户端*/
         Json::Value Root;
         Root["Event"] = Json::Value("RemoteActionResult");
@@ -339,8 +342,7 @@ namespace AstroAir
 	 */
     void AIRCAMERA::StartExposureError()
     {
-		IDLog_Error("Unable to start exposure\n");
-		IDLog_DEBUG("Unable to start exposure\n");
+		IDLog_Error(_("Unable to start exposure\n"));
 		/*整合信息并发送至客户端*/
         Json::Value Root;
         Root["Event"] = Json::Value("RemoteActionResult");
@@ -359,8 +361,7 @@ namespace AstroAir
 	 */
     void AIRCAMERA::AbortExposureError()
     {
-		IDLog_Error("Unable to stop camera exposure\n");
-		IDLog_DEBUG("Unable to stop camera exposure\n");
+		IDLog_Error(_("Unable to stop camera exposure\n"));
 		/*整合信息并发送至客户端*/
 		Json::Value Root;
         Root["Event"] = Json::Value("RemoteActionResult");
@@ -383,9 +384,9 @@ namespace AstroAir
         Root["Event"] = Json::Value("ShotRunning");
         Root["ElapsedPerc"] = Json::Value(ElapsedPerc);
         Root["Status"] = Json::Value(id);
-        Root["File"] = Json::Value(CameraImageName);
-        Root["Expo"] = Json::Value(CameraExpo);
-        Root["Elapsed"] = Json::Value(CameraExpoUsed);
+        Root["File"] = Json::Value(AIRCAMINFO->LastImageName);
+        Root["Expo"] = Json::Value(AIRCAMINFO->Exposure);
+        Root["Elapsed"] = Json::Value(AIRCAMINFO->ExposureUsed);
 		ws.send(Root.toStyledString());
     }
 
@@ -405,16 +406,16 @@ namespace AstroAir
         Root["Event"] = Json::Value("NewJPGReady");
         Root["UID"] = Json::Value("RemoteCameraShot");
         Root["ActionResultInt"] = Json::Value(5);
-        Root["Base64Data"] = Json::Value(img_data);
-        Root["PixelDimX"] = Json::Value(Image_Width);
-        Root["PixelDimY"] = Json::Value(Image_Height);
+        Root["Base64Data"] = Json::Value(IMGINFO->img_data);
+        Root["PixelDimX"] = Json::Value(AIRCAMINFO->Image_Width);
+        Root["PixelDimY"] = Json::Value(AIRCAMINFO->Image_Height);
         Root["SequenceTarget"] = Json::Value(SequenceTarget);
-        Root["Bin"] = Json::Value(CameraBin);
-        Root["StarIndex"] = Json::Value(StarIndex);
-        Root["HFD"] = Json::Value(HFD);
-        Root["Expo"] = Json::Value(CameraExpo);
+        Root["Bin"] = Json::Value(AIRCAMINFO->Bin);
+        Root["StarIndex"] = Json::Value(IMGINFO->StarIndex);
+        Root["HFD"] = Json::Value(IMGINFO->HFD);
+        Root["Expo"] = Json::Value(AIRCAMINFO->Exposure);
         Root["TimeInfo"] = Json::Value(timestampW());
-        Root["File"] = Json::Value(CameraImageName);
+        Root["File"] = Json::Value(AIRCAMINFO->LastImageName);
         Root["Filter"] = Json::Value("** BayerMatrix **");
         /*发送信息*/
 		ws.send(Root.toStyledString());

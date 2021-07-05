@@ -59,6 +59,8 @@ Description:Main framework of astroair server
 #include <atomic>
 #include <fstream>
 
+#define MAXDEVICE 5
+
 #ifdef HAS_WEBSOCKET
 	typedef websocketpp::server<websocketpp::config::asio> airserver;
 	typedef std::set<websocketpp::connection_hdl, std::owner_less<websocketpp::connection_hdl>> con_list;
@@ -106,7 +108,6 @@ namespace AstroAir
 			void ControlDataSend();
 			/*处理错误信息函数*/
 			void SetupConnectError(int id);
-			
 			void UnknownMsg();
 			void UnknownDevice(int id,std::string message);
 			void ClientNumError();
@@ -119,7 +120,6 @@ namespace AstroAir
 			Json::Value root;
 			Json::String errs;
 			Json::CharReaderBuilder reader;
-			std::string method,Image_Name;
 
 			mutex mtx,mtx_action;
 			condition_variable m_server_cond,m_server_action;
@@ -136,12 +136,15 @@ namespace AstroAir
 	extern WSSERVER ws;
 	extern std::string SequenceTarget;
 	void WebLog(std::string message,int type);
-	extern std::atomic_int thread_num;		//线程数量	
 	/*服务器配置参数*/
-	extern std::atomic_int MaxUsedTime,MaxThreadNumber,MaxClientNumber;		//解析最长时间,最多能同时处理的事件数量,最大客户端数量
+	struct ServerSetting
+	{
+		std::atomic_int MaxUsedTime;		//解析最长时间
+		std::atomic_int MaxThreadNumber;	//最多能同时处理的事件数量
+		std::atomic_int MaxClientNumber;	//最大客户端数量
+		std::atomic_int thread_num; 		//线程数量	
+	};extern ServerSetting *SS;
 	extern std::string TargetRA,TargetDEC,MountAngle;
-	extern std::string Camera,Mount,Focus,Filter,Guide;
-	extern std::string Camera_name,Mount_name,Focus_name,Filter_name,Guide_name;
 }
 
 #endif

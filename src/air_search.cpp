@@ -61,7 +61,7 @@ namespace AstroAir
             std::ifstream in("StarBase/Messier.json", std::ios::binary);
             if (!in.is_open())
             {
-                IDLog(_("Unable to open star file\n"));
+                IDLog_Error(_("Unable to open star file\n"));
                 return ;
             }
             while (getline(in, line))

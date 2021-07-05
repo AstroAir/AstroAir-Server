@@ -25,7 +25,7 @@ Author:Max Qian
 
 E-mail:astro_air@126.com
  
-Date:2021-6-23
+Date:2021-7-06
  
 Description:Camera Offical Port
 
@@ -39,6 +39,8 @@ Description:Camera Offical Port
 
 #include "tools/ImgTools.h"
 #include "tools/ImgFitsIO.h"
+
+#define MAXDEVICE 5
 
 namespace AstroAir
 {
@@ -63,24 +65,48 @@ namespace AstroAir
             virtual void AbortExposureError();
             virtual void ShotRunningSend(int ElapsedPerc,int id);
             virtual void newJPGReadySend();
-        public:
-            int CameraBin = 0;
-			int CameraExpo = 0;
-			int CameraExpoUsed = 0;
-			int CameraTemp = 0;
-			
         private:
-            std::string json_message,Image_Name;
-            std::atomic_bool InExposure;
 			std::atomic_bool InSequenceRun;
     };
     extern AIRCAMERA *CCD;
-    extern std::atomic_bool isCameraConnected;
-    extern std::atomic_bool isCameraCoolingOn;
-    
-    extern std::string CameraImageName,img_data;
-    extern int Image_Height,Image_Width,StarIndex;
-    extern double HFD;
+
+    struct CameraInfo
+    {
+        /*相机状态*/
+        bool isCameraConnected;
+        bool InExposure;
+        bool InVideo;
+        bool isCameraCoolingOn;
+        /*相机设置*/
+        int Bin;
+        int Exposure;
+        int ExposureUsed;
+        double Temperature = 0;
+        int Offset;
+        int Gain;
+        /*相机图像设置*/
+        int ImageType;
+        int Image_Height;
+        int Image_Width;
+        int ImageMaxHeight;
+        int ImageMaxWidth;
+        std::string LastImageName;
+        /*连接相机*/
+        int Count;
+        int ID;
+        char *Name[MAXDEVICE];
+        /*相机类型*/
+        bool isCoolCamera;
+        bool isColorCamera;
+        bool isGuidingCamera;
+    };extern CameraInfo *AIRCAMINFO;
+
+    struct ImageInfo
+    {
+        std::string img_data;
+        double HFD;
+        int StarIndex;
+    };extern ImageInfo *IMGINFO;
 }
 
 #endif

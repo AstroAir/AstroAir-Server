@@ -12,11 +12,27 @@ AstroAir Server
 - High quality GNOME desktop, built-in KStars, SkyChart and other open source software, good stability<br>
 # Building
 ## Install Pre-requisites
-On Debian/Ubuntu:
+### On Debian/Ubuntu:
 ```
-sudo apt-get -y install g++ make libnova-dev libcfitsio-dev libusb-1.0-0-dev build-essential cmake git libasio-dev libwebsocketpp-dev libssl-dev libccfits-dev 
+sudo apt-get -y install make libnova-dev libcfitsio-dev libusb-1.0-0-dev build-essential cmake git libasio-dev libwebsocketpp-dev libssl-dev libccfits-dev libboost-dev libopencv-dev libgsl-dev
 ```
 And you alse need to install all of the SDK.
+### Use Clang OR GCC
+```
+sudo apt install clang-11  OR  sudo apt install gcc
+```
+### PHD2
+Guiding depends on PHD2,so you are supposed to install PHD2
+```
+sudo add-apt-repository ppa:pch/phd2
+sudo apt install phd2
+```
+### Bug Fix
+For some unkownn reason,we can use opencv proprely.We need it in "/usr/include/opencv2",but it will be in "/usr/include/opencv4/opencv2".To solve this,you should run:
+```
+sudo mv /usr/include/opencv4/opencv2 /usr/include
+```
+
 ## Get the code
 ```
 git clone https://github.com/AstroAir-Develop-Team/AstroAir-Server.git
@@ -27,12 +43,12 @@ git clone https://github.com/AstroAir/AstroAir-Server.git   (This port doesn't u
 ```
 mkdir build&&cd build 
 cmake ..
-make 
+make -j4        #This depends on your computer
 sudo make install #Currently, direct installation to the system is not supported. Please test in the build directory
 ```
 ## Test
 ```
-./airserver -v  #In building directory
+./airserver     #In building directory
 ```
 # Problem report
 - Join the official QQ group 710622107

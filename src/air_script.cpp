@@ -93,9 +93,9 @@ namespace AstroAir
         Root["UID"] = Json::Value("RemoteGetListAvalaibleSequence");
         if(files.begin() == files.end())
         {
-            IDLog("Cound not found any avalaible sequence files,please check it\n");
+            IDLog_Error(_("Cound not found any avalaible sequence files,please check it\n"));
             Root["ActionResultInt"] = Json::Value(5);
-            Root["Motivo"] = Json::Value("Cound not found any avalaible sequence files");
+            Root["Motivo"] = Json::Value(_("Cound not found any avalaible sequence files"));
         }
         else
         {
@@ -103,7 +103,7 @@ namespace AstroAir
             for (int i = 0; i < files.size(); i++)  
             {
                 Root["ParamRet"]["list"].append(files[i]);
-                IDLog("Found avalaible sequence file named %s\n",files[i].c_str());
+                IDLog(_("Found avalaible sequence file named %s\n"),files[i].c_str());
             }
         }
         /*整合信息并发送至客户端*/
@@ -128,7 +128,7 @@ namespace AstroAir
         std::string a = "Seq/"+SequenceFile;
         if(access(a.c_str(), F_OK ) == -1)
         {
-            RunSequenceError("Could not found file");
+            RunSequenceError(_("Could not found file"));
             return;
         }
         std::string line,jsonStr;
@@ -137,8 +137,8 @@ namespace AstroAir
         /*打开文件*/
         if (!in.is_open())
         {
-            IDLog_Error("Unable to open sequence file\n");
-            IDLog_DEBUG("Unable to open sequence file\n");
+            IDLog_Error(_("Unable to open sequence file\n"));
+            IDLog_DEBUG(_("Unable to open sequence file\n"));
             return;
         }
         /*将文件转化为string格式*/
@@ -155,65 +155,94 @@ namespace AstroAir
         /*赤道仪运动到指定位置*/
         if(!Root["Mount"]["MountName"].asString().empty() && Root["Mount"]["MountName"] == MOUNT->ReturnDeviceName())
         {
-            TargetRA = Root["Mount"]["TargetRA"].asString();
-            TargetDEC = Root["Mount"]["TargetDEC"].asString();
-            if(MOUNT->Goto(Root["Mount"]["TargetRA"].asString(),Root["Mount"]["TargetDEC"].asString()) == true)
+            if(isMountConnected)
             {
-                IDLog("The equator successfully moved to the designated position\n");
-                WebLog("赤道仪运动到指定位置 RA:"+TargetRA+" DEC:"+TargetDEC,2);
-            }
-            else        //赤道仪无法运动到指定位置
-            {
-                IDLog_Error("The equator could not moved to the designated position\n");
-                WebLog("赤道仪无法运动到指定位置 RA:"+TargetRA+" DEC:"+TargetDEC,3);
-                RunSequenceError("赤道仪无法运动到指定位置");
-                return;
+                TargetRA = Root["Mount"]["TargetRA"].asString();
+                TargetDEC = Root["Mount"]["TargetDEC"].asString();
+                if(MOUNT->Goto(Root["Mount"]["TargetRA"].asString(),Root["Mount"]["TargetDEC"].asString()) == true)
+                {
+                    IDLog("The equator successfully moved to the designated position\n");
+                    WebLog("赤道仪运动到指定位置 RA:"+TargetRA+" DEC:"+TargetDEC,2);
+                }
+                else        //赤道仪无法运动到指定位置
+                {
+                    IDLog_Error("The equator could not moved to the designated position\n");
+                    WebLog("赤道仪无法运动到指定位置 RA:"+TargetRA+" DEC:"+TargetDEC,3);
+                    RunSequenceError("赤道仪无法运动到指定位置");
+                    return;
+                }
             }
         }
         if(!Root["Filter"]["FilterName"].asString().empty() && Root["Filter"]["FilterName"] == FILTER->ReturnDeviceName())
         {
-            if(FILTER->FilterMoveTo(Root["Filter"]["TargetPosition"].asInt()) == true)
+            if(isFilterConnected)
             {
-                IDLog("%s moves to the specified focusing position\n",Filter_name.c_str());
-                WebLog(Filter_name+" 成功运动到对焦位置",2);
+                if(FILTER->FilterMoveTo(Root["Filter"]["TargetPosition"].asInt()))
+                {
+                    IDLog("%s moves to the specified focusing position\n",Root["Filter"]["FilterName"].asString().c_str());
+                    WebLog(Root["Filter"]["FilterName"].asString() +" 成功运动到对焦位置",2);
+                }
+                else        //滤镜轮无法运动到指定位置
+                {
+                    IDLog_Error("The equator could not moved to the designated position\n");
+                    WebLog(Root["Filter"]["FilterName"].asString() +" 无法运动到指定位置 " + Root["Filter"]["TargetPosition"].asString(),3);
+                    RunSequenceError("滤镜轮无法运动到指定位置");
+                    return;
+                }
             }
-            else        //滤镜轮无法运动到指定位置
+            else
             {
-                IDLog_Error("The equator could not moved to the designated position\n");
-                WebLog(Filter_name+" 无法运动到指定位置 " + Root["Filter"]["TargetPosition"].asString(),3);
-                RunSequenceError("滤镜轮无法运动到指定位置");
+                IDLog_Error(_("Filter has not connected\n"));
+                WebLog(_("Filter not connnected,please reconnect!"),3);
                 return;
             }
         }
         if(!Root["Focus"]["FocusName"].asString().empty() && Root["Focus"]["FocusName"] == FOCUS->ReturnDeviceName())
         {
-            if(FOCUS->MoveTo(Root["Focus"]["TargetPosition"].asInt()) == true)
+            if(isFocusConnected)
             {
-                IDLog("%s moves to the specified focusing position\n",Focus_name.c_str());
-                WebLog(Focus_name+" 成功运动到对焦位置",2);
+                if(FOCUS->MoveTo(Root["Focus"]["TargetPosition"].asInt()))
+                {
+                    IDLog("%s moves to the specified focusing position\n",Root["Focus"]["FocusName"].asString().c_str());
+                    WebLog(Root["Focus"]["FocusName"].asString()+" 成功运动到对焦位置",2);
+                }
+                else        //电动调焦座无法运动到指定位置
+                {
+                    IDLog_Error("The equator could not moved to the designated position\n");
+                    WebLog(Root["Focus"]["FocusName"].asString()+" 无法运动到指定位置: " + Root["Focus"]["TargetPosition"].asString(),3);
+                    RunSequenceError("电动调焦座无法运动到指定位置");
+                    return;
+                }
             }
-            else        //电动调焦座无法运动到指定位置
             {
-                IDLog_Error("The equator could not moved to the designated position\n");
-                WebLog(Focus_name+" 无法运动到指定位置: " + Root["Focus"]["TargetPosition"].asString(),3);
-                RunSequenceError("电动调焦座无法运动到指定位置");
+                IDLog_Error(_("Focus has not connected\n"));
+                WebLog(_("Focus not connnected,please reconnect!"),3);
                 return;
             }
         }
         if(!Root["Camera"]["CameraName"].asString().empty() && Root["Camera"]["CameraName"] == CCD->ReturnDeviceName())
         {
-            InSequenceRun = true;
-            SequenceImageName = "Image_"+SequenceTarget+"_"+timestamp();
-            std::thread RunSequenceCamera(&AIRCAMERA::StartExposureSeq,CCD,Root["Camera"]["Loop"].asInt(),Root["Camera"]["Expo"].asInt(),Root["Camera"]["Bin"].asInt(),Root["Camera"]["SaveImage"].asBool(),SequenceImageName,Root["Camera"]["Gain"].asInt(),Root["Camera"]["Offset"].asInt());
-            RunSequenceCamera.detach();
-            WebLog("Start sequence capture",2);
-            thread_num--;
+            if(AIRCAMINFO->isCameraConnected)
+            {
+                InSequenceRun = true;
+                SequenceImageName = "Image_"+SequenceTarget+"_"+timestamp();
+                std::thread RunSequenceCamera(&AIRCAMERA::StartExposureSeq,CCD,Root["Camera"]["Loop"].asInt(),Root["Camera"]["Expo"].asInt(),Root["Camera"]["Bin"].asInt(),Root["Camera"]["SaveImage"].asBool(),SequenceImageName,Root["Camera"]["Gain"].asInt(),Root["Camera"]["Offset"].asInt());
+                RunSequenceCamera.detach();
+                WebLog("Start sequence capture",2);
+                SS->thread_num--;
+            }
+            else
+            {
+                IDLog_Error(_("Camera not connected,how do you exposure?\n"));
+                WebLog(_("Camera not connected,how do you exposure?"),3);
+                return;
+            }
         }
         else
         {
-            RunSequenceError("There is no camera been selected");
-            WebLog("未指定相机，无法进行计划拍摄",3);
-            thread_num--;
+            RunSequenceError(_("There is no camera been selected"));
+            WebLog(_("未指定相机，无法进行计划拍摄"),3);
+            SS->thread_num--;
             return;
         }
     }
@@ -260,9 +289,9 @@ namespace AstroAir
         Root["UID"] = Json::Value("RemoteGetListAvalaibleDragScript");
         if(files.begin() == files.end())
         {
-            IDLog("Cound not found any avalaible drag script,please check it\n");
+            IDLog_Error(_("Cound not found any avalaible drag script,please check it\n"));
             Root["ActionResultInt"] = Json::Value(5);
-            Root["Motivo"] = Json::Value("Cound not found any avalaible drag script files");
+            Root["Motivo"] = Json::Value(_("Cound not found any avalaible drag script files"));
         }
         else
         {
@@ -270,7 +299,7 @@ namespace AstroAir
             for (int i = 0; i < files.size(); i++)  
             {
                 Root["ParamRet"]["list"].append(files[i]);
-                IDLog("Found avalaible drag script file named %s\n",files[i].c_str());
+                IDLog(_("Found avalaible drag script file named %s\n"),files[i].c_str());
             }
         }
         /*整合信息并发送至客户端*/
@@ -291,10 +320,16 @@ namespace AstroAir
 	 */
     void AIRSCRIPT::RemoteDragScript(std::string DragScript)
     {
+        /*
+          Max： 这里我们还没设置指定的脚本格式
+          这需要细致的考虑，现在是执行shell
+          不过在未来的版本中我们会及时加入这个功能
+          如果你有任何的想法也可以联系我
+        */
         std::string a = "DS/" + DragScript,b;
         if(access(a.c_str(), F_OK ) == -1)
         {
-            RunSequenceError("Could not found file");
+            RunSequenceError(_("Could not found file"));
             return;
         }
         b = "sh " + a;

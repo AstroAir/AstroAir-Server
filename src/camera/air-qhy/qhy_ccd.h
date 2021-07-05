@@ -36,13 +36,10 @@ Description:QHY camera driver
 #ifndef _QHYCCD_H_
 #define _QHYCCD_H_
 
-#include "../../wsserver.h"
 #include <libqhy/qhyccd.h>
 #include "../../air_camera.h"
 
 #include <atomic>
-
-#define MAXDEVICENUM 5
 
 namespace AstroAir
 {
@@ -50,7 +47,7 @@ namespace AstroAir
 	{
 		public:
 			/*构造函数，重置参数*/
-			explicit QHYCCD();
+			explicit QHYCCD(CameraInfo *NEW);
 			/*析构函数*/
 			~QHYCCD();
 			/*连接相机*/
@@ -71,16 +68,15 @@ namespace AstroAir
 			virtual bool SaveImage(std::string FitsName);
 			/*相机制冷*/
 			virtual bool Cooling(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF,int CamTemp) override;
+		protected:
+			virtual bool SaveCameraConfig();
 		private:
-			int CamNumber = 0;
-			char *CamName[MAXDEVICENUM];
-			int CamBin;
+
+			CameraInfo *QHYCAMERA;
+
 			char iCamId[32] = {0};
 			char CamId[32] = {0};
 			unsigned int retVal;
-
-			std::mutex condMutex;
-			std::mutex ccdBufferLock;
 
 			/*相机配置参数*/
 			double chipWidth;
@@ -88,24 +84,9 @@ namespace AstroAir
 			double pixelWidth;
 			double pixelHeight;
 
-			unsigned int iMaxWidth = 0;		//最大高度
-			unsigned int iMaxHeight = 0;		//最大宽度
-			unsigned int CamWidth = 0;
-			unsigned int CamHeight = 0;
 			unsigned int channels = 1; 		//通道，默认为黑白相机
-			unsigned int Image_type = 0;
 
-			bool isCoolCamera = false;
-			bool isColorCamera = false;
-			bool isGuideCamera = false;
-			
 			qhyccd_handle *pCamHandle;
-			
-			/*相机使用参数*/
-			std::atomic_bool isConnected;
-			std::atomic_bool InExposure;
-			std::atomic_bool InVideo;
-			std::atomic_bool InCooling;
 	};
 }
 

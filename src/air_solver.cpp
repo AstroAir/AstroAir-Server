@@ -88,7 +88,7 @@ namespace AstroAir
         char cmd[2048] = {0},line[256]={0},parity_str[8]={0};
         int UsedTime = 0;
         float ra = -1000, dec = -1000, angle = -1000, pixscale = -1000, parity = 0;
-        snprintf(cmd,2048,"solve-field %s --guess-scale --downsample 2 --ra %s --dec %s --radius 5 ",CameraImageName.c_str(),TargetRA.c_str(),TargetDEC.c_str());
+        snprintf(cmd,2048,"solve-field %s --guess-scale --downsample 2 --ra %s --dec %s --radius 5 ",AIRCAMINFO->LastImageName.c_str(),TargetRA.c_str(),TargetDEC.c_str());
         IDLog("Run:%s",cmd);
         FILE *handle = popen(cmd, "r");
         if (handle == nullptr)
@@ -96,7 +96,7 @@ namespace AstroAir
             IDLog_Error(_("Could not solve this image,the error code is %s\n"),strerror(errno));
             return;
         }
-        while (fgets(line, sizeof(line), handle) != nullptr && UsedTime <= MaxUsedTime && IsSolving == true)
+        while (fgets(line, sizeof(line), handle) != nullptr && UsedTime <= SS->MaxUsedTime && IsSolving == true)
         {
             UsedTime++;
             IDLog("%s", line);

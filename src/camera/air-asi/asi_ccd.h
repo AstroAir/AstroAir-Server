@@ -31,30 +31,19 @@ Description:ZWO camera driver
  
 **************************************************/
 
-#pragma once
-
 #ifndef _ASICCD_H_
 #define _ASICCD_H_
 
 #include "../../air_camera.h"
 #include <libasi/ASICamera2.h>
 
-#include <mutex>
-#include <thread>
-#include <atomic>
-#include <vector>
-#include <string.h>
-
-#define MAXDEVICENUM 5
-
 namespace AstroAir
 {
-
 	class ASICCD: public AIRCAMERA
 	{
 		public:
 			/*构造函数，重置参数*/
-			explicit ASICCD();
+			explicit ASICCD(CameraInfo *NEW);
 			/*析构函数*/
 			virtual ~ASICCD();
 			/*连接相机*/
@@ -77,54 +66,19 @@ namespace AstroAir
 			virtual bool SaveImage(std::string FitsName);
 			/*制冷*/
 			virtual bool Cooling(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF,int CamTemp) override;
-		private:
-			/*打开制冷*/
+		protected:
+			/*打开或停止制冷*/
 			virtual bool ActiveCool(bool enable);
 			/*保存相机设置*/
 			virtual bool SaveCameraConfig();
-			
-			std::mutex condMutex;
-			std::mutex ccdBufferLock;
-			/*基础参数*/
-			int CamNumber;
-			int CamId;
-			char *CamName[MAXDEVICENUM];
-			int CamBin;
-			int CamExpo;
-			int CamOffset;
-			int CamGain;
-			
-			double ExposureRequest;
-			double TemperatureRequest;
-			/*相机配置参数*/
-			int Image_type = 0;
-			int CamWidth = 0;
-			int CamHeight = 0;
-			int iMaxWidth = 0;		//最大高度
-			int iMaxHeight = 0;		//最大宽度
-			bool isCoolCamera = false;
-			bool isColorCamera = false;
-			bool isGuideCamera = false;
-			/*FitsIO*/
-			//fitsfile *fptr;		//cFitsIO定义
-			long nelements;
-			long fpixel = 1;
-			char datatype[40];		//数据格式
-			char keywords[40];		//相机品牌
-			char value[20];		//相机名称
-			char description[40];		//相机描述
-			/*相机使用参数（使用原子变量）*/
-			std::atomic_bool isConnected;
-			std::atomic_bool InExposure;
-			std::atomic_bool InVideo;
-			std::atomic_bool InCooling;
+		private:
+			CameraInfo *ASICAMERA;
 			
 			/*ASI相机参数*/
 			ASI_CAMERA_INFO ASICameraInfo;
 			ASI_ERROR_CODE errCode;
 			ASI_EXPOSURE_STATUS expStatus;
 	};
-	
 }
 
 #endif

@@ -37,7 +37,7 @@ Description:Focus offical port
 
 namespace AstroAir
 {
-    AIRFOCUS *FOCUS;
+    AIRFOCUS *FOCUS = nullptr;
     std::atomic_bool isFocusConnected;
     double FocusTemp;
     std::atomic_int FocusPosition;
@@ -60,7 +60,7 @@ namespace AstroAir
     AIRFOCUS::~AIRFOCUS()
     {
         InMoving = false;
-        if(isFocusConnected == true)
+        if(isFocusConnected)
             FOCUS->Disconnect();
     }
 
@@ -116,15 +116,15 @@ namespace AstroAir
             WebLog(_("Are you kidding me?!"),3);
             return false;
         }
-        if(isFocusConnected == true)
+        if(isFocusConnected)
         {
-            if(InMoving == true)
+            if(InMoving)
             {
                 IDLog(_("Focus is moving,try again later!\n"));
                 WebLog(_("Focus is moving,try again later!"),3);
                 return false;
             }
-            if(FOCUS->MoveTo(TargetPosition) != true)
+            if(!FOCUS->MoveTo(TargetPosition))
             {
                 /*返回原因*/
 				MoveToError();
@@ -179,15 +179,15 @@ namespace AstroAir
      */
     bool AIRFOCUS::MoveServer(int Steps)
     {
-        if(isFocusConnected == true)
+        if(isFocusConnected)
         {
-            if(InMoving == true)
+            if(InMoving)
             {
                 IDLog(_("Focus is moving,try again later!\n"));
                 WebLog(_("Focus is moving,try again later!"),3);
                 return false;
             }
-            if(FOCUS->MoveTo(Steps) != true)
+            if(!FOCUS->MoveTo(Steps))
             {
                 /*返回原因*/
 				MoveError();
@@ -202,7 +202,7 @@ namespace AstroAir
         }
         else
         {
-            IDLog("There seems to be some unknown mistakes here.Maybe you need to check the focus connection\n");
+            IDLog_Error(_("There seems to be some unknown mistakes here.Maybe you need to check the focus connection\n"));
 			return false;
         }
         return true;

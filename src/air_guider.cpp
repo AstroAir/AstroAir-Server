@@ -37,7 +37,7 @@ Description:Guider offical port
 
 namespace AstroAir
 {
-    AIRGUIDER *GUIDE;
+    AIRGUIDER *GUIDE = nullptr;
     std::atomic_bool isGuideConnected;
     double Guide_RA,Guide_DEC;
     std::atomic_bool IsGuiding;

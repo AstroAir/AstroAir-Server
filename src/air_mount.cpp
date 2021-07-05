@@ -39,7 +39,7 @@ static const uint8_t DRIVER_LEN { 64 };
 
 namespace AstroAir
 {
-    AIRMOUNT *MOUNT;
+    AIRMOUNT *MOUNT = nullptr;
     std::atomic_bool isMountConnected;
     std::atomic_bool isMountSlewing;
     std::atomic_bool isMountTracking;

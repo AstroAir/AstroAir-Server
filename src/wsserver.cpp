@@ -25,7 +25,7 @@ Author:Max Qian
 
 E-mail:astro_air@126.com
  
-Date:2021-6-28
+Date:2021-7-05
  
 Description:Main framework of astroair server
 
@@ -80,15 +80,11 @@ namespace AstroAir
 {
     WSSERVER ws;
     std::string SequenceTarget;
+    ServerSetting AA;
+    ServerSetting *SS = &AA;
     
-    /*服务器配置参数*/
-	std::atomic_int MaxUsedTime = 0;		//解析最长时间
-	std::atomic_int MaxThreadNumber = 0;		//最多能同时处理的事件数量
-	std::atomic_int	MaxClientNumber = 0;		//最大客户端数量
-    std::atomic_int thread_num = 0;
     std::string TargetRA,TargetDEC,MountAngle;
 
-    std::string Camera,Mount,Focus,Filter,Guide;
 	std::string Camera_name,Mount_name,Focus_name,Filter_name,Guide_name;
 
 //----------------------------------------服务器----------------------------------------
@@ -115,16 +111,21 @@ namespace AstroAir
         m_server.set_close_handler(bind(&WSSERVER::on_close, this , ::_1));
         /*设置事件*/
         m_server.set_message_handler(bind(&WSSERVER::on_message, this ,::_1,::_2));
-        /*重置参数*/
+        /*重置设备参数*/
         isConnected = false;            //客户端连接状态
-        isCameraConnected = false;      //相机连接状态
+        AIRCAMINFO->isCameraConnected = false;      //相机连接状态
         isMountConnected = false;       //赤道仪连接状态
         isFocusConnected = false;       //电动调焦座连接状态
         isFilterConnected = false;      //滤镜轮连接状态
         isGuideConnected = false;       //导星软件连接状态
-        isCameraCoolingOn = false;      //相机制冷状态
+        AIRCAMINFO->isCameraCoolingOn = false;      //相机制冷状态
         isSolverConnected = false;      //解析器连接状态
         isMountSlewing = false;         //赤道仪运动状态
+        /*初始化服务器参数*/
+        SS->MaxClientNumber = 0;
+        SS->MaxThreadNumber = 5;
+        SS->MaxUsedTime = 90;
+        SS->thread_num = 0;
     }
     
     /*
@@ -136,7 +137,7 @@ namespace AstroAir
     WSSERVER::~WSSERVER()
     {
 		/*如果服务器正在工作，则在停止程序之前停止服务器*/
-        if(isConnected ==true)
+        if(isConnected)
         {
             stop();
         }
@@ -163,7 +164,7 @@ namespace AstroAir
         m_connections.insert(hdl);
         isConnected = true;
         ClientNum++;
-        if(ClientNum > MaxClientNumber)
+        if(ClientNum > SS->MaxClientNumber)
             ClientNumError();
         m_server_cond.notify_one();
     }
@@ -177,7 +178,7 @@ namespace AstroAir
     void WSSERVER::on_close(websocketpp::connection_hdl hdl)
     {
         lock_guard<mutex> guard(mtx);
-        IDLog(_("Disconnect from client\n"));
+        IDLog(_("Disconnect from client,goodbye\n"));
         m_connections.erase(hdl);
         isConnected = false;
         /*防止多次连接导致错误*/
@@ -234,15 +235,13 @@ namespace AstroAir
         /*运用JsonCpp拆分JSON数组*/
         std::unique_ptr<Json::CharReader>const json_read(reader.newCharReader());
         json_read->parse(message.c_str(), message.c_str() + message.length(), &root,&errs);
-        /*将string格式转化为const char*/
-        method = root["method"].asString();
         /*将接收到的信息写入文件*/
         #ifdef DEBUG_MODE
-            if(method != "Polling")
-                IDLog_CMDL(message.c_str());
+        if(root["method"].asString() != "Polling")
+            IDLog_CMDL(message.c_str());
         #endif
         /*判断客户端需要执行的命令*/
-        switch(hash_(method.c_str()))
+        switch(hash_(root["method"].asString().c_str()))
         {
             /*返回服务器版本号*/
             case "RemoteSetDashboardMode"_hash:
@@ -256,28 +255,28 @@ namespace AstroAir
             case "RemoteSetProfile"_hash:{
                 std::thread ProfileThread(&WSSERVER::SetProfile,this,root["params"]["FileName"].asString());
                 ProfileThread.detach();
-                thread_num++;
+                SS->thread_num++;
                 break;
             }
             /*连接设备*/
             case "RemoteSetupConnect"_hash:{
                 std::thread ConnectThread(&WSSERVER::SetupConnect,this,root["params"]["TimeoutConnect"].asInt());
                 ConnectThread.detach();
-                thread_num++;
+                SS->thread_num++;
                 break;
             }
             /*断开连接*/
             case "RemoteSetupDisconnect"_hash:{
                 std::thread DisconnectThread(&WSSERVER::SetupDisconnect,this,root["params"]["TimeoutConnect"].asInt());
                 DisconnectThread.detach();
-                thread_num++;
+                SS->thread_num++;
                 break;
             }
             /*相机开始拍摄*/
             case "RemoteCameraShot"_hash:{
                 std::thread CamThread(&AIRCAMERA::StartExposureServer,CCD,root["params"]["Expo"].asInt(),root["params"]["Bin"].asInt(),root["params"]["IsSaveFile"].asBool(),root["params"]["FitFileName"].asString(),root["params"]["Gain"].asInt(),root["params"]["Offset"].asInt());
                 CamThread.detach();
-                thread_num++;
+                SS->thread_num++;
                 break;
             }
             /*相机停止拍摄*/
@@ -288,7 +287,7 @@ namespace AstroAir
             case "RemoteCooling"_hash:{
                 std::thread CoolingThread(&AIRCAMERA::CoolingServer,CCD,root["params"]["IsSetPoint"].asBool(),root["params"]["IsCoolDown"].asBool(),root["params"]["IsASync"].asBool(),root["params"]["IsWarmup"].asBool(),root["params"]["IsCoolerOFF"].asBool(),root["params"]["Temperature"].asInt());
                 CoolingThread.detach();
-                thread_num++;
+                SS->thread_num++;
                 break;
             }
             /*搜索天体*/
@@ -296,21 +295,21 @@ namespace AstroAir
                 Search a;
                 std::thread SearchThread(&Search::SearchTarget,a,root["params"]["Name"].asString());
                 SearchThread.detach();
-                thread_num++;
+                SS->thread_num++;
                 break;
             }
             /*自定义目标管理*/
             case "RemoteRoboClipGetTargetList"_hash:{
                 std::thread RoboClipThread(&Search::RoboClipGetTargetList,SEARCH,root["params"]["FilterGroup"].asString(),root["params"]["FilterName"].asString(),root["params"]["FilterNote"].asString(),root["params"]["Order"].asInt());
                 RoboClipThread.detach();
-                thread_num++;
+                SS->thread_num++;
                 break;
             }
             /*自定义目标管理-添加目标*/
             case "RemoteRoboClipAddTarget"_hash:{
                 std::thread RoboClipThread(&Search::RemoteRoboClipAddTarget,SEARCH,root["params"]["DECJ2000"].asString(),root["params"]["RAJ2000"].asString(),root["params"]["FCOL"].asInt(),root["params"]["FROW"].asInt(),root["params"]["Group"].asString(),root["params"]["GuidTarget"].asString(),root["params"]["IsMosaic"].asBool(),root["params"]["Note"].asString(),root["params"]["PA"].asString(),root["params"]["TILES"].asString(),root["params"]["TargetName"].asString(),root["params"]["angleAdj"].asBool(),root["params"]["overlap"].asInt());
                 RoboClipThread.detach();
-                thread_num++;
+                SS->thread_num++;
                 break;
             }
             /*获取滤镜轮设置*/
@@ -327,12 +326,12 @@ namespace AstroAir
             case "RemotePrecisePointTarget"_hash:{
                 std::thread GotoThread(&AIRMOUNT::GotoServer,MOUNT,root["params"]["RAText"].asString(),root["params"]["DECText"].asString());
                 GotoThread.detach();
-                thread_num++;
+                SS->thread_num++;
                 break;
             }
             /*解析*/
             case "RemoteSolveActualPosition"_hash:{
-                if(root["params"]["IsBlind"].asBool() == true)
+                if(root["params"]["IsBlind"].asBool())
                 {
                     std::thread SolveThread(&AIRSOLVER::SolveActualPosition,SOLVER,root["params"]["IsBlind"].asBool(),root["params"]["IsSync"].asBool());
                     SolveThread.detach();
@@ -342,35 +341,35 @@ namespace AstroAir
                     std::thread SolveThread(&AIRSOLVER::SolveActualPositionOnline,SOLVER,root["params"]["IsBlind"].asBool(),root["params"]["IsSync"].asBool());
                     SolveThread.detach();
                 }
-                thread_num++;
+                SS->thread_num++;
                 break;
             }
             /*搜索所有可以执行的序列*/
             case "RemoteGetListAvalaibleSequence"_hash:{
                 std::thread SequenceThread(&AIRSCRIPT::GetListAvalaibleSequence,SCRIPT);
                 SequenceThread.detach();
-                thread_num++;
+                SS->thread_num++;
                 break;
             }
             /*运行拍摄序列*/
             case "RemoteSequence"_hash:{
                 std::thread SequenceThreadRun(&AIRSCRIPT::RunSequence,SCRIPT,root["params"]["SequenceFile"].asString());
                 SequenceThreadRun.detach();
-                thread_num++;
+                SS->thread_num++;
                 break;
             }
             /*搜索所有可以执行的脚本*/
             case "RemoteGetListAvalaibleDragScript"_hash:{
                 std::thread DragScriptThread(&AIRSCRIPT::GetListAvalaibleDragScript,SCRIPT);
                 DragScriptThread.detach();
-                thread_num++;
+                SS->thread_num++;
                 break;
             }
             /*运行脚本*/
             case "RemoteDragScript"_hash:{
                 std::thread DragScriptThreadRun(&AIRSCRIPT::RemoteDragScript,SCRIPT,root["params"]["DragScriptFile"].asString());
                 DragScriptThreadRun.detach();
-                thread_num++;
+                SS->thread_num++;
                 break;
             }
             /*连接导星软件*/
@@ -410,7 +409,7 @@ namespace AstroAir
      */
     void WSSERVER::send(std::string message)
     {
-        if(isConnected == true)
+        if(isConnected)
         {
             /*向WS客户端发送信息*/
             for (auto it : m_connections)
@@ -443,7 +442,7 @@ namespace AstroAir
         {
             m_server.close(it, websocketpp::close::status::normal, _("Switched off by user."));
         }
-        IDLog("Stop the server..\n");
+        IDLog(_("Stop the server..\n"));
         /*清除服务器句柄*/
         m_connections.clear();
         /*停止服务器*/
@@ -510,9 +509,9 @@ namespace AstroAir
         std::unique_ptr<Json::CharReader>const json_read(reader.newCharReader());
         json_read->parse(jsonStr.c_str(), jsonStr.c_str() + jsonStr.length(), &root,&errs);
         /*获取基础配置信息*/
-        MaxUsedTime = root["ServerConfig"]["Timeout"].asInt();
-        MaxClientNumber = root["ServerConfig"]["MaxClientNum"].asInt();
-        MaxThreadNumber = root["ServerConfig"]["MaxThreadNum"].asInt();
+        SS->MaxUsedTime = root["ServerConfig"]["Timeout"].asInt();
+        SS->MaxClientNumber = root["ServerConfig"]["MaxClientNum"].asInt();
+        SS->MaxThreadNumber = root["ServerConfig"]["MaxThreadNum"].asInt();
         return true;
     }
 
@@ -617,7 +616,7 @@ namespace AstroAir
             Root["ParamRet"]["list"].append(profile);
         }
         send(Root.toStyledString());
-        thread_num--;
+        SS->thread_num--;
     }
 
     /*
@@ -636,7 +635,7 @@ namespace AstroAir
     {
         if(FileName.empty())
         {
-            IDLog_Error(_("No file!\n"));
+            IDLog_Error(_("No file found in default direction!\n"));
             WebLog(_("No file list!"),3);
             SetupConnectError(8);
             return ;
@@ -653,9 +652,7 @@ namespace AstroAir
         }
         /*将文件转化为string格式*/
         while (getline(in, line))
-        {
             jsonStr.append(line);
-        }
         /*关闭文件*/
         in.close();
         /*将读取出的json数组转化为string*/
@@ -664,9 +661,8 @@ namespace AstroAir
         bool connect_ok = false;
         auto start = std::chrono::high_resolution_clock::now();     //开始计时
         /*连接指定品牌的指定型号相机*/
-        if(isCameraConnected == false)
+        if(!AIRCAMINFO->isCameraConnected)
         {
-            bool camera_ok = false;
             Camera_name = root["camera"]["name"].asString();
             if(!root["camera"]["brand"].asString().empty() && !Camera_name.empty())
             {
@@ -677,7 +673,7 @@ namespace AstroAir
                         case "ZWOASI"_hash:
                         {
                             /*初始化ASI相机，并赋值CCD*/
-                            ASICCD *ASICamera = new ASICCD();
+                            ASICCD *ASICamera = new ASICCD(AIRCAMINFO);
                             CCD = ASICamera;
                             ASICamera = nullptr;
                             break;
@@ -690,7 +686,7 @@ namespace AstroAir
                         case "QHYCCD"_hash:
                         {
                             /*初始化QHY相机，并赋值CCD*/
-                            QHYCCD *QHYCamera = new QHYCCD();
+                            QHYCCD *QHYCamera = new QHYCCD(AIRCAMINFO);
                             CCD = QHYCamera;
                             QHYCamera = nullptr;
                             break;
@@ -704,6 +700,7 @@ namespace AstroAir
                             /*初始化INDI相机，并赋值CCD*/
                             INDICCD *INDIDevice = new INDICCD();
                             CCD = INDIDevice;
+                            INDIDevice = nullptr;
                             break;
                         }
                     }
@@ -713,7 +710,7 @@ namespace AstroAir
                         case "GPhoto2"_hash:
                         {
                             /*初始化GPhoto2相机，并赋值CCD*/
-                            GPhotoCCD *GPhotoCamera = new GPhotoCCD();
+                            GPhotoCCD *GPhotoCamera = new GPhotoCCD(AIRCAMINFO);
                             CCD = GPhotoCamera;
                             GPhotoCamera = nullptr;
                             break;
@@ -729,22 +726,25 @@ namespace AstroAir
                 }
                 for(int i=1;i<=3;i++)
                 {
-                    if((CCD->Connect(Camera_name)) == true)
-                    {
-                        isCameraConnected = true;
-                        DeviceBuf[DeviceNum] = CCD->ReturnDeviceName();
-                        WebLog(_("Connect to ")+DeviceBuf[DeviceNum]+_(" successfully"),2);
-                        DeviceNum++;
-                        connect_ok = true;
-                        break;
-                    }
-                    if(i == 3&& camera_ok == false)
+                    if(i == 3)
                     {
                         /*相机未连接成功，返回错误信息*/
                         SetupConnectError(5);
                         WebLog(_("Could not connect to ") + Camera_name,3);
                         connect_ok = false;
                         break;
+                    }
+                    else
+                    {
+                        if(CCD->Connect(Camera_name))
+                        {
+                            AIRCAMINFO->isCameraConnected = true;
+                            DeviceBuf[DeviceNum] = CCD->ReturnDeviceName();
+                            WebLog(_("Connect to ")+DeviceBuf[DeviceNum]+_(" successfully"),2);
+                            DeviceNum++;
+                            connect_ok = true;
+                            break;
+                        }
                     }
                     sleep(4);
                 }
@@ -756,9 +756,8 @@ namespace AstroAir
         }
         error_c:{}
         /*连接指定品牌的指定型号赤道仪*/
-        if(isMountConnected == false)
+        if(!isMountConnected)
         {
-            bool mount_ok = false;		//赤道仪连接状态
             Mount_name = root["mount"]["name"].asString();
             if(!root["mount"]["brand"].asString().empty() && !Mount_name.empty())
             {
@@ -799,22 +798,25 @@ namespace AstroAir
 				}
                 for(int i=1;i<=3;i++)
                 {
-                    if((mount_ok = MOUNT->Connect(Mount_name)) == true)
-                    {
-                        isMountConnected = true;
-                        DeviceBuf[DeviceNum] = MOUNT->ReturnDeviceName();
-                        WebLog("Connect to "+DeviceBuf[DeviceNum]+" successfully",2);
-                        DeviceNum++;
-                        connect_ok = true;
-                        break;
-                    }
-                    if(i == 3&& mount_ok == false)
+                    if(i == 3)
                     {
                         /*赤道仪未连接成功，返回错误信息*/
                         SetupConnectError(5);
                         WebLog(_("Could not connect to ") + Mount_name,3);
                         connect_ok = false;
                         break;
+                    }
+                    else
+                    {
+                        if(MOUNT->Connect(Mount_name))
+                        {
+                            isMountConnected = true;
+                            DeviceBuf[DeviceNum] = MOUNT->ReturnDeviceName();
+                            WebLog("Connect to "+DeviceBuf[DeviceNum]+" successfully",2);
+                            DeviceNum++;
+                            connect_ok = true;
+                            break;
+                        }
                     }
                     sleep(4);
                 }
@@ -826,9 +828,8 @@ namespace AstroAir
         }
         error_m:{}
         /*连接指定品牌的指定型号电动调焦座*/
-        if(isFocusConnected == false)
+        if(!isFocusConnected)
         {
-            bool focus_ok = false;
             Focus_name = root["focus"]["name"].asString();
             if(!root["focus"]["brand"].asString().empty() && !Focus_name.empty())
             {
@@ -869,22 +870,25 @@ namespace AstroAir
 				}
                 for(int i = 0;i<=3;i++)
                 {
-                    if((focus_ok = FOCUS->Connect(Focus_name)) == true)
-                    {
-                        isFocusConnected = true;
-                        DeviceBuf[DeviceNum] = FOCUS->ReturnDeviceName();
-                        WebLog("Connect to "+DeviceBuf[DeviceNum]+" successfully",2);
-                        DeviceNum++;
-                        connect_ok = true;
-                        break;
-                    }
-                    if(i == 3&& focus_ok == false)
+                    if(i == 3)
                     {
                         /*电动调焦座未连接成功，返回错误信息*/
                         SetupConnectError(5);
                         WebLog("Could not connect to "+Focus_name,3);
                         connect_ok = false;
                         break;
+                    }
+                    else
+                    {
+                        if(FOCUS->Connect(Focus_name))
+                        {
+                            isFocusConnected = true;
+                            DeviceBuf[DeviceNum] = FOCUS->ReturnDeviceName();
+                            WebLog("Connect to "+DeviceBuf[DeviceNum]+" successfully",2);
+                            DeviceNum++;
+                            connect_ok = true;
+                            break;
+                        }
                     }
                     sleep(4);
                 }
@@ -896,9 +900,8 @@ namespace AstroAir
         }
         error_ff:{}
         /*连接指定品牌的指定型号滤镜轮*/
-        if(isFilterConnected == false)
+        if(!isFilterConnected)
         {
-            bool filter_ok = false;
             Filter_name = root["filter"]["name"].asString();
             if(!root["filter"]["brand"].asString().empty() && !Filter_name.empty())
             {
@@ -939,23 +942,23 @@ namespace AstroAir
 				}
                 for(int i = 1;i<=3;i++)
                 {
-                    if((filter_ok = FILTER->Connect(Filter_name)) == true)
+                    if(i == 3)
                     {
-                        isFilterConnected = true;
-                        DeviceBuf[DeviceNum] = FILTER->ReturnDeviceName();
-                        WebLog("Connect to "+DeviceBuf[DeviceNum]+" successfully",2);
-                        DeviceNum++;
-                        connect_ok = true;
+                        /*滤镜轮未连接成功，返回错误信息*/
+                        SetupConnectError(5);
+                        WebLog("Could not connect to "+Filter_name,3);
+                        connect_ok = false;
                         break;
                     }
                     else
                     {
-                        if(i == 3)
+                        if(FILTER->Connect(Filter_name))
                         {
-                            /*滤镜轮未连接成功，返回错误信息*/
-                            SetupConnectError(5);
-                            WebLog("Could not connect to "+Filter_name,3);
-                            connect_ok = false;
+                            isFilterConnected = true;
+                            DeviceBuf[DeviceNum] = FILTER->ReturnDeviceName();
+                            WebLog("Connect to "+DeviceBuf[DeviceNum]+" successfully",2);
+                            DeviceNum++;
+                            connect_ok = true;
                             break;
                         }
                     }
@@ -971,11 +974,10 @@ namespace AstroAir
         /*连接指定品牌的指定型号导星软件*/
         if(!isGuideConnected)
         {
-            bool guide_ok = false;
             Guide_name = root["Guide"]["name"].asString();
             if(!root["Guide"]["brand"].asString().empty() && !Guide_name.empty())
             {
-                switch(hash_(Guide.c_str()))
+                switch(hash_(root["Guide"]["brand"].asString().c_str()))
                 {
                     /*Max：事实上我们一般只会使用PHD2，所以LinGuider可以等其他做好以后再做*/
                     case "PHD2"_hash:
@@ -995,22 +997,25 @@ namespace AstroAir
                 }
                 for(int i = 1;i<=3;i++)
                 {
-                    if((guide_ok = GUIDE->Connect(Guide_name)) == true)
-                    {
-                        isGuideConnected = true;
-                        DeviceBuf[DeviceNum] = GUIDE->ReturnDeviceName();
-                        WebLog("Connect to "+DeviceBuf[DeviceNum]+" successfully",2);
-                        DeviceNum++;
-                        connect_ok = true;
-                        break;
-                    }
-                    if(i == 3&& guide_ok == false)
+                    if(i == 3)
                     {
                         /*导星软件未连接成功，返回错误信息*/
                         SetupConnectError(5);
-                        WebLog("Could not connect to "+root["Guide"]["brand"].asString(),3);
+                        WebLog(_("Could not connect to ")+root["Guide"]["brand"].asString(),3);
                         connect_ok = false;
                         break;
+                    }
+                    else
+                    {
+                        if(GUIDE->Connect(Guide_name))
+                        {
+                            isGuideConnected = true;
+                            DeviceBuf[DeviceNum] = GUIDE->ReturnDeviceName();
+                            WebLog(_("Connect to ")+DeviceBuf[DeviceNum]+_(" successfully"),2);
+                            DeviceNum++;
+                            connect_ok = true;
+                            break;
+                        }
                     }
                     sleep(4);
                 }
@@ -1018,7 +1023,7 @@ namespace AstroAir
         }
         else
         {
-            WebLog(root["Guide"]["brand"].asString()+" had already connected",3);
+            WebLog(root["Guide"]["brand"].asString()+_(" had already connected"),3);
         }
         error_g:{}
         auto end = std::chrono::high_resolution_clock::now();       //停止计时
@@ -1027,11 +1032,11 @@ namespace AstroAir
         if(diff.count() >= 50)
         {
             SetupConnectError(8);
-            thread_num--;
+            SS->thread_num--;
             return;
         }
         /*判断设备是否完全连接成功*/
-        if(connect_ok == true)
+        if(connect_ok)
         {
             SetupConnectSuccess();		//将连接上的设备列表发送给客户端
             EnvironmentDataSend();
@@ -1045,59 +1050,73 @@ namespace AstroAir
             SetupConnectError(5);
             WebLog(_("There were some errors in connecting the device"),3);
         }
-        thread_num--;
+        SS->thread_num--;
         return;
     }
     
+    /*
+     * name: SetupDisconnect(int timeout)
+     * describe: Disconnect from devices
+     * @param tiemout:Max time
+     * 描述： 与设备断开连接
+     * calls: Disconnect()
+     * calls: WebLog()
+     * calls: SetupDisconnectSuccess()
+     */
     void WSSERVER::SetupDisconnect(int timeout)
     {
         bool disconnect_ok = false;
-        if(isCameraConnected == true)
+        if(AIRCAMINFO->isCameraConnected)
         {
-            if((disconnect_ok = CCD->Disconnect()) == true)
-                WebLog("Disconnect from"+Camera_name,2);
+            if((disconnect_ok = CCD->Disconnect()))
+                WebLog(_("Disconnect from ")+Camera_name,2);
             else
-                WebLog("Could not Disconnect from"+Camera_name,3);
-            isCameraConnected = false;
+                WebLog(_("Could not Disconnect from ")+Camera_name,3);
+            AIRCAMINFO->isCameraConnected = false;
+            CCD = nullptr;
         }
-        if(isMountConnected == true)
+        if(isMountConnected)
         {
-            if((disconnect_ok = MOUNT->Disconnect()) == true)
-                WebLog("Disconnect from"+Mount_name,2);
+            if((disconnect_ok = MOUNT->Disconnect()))
+                WebLog(_("Disconnect from ")+Mount_name,2);
             else
-                WebLog("Could not Disconnect from"+Mount_name,3);
+                WebLog(_("Could not Disconnect from ")+Mount_name,3);
             isMountConnected = false;
+            MOUNT = nullptr;
         }
-        if(isFocusConnected == true)
+        if(isFocusConnected)
         {
-            if((disconnect_ok = FOCUS->Disconnect()) == true)
-                WebLog("Disconnect from"+Focus_name,2);
+            if((disconnect_ok = FOCUS->Disconnect()))
+                WebLog(_("Disconnect from ")+Focus_name,2);
             else
-                WebLog("Could not Disconnect from"+Focus_name,3);
+                WebLog(_("Could not Disconnect from ")+Focus_name,3);
             isFocusConnected = false;
+            FOCUS = nullptr;
         }
-        if(isFilterConnected == true)
+        if(isFilterConnected)
         {
-            if((disconnect_ok = FILTER->Disconnect()) == true)
-                WebLog("Disconnect from"+Filter_name,2);
+            if((disconnect_ok = FILTER->Disconnect()))
+                WebLog(_("Disconnect from ")+Filter_name,2);
             else
-                WebLog("Could not Disconnect from"+Filter_name,3);
+                WebLog(_("Could not Disconnect from ")+Filter_name,3);
             isFilterConnected = false;
+            FILTER = nullptr;
         }
-        if(isGuideConnected == true)
+        if(isGuideConnected)
         {
-            if((disconnect_ok = GUIDE->Disconnect()) == true)
-                WebLog("Disconnect from"+Guide_name,2);
+            if((disconnect_ok = GUIDE->Disconnect()))
+                WebLog(_("Disconnect from ")+Guide_name,2);
             else
-                WebLog("Could not Disconnect from"+Guide_name,3);
+                WebLog(_("Could not Disconnect from ")+Guide_name,3);
             isGuideConnected = false;
+            GUIDE = nullptr;
         }
-        if(disconnect_ok == true)
+        if(disconnect_ok)
         {
             WebLog(_("Successfully disconnected from all devices"),2);
             SetupDisconnectSuccess();
         }
-        thread_num--;
+        SS->thread_num--;
     }
 
     /*
@@ -1140,12 +1159,12 @@ namespace AstroAir
         {
             Json::Value Root;
             Root["Event"] = Json::Value("ControlData");
-            if(isCameraConnected)
+            if(AIRCAMINFO->isCameraConnected)
                 Root["CCDCONN"] = Json::Value(1);
             else
                 Root["CCDCONN"] = Json::Value(0);
             Root["PLACONN"] = Json::Value(1);
-            if(isCameraCoolingOn)
+            if(AIRCAMINFO->isCameraCoolingOn)
                 Root["CCDCOOL"] = Json::Value(1);
             else
                 Root["CCDCOOL"] = Json::Value(0);
@@ -1183,7 +1202,7 @@ namespace AstroAir
             Root["AFTEMP"] = Json::Value(FocusTemp);
             Root["AFPOS"] = Json::Value(FocusPosition);
             Root["CCDSTAT"] = Json::Value(1);
-            if(thread_num == 0)
+            if(SS->thread_num == 0)
                 Root["AIRSTAT"] = Json::Value(1);
             else
                 Root["AIRSTAT"] = Json::Value(0);
@@ -1207,7 +1226,7 @@ namespace AstroAir
      */
     void WSSERVER::SetupConnectSuccess()
     {
-        IDLog("Successfully connect device\n");
+        IDLog(_("Successfully connect device\n"));
         /*整合信息并发送至客户端*/
         Json::Value Root;
         Root["Event"] = Json::Value("RemoteActionResult");
@@ -1227,8 +1246,7 @@ namespace AstroAir
      */
     void WSSERVER::SetupConnectError(int id)
     {
-        IDLog_Error("Unable to connect device\n");
-        IDLog_DEBUG("Unable to connect device\n");
+        IDLog_Error(_("Unable to connect device\n"));
         /*整合信息并发送至客户端*/
         Json::Value Root;
         Root["Event"] = Json::Value("RemoteActionResult");
@@ -1249,7 +1267,7 @@ namespace AstroAir
         /*防止多次连接导致错误*/
         memset(DeviceBuf,0,5);
         DeviceNum = 0;
-        IDLog("Successfully disconnect from devices\n");
+        IDLog(_("Successfully disconnect from devices\n"));
         /*整合信息并发送至客户端*/
         Json::Value Root;
         Root["Event"] = Json::Value("RemoteActionResult");
@@ -1292,14 +1310,13 @@ namespace AstroAir
      */
     void WSSERVER::UnknownMsg()
     {
-        IDLog_Error("An unknown message was received from the client\n");
-        IDLog_DEBUG("An unknown message was received from the client\n");
+        IDLog_Error(_("An unknown message was received from the client\n"));
         /*整合信息并发送至客户端*/
         Json::Value Root,error;
         Root["result"] = Json::Value(1);
 		Root["code"] = Json::Value();
         Root["id"] = Json::Value(403);
-        error["message"] = Json::Value("Unknown information");
+        error["message"] = Json::Value(_("Unknown information"));
         Root["error"] = error;
         send(Root.toStyledString());
     }
@@ -1314,7 +1331,7 @@ namespace AstroAir
      */
     void WSSERVER::UnknownDevice(int id,std::string message)
     {
-        IDLog_Error("An unknown device was found,please check the connection\n");
+        IDLog_Error(_("An unknown device was found,please check the connection\n"));
         /*整合信息并发送至客户端*/
         Json::Value Root,error;
         Root["result"] = Json::Value(1);
@@ -1327,14 +1344,13 @@ namespace AstroAir
 
     void WSSERVER::ClientNumError()
     {
-        IDLog_Error("There are too many clients connected with server\n");
+        IDLog_Error(_("There are too many clients connected with server\n"));
         /*整合信息并发送至客户端*/
-        Json::Value Root,error;
+        Json::Value Root;
         Root["result"] = Json::Value(1);
 		Root["code"] = Json::Value();
         Root["id"] = Json::Value(601);
-        error["message"] = Json::Value("客户端数量过多");
-        Root["error"] = error;
+        Root["error"]["message"] = Json::Value(_("Too many client!"));
         send(Root.toStyledString());
     }
     

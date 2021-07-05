@@ -49,7 +49,7 @@ namespace AstroAir
     {
         public:
             /*构造函数，重置参数*/
-			explicit GPhotoCCD();
+			explicit GPhotoCCD(CameraInfo *NEW);
 			/*析构函数*/
 			~GPhotoCCD();
 			/*连接相机*/
@@ -73,16 +73,9 @@ namespace AstroAir
 			/*制冷*/
 			virtual bool Cooling(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF,int CamTemp) override;
         private:
-            int CamNumber;
-			int CamId;
-			char *CamName[MAXDEVICENUM];
-			int CamBin;
-
-            /*相机使用参数（使用原子变量）*/
-			std::atomic_bool isConnected;
-			std::atomic_bool InExposure;
-			std::atomic_bool InVideo;
-			std::atomic_bool InCooling;
+            CameraInfo *GPHOTOINFO;
+			Camera *camera;
+			GPContext *context;
     };
 }
 

@@ -35,8 +35,12 @@ Description:QHY camera driver
 #include "../../tools/ImgTools.h"
 
 #include "../../logger.h"
+#include "../../config.h"
 
-#include <fitsio.h>
+#include <string.h>
+#include <unistd.h>
+#include <json/json.h>
+#include <fstream>
 
 namespace AstroAir
 {
@@ -45,14 +49,25 @@ namespace AstroAir
      * describe: Initialization, for camera constructor
      * 描述：构造函数，用于初始化相机参数
      */
-	QHYCCD::QHYCCD()
+	QHYCCD::QHYCCD(CameraInfo *NEW)
 	{
-		CamNumber = 0;
-		CamBin = 0;
-		isConnected = false;
-		InVideo = false;
-		InExposure = false;
-		InCooling = false;
+		QHYCAMERA = NEW;
+		QHYCAMERA->Exposure = 0;
+		QHYCAMERA->ExposureUsed = 0;
+		QHYCAMERA->Gain = 0;
+		QHYCAMERA->Offset = 0;
+		QHYCAMERA->Temperature = 0;
+		QHYCAMERA->ID = 0;
+		QHYCAMERA->Image_Height = 0;
+		QHYCAMERA->Image_Width = 0;
+		QHYCAMERA->ImageMaxHeight = 0;
+		QHYCAMERA->ImageMaxWidth = 0;
+		QHYCAMERA->InExposure = false;
+		QHYCAMERA->isCameraConnected = false;
+		QHYCAMERA->isCameraCoolingOn = false;
+		QHYCAMERA->isColorCamera = false;
+		QHYCAMERA->isCoolCamera = false;
+		QHYCAMERA->isGuidingCamera = false;
 	}
 	
 	/*
@@ -64,7 +79,7 @@ namespace AstroAir
      */
 	QHYCCD::~QHYCCD()
 	{
-		if (isConnected == true)
+		if (QHYCAMERA->isCameraConnected)
 		{
 			Disconnect();
 		}
@@ -91,39 +106,38 @@ namespace AstroAir
 		/*初始化SDK*/
 		if((retVal = InitQHYCCDResource()) != QHYCCD_SUCCESS)
 		{
-			IDLog("Unable to initialize SDK settings,error code is %d please check system settings\n",retVal);
+			IDLog_Error(_("Unable to initialize SDK settings,error code is %d please check system settings\n"),retVal);
 			return false;
 		}
 		else
 		{
-			IDLog("Init SDK successfully!\n");
+			IDLog(_("Init SDK successfully!\n"));
 			/*搜索QHY相机数量*/
-			if((CamNumber = ScanQHYCCD()) <= 0)
+			if((QHYCAMERA->Count = ScanQHYCCD()) <= 0)
 			{
-				IDLog("QHY camera not found, please check the power supply or make sure the camera is connected.\n");
+				IDLog_Error(_("QHY camera not found, please check the power supply or make sure the camera is connected.\n"));
 				return false;
 			}
 			else
 			{
 				/*根据相机数量依次搜索*/
-				for(int i = 0;i < CamNumber;i++)
+				for(int i = 0;i < QHYCAMERA->Count;i++)
 				{
 					/*获取相机ID*/
 					if((GetQHYCCDId(i, iCamId)) != QHYCCD_SUCCESS)
 					{
-						IDLog("Unable to get camera ID, please check connection\n");
+						IDLog_Error(_("Unable to get camera ID, please check connection\n"));
 						return false;
 					}
 					strcpy(CamId,iCamId);
-					char *p = strtok(iCamId,"-");
 					/*判断当前相机是否为指定相机*/
-					if(p == Device_name)
+					if(strtok(iCamId,"-") == Device_name)
 					{
-						IDLog("Find %s.\n",iCamId);
+						IDLog(_("Find %s.\n"),iCamId);
 						/*打开相机*/
 						if((pCamHandle = OpenQHYCCD(CamId)) == NULL)
 						{
-							IDLog("Unable to turn on the %s.\n",iCamId);
+							IDLog_Error(_("Unable to turn on the %s.\n"),iCamId);
 							return false;
 						}
 						else
@@ -131,20 +145,20 @@ namespace AstroAir
 							retVal = IsQHYCCDControlAvailable(pCamHandle, CAM_SINGLEFRAMEMODE);
 							if (SetQHYCCDStreamMode(pCamHandle, 0) != QHYCCD_SUCCESS)
 							{
-								IDLog("This camera doesn't support single frame shooting\n");
+								IDLog_Error(_("This camera doesn't support single frame shooting\n"));
 								return false;
 							}
 							/*初始化相机*/
 							if(InitQHYCCD(pCamHandle) != QHYCCD_SUCCESS)
 							{
-								IDLog("Unable to initialize connection to camera.\n");
+								IDLog_Error(_("Unable to initialize connection to camera.\n"));
 								return false;
 							}
 							else
 							{
-								isConnected = true;
-								isCameraConnected = true;
-								IDLog("Camera turned on successfully\n");
+								QHYCAMERA->isCameraConnected = true;
+								QHYCAMERA->isCameraConnected = true;
+								IDLog(_("Camera turned on successfully\n"));
 								/*获取连接相机配置信息，并存入参数*/
 								UpdateCameraConfig();
 								return true;
@@ -152,7 +166,7 @@ namespace AstroAir
 						}
 					}
 				}
-				IDLog("The specified camera was not found. Please check the camera connection");
+				IDLog_Error(_("The specified camera was not found. Please check the camera connection"));
 				return false;
 			}
 		}
@@ -173,41 +187,41 @@ namespace AstroAir
 	bool QHYCCD::Disconnect()
 	{
 		/*在关闭相机之前停止所有任务*/
-		if(InVideo == true)
+		if(QHYCAMERA->InVideo)
 		{
 			if(StopQHYCCDLive(pCamHandle) != QHYCCD_SUCCESS)		//停止视频拍摄
 			{
-				IDLog("Unable to stop video capture, please try again.\n");
+				IDLog_Error(_("Unable to stop video capture, please try again.\n"));
 				return false;
 			}
-			IDLog("Stop video capture.\n");
+			IDLog(_("Stop video capture.\n"));
 		}
-		if(InExposure == true)
+		if(QHYCAMERA->InExposure)
 		{
 			if(CancelQHYCCDExposingAndReadout(pCamHandle) != QHYCCD_SUCCESS)		//停止曝光
 			{
-				IDLog("Unable to stop exposure, please try again.\n");
+				IDLog_Error(_("Unable to stop exposure, please try again.\n"));
 				return false;
 			}
-			IDLog("Stop exposure.\n");
+			IDLog(_("Stop exposure.\n"));
 		}
 		/*在关闭相机之前保存设置*/
 		//SaveConfig();
 		/*关闭相机*/
 		if(CloseQHYCCD(pCamHandle) != QHYCCD_SUCCESS)		//关闭相机
 		{
-			IDLog("Unable to turn off the camera, please try again");
+			IDLog_Error(_("Unable to turn off the camera, please try again"));
 			return false;
 		}
 		if ((retVal = ReleaseQHYCCDResource()) != QHYCCD_SUCCESS)
 		{
-			printf("Cannot release SDK resources, error %d.\n", retVal);
+			IDLog_Error(_("Cannot release SDK resources, error %d.\n"), retVal);
 		}
 		else
 		{
-			printf("SDK resources released.\n"); 
+			IDLog(_("SDK resources released.\n")); 
 		}
-		IDLog("Disconnect from camera\n");
+		IDLog(_("Disconnect from camera\n"));
 		return true;
     }
     
@@ -231,21 +245,21 @@ namespace AstroAir
 		retVal = IsQHYCCDControlAvailable(pCamHandle, CAM_COLOR);
   		if (retVal == BAYER_GB || retVal == BAYER_GR || retVal == BAYER_BG || retVal == BAYER_RG)
 		{
-			isColorCamera = true;
+			QHYCAMERA->isColorCamera = true;
 			channels = 3;
 		}
 		if((retVal = IsQHYCCDControlAvailable(pCamHandle, CONTROL_COOLER)) == QHYCCD_SUCCESS)
-			isCoolCamera = true;
+			QHYCAMERA->isCoolCamera = true;
 		if((retVal = IsQHYCCDControlAvailable(pCamHandle, CONTROL_ST4PORT)) == QHYCCD_SUCCESS)
-			isGuideCamera = true;
-		if((retVal = GetQHYCCDChipInfo(pCamHandle, &chipWidth, &chipHeight, &iMaxWidth, &iMaxHeight, &pixelWidth, &pixelHeight, &Image_type)) != QHYCCD_SUCCESS)
+			QHYCAMERA->isGuidingCamera = true;
+		if((retVal = GetQHYCCDChipInfo(pCamHandle, &chipWidth, &chipHeight, (uint32_t*)&QHYCAMERA->ImageMaxWidth, (uint32_t*)&QHYCAMERA->ImageMaxHeight, &pixelWidth, &pixelHeight, (uint32_t*)&QHYCAMERA->ImageType)) != QHYCCD_SUCCESS)
 		{
-			IDLog("Unable to get camera parameters, please check the connection\n");
+			IDLog_Error(_("Unable to get camera parameters, please check the connection\n"));
 			return false;
 		}
-		CamWidth = iMaxWidth;
-		CamHeight = iMaxHeight;
-		IDLog("Camera information obtained successfully.\n");
+		QHYCAMERA->Image_Width = QHYCAMERA->ImageMaxWidth;
+		QHYCAMERA->Image_Height = QHYCAMERA->ImageMaxHeight;
+		IDLog(_("Camera information obtained successfully.\n"));
 		return true;
 	}
 
@@ -269,50 +283,48 @@ namespace AstroAir
      */
 	bool QHYCCD::StartExposure(int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset)
 	{
-		std::unique_lock<std::mutex> guard(condMutex);
 		double blink_duration = exp * 1000000;
-		CamBin = bin;
-		IDLog("Blinking %ld time(s) before exposure\n", blink_duration);
+		QHYCAMERA->Bin = bin;
+		IDLog(_("Blinking %ld time(s) before exposure\n"), blink_duration);
 		if((retVal = IsQHYCCDControlAvailable(pCamHandle,CONTROL_EXPOSURE)) != QHYCCD_SUCCESS || (retVal = SetQHYCCDParam(pCamHandle,CONTROL_EXPOSURE,blink_duration)) != QHYCCD_SUCCESS)
 		{
-			IDLog("Failed to set blink exposure to %ldus, error %d\n", blink_duration, retVal);
+			IDLog_Error(_("Failed to set blink exposure to %ldus, error %d\n"), blink_duration, retVal);
 			return false;
 		}
 		else
 		{
-			if(SetCameraConfig(bin,Gain,Offset) != true)
+			if(!SetCameraConfig(bin,Gain,Offset))
 			{
-				IDLog("Failed to set camera configure\n");
+				IDLog_Error(_("Failed to set camera configure\n"));
 				return false;
 			}
 			else
 			{
-				InExposure = true;
+				QHYCAMERA->InExposure = true;
 				if((retVal = ExpQHYCCDSingleFrame(pCamHandle)) != QHYCCD_ERROR)
 				{
 					usleep(10);
 				}
 				else
 				{
-					IDLog("Blink exposure failed, error code is %d\n", retVal);
+					IDLog_Error(_("Blink exposure failed, error code is %d\n"), retVal);
 					AbortExposure();
 					return false;
                 }
-				InExposure = false;
+				QHYCAMERA->InExposure = false;
             }
         }
-		guard.unlock();
         if(IsSave == true)
         {
-			IDLog("Finished exposure and save image locally\n");
+			IDLog(_("Finished exposure and save image locally\n"));
 			if(SaveImage(FitsName) != true)
 			{
-				IDLog("Could not save image correctly,please check the config\n");
+				IDLog_Error(_("Could not save image correctly,please check the config\n"));
 				return false;
 			}
 			else
 			{
-				IDLog("Saved Fits and JPG images %s successfully in locally\n",FitsName.c_str());
+				IDLog(_("Saved Fits and JPG images %s successfully in locally\n"),FitsName.c_str());
 			}
 		}
 		return true;
@@ -329,13 +341,13 @@ namespace AstroAir
      */
 	bool QHYCCD::AbortExposure()
 	{
-		IDLog("Aborting camera exposure...\n");
+		IDLog(_("Aborting camera exposure...\n"));
 		if((retVal = CancelQHYCCDExposingAndReadout(pCamHandle)) != QHYCCD_SUCCESS)
 		{
-			IDLog("Unable to stop camera exposure,error id is %d,please try again.\n",retVal);
+			IDLog_Error(_("Unable to stop camera exposure,error id is %d,please try again.\n"),retVal);
 			return false;
 		}
-		InExposure = false;
+		QHYCAMERA->InExposure = false;
 		return true;
 	}
 	
@@ -351,41 +363,42 @@ namespace AstroAir
      */
 	bool QHYCCD::SetCameraConfig(double Bin,double Gain,double Offset)
 	{
-		
 		retVal = IsQHYCCDControlAvailable(pCamHandle, CONTROL_USBTRAFFIC);
   		if ((retVal = SetQHYCCDParam(pCamHandle, CONTROL_USBTRAFFIC, 50)) != QHYCCD_SUCCESS)
   		{
-			IDLog("Unable to set camera USBTRAFFIC failure, error code is  %d\n", retVal);
+			IDLog_Error(_("Unable to set camera USBTRAFFIC failure, error code is  %d\n"), retVal);
 			return false;
 		}
 		/*设置相机增益*/
 		retVal = IsQHYCCDControlAvailable(pCamHandle, CONTROL_GAIN);
 		if ((retVal = SetQHYCCDParam(pCamHandle, CONTROL_GAIN, Gain)) != QHYCCD_SUCCESS)
 		{
-			IDLog("Unable to set camera GAIN failure, error code is  %d\n", retVal);
+			IDLog_Error(_("Unable to set camera GAIN failure, error code is  %d\n"), retVal);
 			return false;
 		}
 		/*设置相机偏置*/
 		retVal = IsQHYCCDControlAvailable(pCamHandle, CONTROL_OFFSET);
 		if((retVal = SetQHYCCDParam(pCamHandle, CONTROL_OFFSET, Offset)) != QHYCCD_SUCCESS)
 		{
-			IDLog("Unable to set camera OFFSET failure, error code is  %d\n", retVal);
+			IDLog_Error(_("Unable to set camera OFFSET failure, error code is  %d\n"), retVal);
 			return false;
 		}
 		/*设置像素合并模式*/
+		QHYCAMERA->Image_Height =  QHYCAMERA->Image_Height / Bin;
+		QHYCAMERA->Image_Width = QHYCAMERA->Image_Width /Bin;
 		if((retVal = SetQHYCCDBinMode(pCamHandle,Bin,Bin)) != QHYCCD_SUCCESS)
 		{
-			IDLog("Unable to set camera BIN MODE failure, error code is  %d\n", retVal);
+			IDLog_Error(_("Unable to set camera BIN MODE failure, error code is  %d\n"), retVal);
 			return false;
 		}
 		else
 		{
-			if((retVal = SetQHYCCDResolution(pCamHandle, 0, 0, CamWidth/Bin, CamHeight/Bin)) != QHYCCD_SUCCESS)
+			if((retVal = SetQHYCCDResolution(pCamHandle, 0, 0, QHYCAMERA->Image_Width, QHYCAMERA->Image_Height)) != QHYCCD_SUCCESS)
 			{
-				IDLog("Unable to set camera frame size failure, error code is  %d\n", retVal);
+				IDLog_Error(_("Unable to set camera frame size failure, error code is  %d\n"), retVal);
 				return false;
 			}
-			CamBin = Bin;
+			QHYCAMERA->Bin = Bin;
 		}
 		/*设置相机USB速度
 		retVal = IsQHYCCDControlAvailable(pCamHandle, CONTROL_SPEED);
@@ -399,7 +412,7 @@ namespace AstroAir
 		retVal = IsQHYCCDControlAvailable(pCamHandle, CONTROL_USBTRAFFIC);
 		if((retVal = SetQHYCCDParam(pCamHandle, CONTROL_USBTRAFFIC,50)) != QHYCCD_SUCCESS)
 		{
-			IDLog("Unable to set camera speed failure, error code is  %d\n", retVal);
+			IDLog_Error(_("Unable to set camera speed failure, error code is  %d\n"), retVal);
 			return false;
 		}
 		/*设置相机图像深度*/
@@ -407,7 +420,7 @@ namespace AstroAir
 		{
 			if ((retVal = SetQHYCCDParam(pCamHandle, CONTROL_TRANSFERBIT, 16)) != QHYCCD_SUCCESS)
 			{
-				IDLog("Unable to set camera 16 bits mode failure, error code is  %d\n", retVal);
+				IDLog_Error(_("Unable to set camera 16 bits mode failure, error code is  %d\n"), retVal);
 				return false;
 			}
 		}
@@ -415,7 +428,7 @@ namespace AstroAir
 		{
 			if ((retVal = SetQHYCCDParam(pCamHandle, CONTROL_TRANSFERBIT,8)) != QHYCCD_SUCCESS)
 			{
-				IDLog("Unable to set camera 8 bits mode failure, error code is  %d\n", retVal);
+				IDLog_Error(_("Unable to set camera 8 bits mode failure, error code is  %d\n"), retVal);
 				return false;
 			}
 		}
@@ -440,59 +453,24 @@ namespace AstroAir
      */
     bool QHYCCD::SaveImage(std::string FitsName)
     {
-		if(InExposure == false && InVideo == false)
-		{	
-			//std::unique_lock<std::mutex> guard(ccdBufferLock);
+		if(QHYCAMERA->InExposure == false && QHYCAMERA->InVideo == false)
+		{
 			uint32_t imgSize = GetQHYCCDMemLength(pCamHandle);		//设置图像大小
-			//long imgSize = CamWidth*CamHeight*(1 + (Image_type==16));
 			unsigned char * imgBuf = new unsigned char [imgSize];		//图像缓冲区大小
-			long naxis = 2;
-			CamWidth /= CamBin;
-			CamHeight /= CamBin;
 			/*曝光后获取图像信息*/
-			if ((retVal = GetQHYCCDSingleFrame(pCamHandle, &CamWidth, &CamHeight, &Image_type, &channels, imgBuf)) != QHYCCD_SUCCESS)
+			if ((retVal = GetQHYCCDSingleFrame(pCamHandle, (uint32_t*)&QHYCAMERA->Image_Width, (uint32_t*)&QHYCAMERA->Image_Height, (uint32_t*)&QHYCAMERA->ImageType, &channels, imgBuf)) != QHYCCD_SUCCESS)
 			{
 				/*获取图像失败*/
-				IDLog("GetQHYCCDSingleFrame error (%d)\n",retVal);
+				IDLog_Error(_("GetQHYCCDSingleFrame error (%d)\n"),retVal);
 				return false;
 			}
-			//guard.unlock();
-			IDLog("Download complete.\n");
+			IDLog(_("Download complete.\n"));
 			/*将图像写入本地文件*/
 			#ifdef HAS_FITSIO
-				char datatype[40];		//相机品牌
-				char keywords[40];		//相机品牌
-				char value[20];		//相机名称
-				char description[40];		//相机描述
-				strcpy(datatype, "TSTRING");
-				strcpy(keywords, "Camera");
-				strcpy(value,iCamId);
-				strcpy(description,"ZWOASI");
-
-				fitsfile *fptr;		//cFitsIO定义
-				int FitsStatus;		//cFitsio状态
-				long naxes[2] = {CamWidth,CamHeight};
-				long nelements;
-				long fpixel = 1;
-
-				fits_create_file(&fptr, FitsName.c_str(), &FitsStatus);		//创建Fits文件
-				if(Image_type == 1)		//创建Fits图像
-					fits_create_img(fptr, USHORT_IMG, naxis, naxes, &FitsStatus);		//16位
-				else
-					fits_create_img(fptr, BYTE_IMG,   naxis, naxes, &FitsStatus);		//8位或12位
-				if(strcmp(datatype, "TSTRING") == 0)		//写入Fits图像头文件
-				{
-					fits_update_key(fptr, TSTRING, keywords, value, description, &FitsStatus);
-				}
-				if(Image_type == 1)		//将缓存图像写入SD卡
-					fits_write_img(fptr, TUSHORT, fpixel, imgSize, &imgBuf[0], &FitsStatus);		//16位
-				else
-					fits_write_img(fptr, TBYTE, fpixel, imgSize, &imgBuf[0], &FitsStatus);		//8位或12位
-				fits_close_file(fptr, &FitsStatus);		//关闭Fits图像
-				fits_report_error(stderr, FitsStatus);		//如果有错则返回错误信息
+				FitsIO::SaveFitsImage(imgBuf,FitsName.c_str(),QHYCAMERA->ImageType,QHYCAMERA->isColorCamera,QHYCAMERA->Image_Height,QHYCAMERA->Image_Width,QHYCAMERA->Name[QHYCAMERA->ID],QHYCAMERA->Exposure,QHYCAMERA->Bin,QHYCAMERA->Offset,QHYCAMERA->Gain,QHYCAMERA->Temperature);
 			#endif
 			#ifdef HAS_OPENCV
-				img_data = "data:image/jpg;base64," + ImageTools::ConvertUCto64(imgBuf,isColorCamera,CamHeight,CamWidth);
+				IMGINFO->img_data = "data:image/jpg;base64," + ImageTools::ConvertUCto64(imgBuf,QHYCAMERA->isColorCamera,QHYCAMERA->Image_Height,QHYCAMERA->Image_Width);
 			#endif
 			if(imgBuf)
 				delete[] imgBuf;		//删除图像缓存
@@ -502,15 +480,47 @@ namespace AstroAir
 
 	bool QHYCCD::Cooling(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF,int CamTemp)
 	{
-		if(isCoolCamera == true)
+		if(QHYCAMERA->isCoolCamera == true)
 		{
 
 		}
 		else
 		{
-			IDLog("This is not a cooling camera. The cooling mode cannot be turned on. Please choose another camera\n");
+			IDLog_Error(_("This is not a cooling camera. The cooling mode cannot be turned on. Please choose another camera\n"));
 			return false;
 		}
 		return true;
 	}
+
+	/*
+     * name: SaveCameraConfig()
+     * describe: Save camera configuration
+     * 描述：保存相机参数
+     */
+	bool QHYCCD::SaveCameraConfig()
+    {
+        Json::Value Root;
+        Root["Brand"] = Json::Value("QHYCCD");
+        Root["Name"] = Json::Value(QHYCAMERA->Name[QHYCAMERA->ID]);
+		/*相机设置*/
+        Root["Config"]["BinMode"] = Json::Value(QHYCAMERA->Bin);
+        Root["Config"]["Exposure"] = Json::Value(QHYCAMERA->Exposure);
+		Root["Config"]["CameraFrameWidth"] = Json::Value(QHYCAMERA->Image_Width);
+		Root["Config"]["CameraFrameHeight"] = Json::Value(QHYCAMERA->Image_Height);
+		Root["Config"]["ImageType"] = Json::Value(QHYCAMERA->ImageType);
+		Root["Config"]["Temperature"] = Json::Value(QHYCAMERA->Temperature);
+		/*相机信息*/
+		Root["Info"]["IsCoolCamera"] = Json::Value(QHYCAMERA->isCoolCamera);
+		Root["Info"]["IsColorCamera"] = Json::Value(QHYCAMERA->isColorCamera);
+		Root["Info"]["IsGuidingCamera"] = Json::Value(QHYCAMERA->isGuidingCamera);
+		Root["Info"]["MaxFrameWidth"] = Json::Value(QHYCAMERA->ImageMaxWidth);
+		Root["Info"]["MaxFrameHeight"] = Json::Value(QHYCAMERA->ImageMaxHeight);
+		Root["Info"]["LastImageName"] = Json::Value(QHYCAMERA->LastImageName);
+		/*输出至对应相机名称文件*/
+		std::string temp = QHYCAMERA->Name[QHYCAMERA->ID];
+		std::ofstream out("config/camera/" + temp + ".json",std::ios::trunc);
+		out << Root.toStyledString();
+		out.close();
+		return true;
+    }
 }

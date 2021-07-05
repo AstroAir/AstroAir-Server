@@ -24,8 +24,8 @@ else
 fi
 
 project_path=$(cd `dirname $0`; pwd)
-echo $project_path
-sudo cp $project_path/scripts/config.h /usr/include/libqhy
+
+sudo cp $project_path/config.h /usr/include/libqhy
 
 echo "Start Builing..."
 mkdir build && cd build

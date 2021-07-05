@@ -9,6 +9,7 @@
 ../../../src/air_script.cpp
 ../../../src/air_search.cpp
 ../../../src/air_solver.cpp
+../../../src/air_autofocus.cpp
 
 ../../../src/camera/air-asi/asi_ccd.cpp
 ../../../src/camera/air-gphoto2/gphoto2_ccd.cpp
@@ -24,3 +25,5 @@
 
 ../../../src/tools/ImgFitsIO.cpp
 ../../../src/tools/ImgTools.cpp
+../../../src/tools/AutoUpdate.cpp
+../../../src/tools/TcpSocket.cpp

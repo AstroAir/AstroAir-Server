@@ -37,7 +37,7 @@ Description:Filter port
 
 namespace AstroAir
 {
-    AIRFILTER *FILTER;
+    AIRFILTER *FILTER = nullptr;
     std::atomic_bool isFilterConnected;
 
     /*

@@ -5,6 +5,7 @@ os:
 dist: focal
 compiler:
   - clang
+  - gcc
 branches:
   only:
   - master
