@@ -12,7 +12,7 @@ branches:
 before_install:
   - sudo apt update && sudo apt upgrade
   - echo "Update and Upgrade\n"
-  - sudo ./scripts/build.sh
+  - sudo sh scripts/build.sh
 before_script:
   - echo "Prepare to run the script"
 after_script:
