@@ -52,6 +52,8 @@ addons:
       - libnova-dev
       - libgphoto2-dev
       - libboost-dev
+      - libusb-1.0-0-dev
+      - libgsl-dev
 
   hosts:
     - ci.astroair.cn
