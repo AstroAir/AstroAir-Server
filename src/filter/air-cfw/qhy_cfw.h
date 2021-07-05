@@ -36,7 +36,7 @@ Description:CFW Filter offical port
 
 #include "../../air_filter.h"
 
-#include <qhyccd.h>
+#include <libqhy/qhyccd.h>
 
 namespace AstroAir
 {

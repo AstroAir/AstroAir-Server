@@ -37,7 +37,7 @@ Description:QHY camera driver
 #define _QHYCCD_H_
 
 #include "../../wsserver.h"
-#include <qhyccd.h>
+#include <libqhy/qhyccd.h>
 #include "../../air_camera.h"
 
 #include <atomic>
