@@ -7,7 +7,7 @@ if [ ! -d "/usr/include/json" ]; then
     git clone https://github.com/open-source-parsers/jsoncpp
     cd jsoncpp
     mkdir build && cd build
-    cmake -DCMAKE_INSTALL_PREFIX=/usr ..
+    cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_CXX_COMPILER=clang++-11 ..
     make -j4
     sudo make install
     cd ../..
