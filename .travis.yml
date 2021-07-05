@@ -40,6 +40,7 @@ addons:
       - make
       - cmake
       - indi-full
+      - phd2
       - clang-11
       - libwebsocketpp-dev
       - libjsoncpp-dev
@@ -48,8 +49,10 @@ addons:
       - libcfitsio-dev
       - libccfits-dev
       - libssl-dev
+      - libnova-dev
+      
   hosts:
     - ci.astroair.cn
-    
+
 notifications:
   email: false
