@@ -15,3 +15,7 @@ if [ ! -d "/usr/include/json" ]; then
 else
     echo "Jsoncpp Library has already built"
 fi
+
+if [ ! -f "/usr/include/libqhy/config.h" ]; then
+    sudo cp config.h /usr/include/libqhy
+fi
