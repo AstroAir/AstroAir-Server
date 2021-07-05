@@ -42,12 +42,6 @@ if(HAS_JSONCPP)
 		target_link_libraries(airserver PUBLIC libjsoncpp.so)
 	else()
 		message("-- Could not found JsonCpp library.Try to build it!")
-		add_custom_command(
-			TARGET airserver
-			PRE_BUILD
-			COMMAND sudo apt install libjsoncpp-dev -y
-			COMMENT "Downloaded and Building JSONCPP Library"
-		)
 	endif()
 else()
 	message("Please check setting,jsoncpp is one of the main library!")
