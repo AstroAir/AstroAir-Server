@@ -108,7 +108,7 @@ namespace AstroAir
                     {
                         IDLog(_("Find %s on port %s\n"), model, port);
                         GPHOTOINFO->ID = i;
-                        GPHOTOINFO->Name[GPHOTOINFO->ID];
+                        GPHOTOINFO->Name[GPHOTOINFO->ID] = const_cast<char *>(model);
                         gp_camera_new(&camera);
                         if(gp_camera_init(camera, context) != GP_OK)
                         {

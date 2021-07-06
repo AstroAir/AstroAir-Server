@@ -35,6 +35,15 @@ Description:Image Progress Tools
 #define _IMG_TOOLS_H_
 
 #include <string>
+namespace AstroAir
+{
+    struct ImageInfo
+    {
+        std::string img_data;
+        double HFD;
+        int StarIndex;
+    };extern ImageInfo *IMGINFO;
+}
 
 namespace AstroAir::ImageTools
 {
@@ -45,6 +54,7 @@ namespace AstroAir::ImageTools
     
     /*图像信息处理*/
     void clacHistogram(unsigned char *imgBuf,bool isColor,int ImageHeight,int ImageWidth);      /*计算直方图*/
+    
 }
 
 #endif

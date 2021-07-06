@@ -45,6 +45,12 @@ configure_file(config.h.in ${PROJECT_SOURCE_DIR}/src/config.h)
 
 add_executable(airserver src/main.cpp)
 
+IF(CMAKE_CL_64)
+    set(PLATFORM x64)
+ELSE(CMAKE_CL_64)
+    set(PLATFORM x86)
+ENDIF(CMAKE_CL_64)
+
 set(PLATFORM x64)
 set(MODE DEBUG)
 set(LOG "install.txt")
@@ -62,10 +68,6 @@ include(FindGPHOTO2)
 include(SetTelescope)
 #导星
 include(FindPHD2)
-#依赖库
-include(FindIMGTOOLS)
-include(FindJSONCPP)
-include(FindNOVA)
 #GUI
 include(FindIMGUI)
 
@@ -91,12 +93,15 @@ add_library(LIBSEARCH src/air_search.cpp)		#搜索
 target_link_libraries(airserver PUBLIC LIBSEARCH)
 add_library(LIBCOM src/telescope/air_com.cpp)		#COM
 target_link_libraries(airserver PUBLIC LIBCOM)
-#add_library(LIBAUTOFOCUS src/air_autofocus.cpp)			#自动对焦
-#target_link_libraries(airserver PUBLIC LIBAUTOFOCUS)
 add_library(LIBAUTOUPDATE src/tools/AutoUpdate.cpp)				#自动检查更新
 target_link_libraries(airserver PUBLIC LIBAUTOUPDATE)
 add_library(LIBTCP src/tools/TcpSocket.cpp)				#自动检查更新
 target_link_libraries(airserver PUBLIC LIBTCP)
+
+#依赖库
+include(FindIMGTOOLS)
+include(FindJSONCPP)
+include(FindNOVA)
 
 set(LINK_DIR /usr/lib)
 link_directories(${LINK_DIR})

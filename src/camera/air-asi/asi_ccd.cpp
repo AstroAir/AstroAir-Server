@@ -349,7 +349,7 @@ namespace AstroAir
 		const long blink_duration = exp * 1000000;
 		ASICAMERA->Bin = bin;
 		ASICAMERA->Exposure = exp;
-		IDLog(_("Blinking %ld time(ms) before exposure\n"), blink_duration);
+		IDLog(_("Blinking %ld time(us) before exposure\n"), blink_duration);
 		if((errCode = ASISetControlValue(ASICAMERA->ID, ASI_EXPOSURE, blink_duration, ASI_FALSE)) != ASI_SUCCESS)
 		{
 			IDLog_Error(_("Failed to set blink exposure to %ldus, error %d\n"), blink_duration, errCode);

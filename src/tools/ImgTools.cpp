@@ -34,12 +34,29 @@ Description:Image Progress Tools
 #include "ImgTools.h"
 
 #include <vector>
+#include <iomanip>
+#include <math.h>
+#include <set>
+#include <tuple>
+#include <list>
 
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/opencv.hpp>
 
+namespace AstroAir
+{
+    ImageInfo NEW1;
+    ImageInfo *IMGINFO = &NEW1;
+}
+
+typedef std::tuple<int /*x*/,int /*y*/> PixelPosT;
+typedef std::set<PixelPosT> PixelPosSetT;
+typedef std::list<PixelPosT> PixelPosListT;
+
 namespace AstroAir::ImageTools
 {
+    void clacStarInfo(cv::Mat iMat,int outDiameter);
+
     /*
      * name: ConvertUCto64(unsigned char *imgBuf,bool isColor,int ImageHeight,int ImageWidth)
      * @param imgBuf:图像缓冲区
@@ -61,11 +78,13 @@ namespace AstroAir::ImageTools
         {
             cv::Mat img(ImageHeight,ImageWidth, CV_8UC3, imgBuf);		//3通道图像信息
             cv::imencode(".jpg", img, vecImg, compression_params);
+            clacStarInfo(img,21);
         }
 		else
         {
             cv::Mat img(ImageHeight,ImageWidth, CV_8UC1, imgBuf);		//单通道图像信息
             cv::imencode(".jpg", img, vecImg, compression_params);
+            clacStarInfo(img,21);
         }
 		return base64Encode(vecImg.data(), vecImg.size());
     }
@@ -105,6 +124,36 @@ namespace AstroAir::ImageTools
 			cv::calcHist(&img, 1, &channels, cv::Mat(), dstHist, 1, &histSize, ranges);
 		}
 	}
+
+    void clacStarInfo(cv::Mat iMat,int outDiameter)
+    {
+        /*计算HFD*/
+        double out = outDiameter / 2;
+        float sum = 0, sumDist = 0;
+        int centerX = ceil(iMat.rows / 2.0);
+        int centerY = ceil(iMat.cols / 2.0);
+
+        double mean = cv::mean(iMat)[0];
+
+        for(int x = 0 ;x < iMat.rows;x++)
+        {
+            for(int y = 0;y< iMat.cols;y++)
+            {
+                if(iMat.at<float>(x,y) < mean)
+                    iMat.at<float>(x,y) = 0;
+                else
+                    iMat.at<float>(x,y) = iMat.at<float>(x,y) - mean;
+                if((pow(x - centerX, 2.0) + pow(y - centerY, 2.0) <= pow(out, 2.0)))
+                {
+                    sum += iMat.at<float>(x,y);
+                    sumDist += iMat.at<float>(x,y) * sqrt(pow((float)x - (float)centerX, 2.0f) + pow((float)y - (float)centerY, 2.0f));
+                }
+            }
+        }
+        IMGINFO->HFD = ((float)((int)(((sum ? 2.0 * sumDist / sum : sqrt(2.0) * out)+0.005)*100)))/100;
+
+        /*计算星点数量*/
+    }
 
     /*
      * name: base64Encode(const unsigned char* Data, int DataByte) 

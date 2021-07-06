@@ -121,11 +121,6 @@ namespace AstroAir
         AIRCAMINFO->isCameraCoolingOn = false;      //相机制冷状态
         isSolverConnected = false;      //解析器连接状态
         isMountSlewing = false;         //赤道仪运动状态
-        /*初始化服务器参数*/
-        SS->MaxClientNumber = 0;
-        SS->MaxThreadNumber = 5;
-        SS->MaxUsedTime = 90;
-        SS->thread_num = 0;
     }
     
     /*

@@ -25,14 +25,13 @@ Author:Max Qian
 
 E-mail:astro_air@126.com
  
-Date:2021-6-28
+Date:2021-7-06
  
 Description:Camera Offical Port
 
 **************************************************/
 
 #include "air_camera.h"
-//#include "air_autofocus.h"
 #include "wsserver.h"
 #include "logger.h"
 
@@ -41,8 +40,7 @@ namespace AstroAir
     AIRCAMERA *CCD = nullptr;
     CameraInfo NEW;
     CameraInfo *AIRCAMINFO = &NEW;
-    ImageInfo NEW1;
-    ImageInfo *IMGINFO = &NEW1;
+    
     /*
      * name: AIRCAMERA()
      * describe: Constructor for initializing camera parameters
@@ -400,7 +398,6 @@ namespace AstroAir
     void AIRCAMERA::newJPGReadySend()
     {
         auto start = std::chrono::high_resolution_clock::now();
-        //autofocus->SolveImageInfo(CameraImageName); 这里还有很大的问题，暂时不使用
         /*组合即将发送的json信息*/
         Json::Value Root;
         Root["Event"] = Json::Value("NewJPGReady");

@@ -101,12 +101,7 @@ namespace AstroAir
         bool isGuidingCamera;
     };extern CameraInfo *AIRCAMINFO;
 
-    struct ImageInfo
-    {
-        std::string img_data;
-        double HFD;
-        int StarIndex;
-    };extern ImageInfo *IMGINFO;
+    
 }
 
 #endif

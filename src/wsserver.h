@@ -139,10 +139,10 @@ namespace AstroAir
 	/*服务器配置参数*/
 	struct ServerSetting
 	{
-		std::atomic_int MaxUsedTime;		//解析最长时间
-		std::atomic_int MaxThreadNumber;	//最多能同时处理的事件数量
-		std::atomic_int MaxClientNumber;	//最大客户端数量
-		std::atomic_int thread_num; 		//线程数量	
+		int MaxUsedTime;		//解析最长时间
+		int MaxThreadNumber;	//最多能同时处理的事件数量
+		int MaxClientNumber;	//最大客户端数量
+		int thread_num; 		//线程数量	
 	};extern ServerSetting *SS;
 	extern std::string TargetRA,TargetDEC,MountAngle;
 }

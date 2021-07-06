@@ -39,10 +39,6 @@ if(HAS_ASI_CAMERA)
 	find_library(PATH_ASI_CAMERA_LIB libASICamera2.so /usr/local/lib)
 	if(PATH_ASI_CAMERA AND PATH_ASI_CAMERA_LIB)
 		message("-- Found ASI camera header file in ${PATH_ASI} and library in ${PATH_ASI_LIB}")
-		add_library(LIBASI_CAMERA src/camera/air-asi/asi_ccd.cpp)
-		target_link_libraries(airserver PUBLIC LIBASI_CAMERA)
-		target_link_libraries(airserver PUBLIC libASICamera2.so)		#ASI相机
-		target_link_libraries(airserver PUBLIC libusb-1.0.so)
 	else()
 		message("-- Could not found ASI camera library.Please build it before intall!")
 		add_custom_command(
@@ -52,9 +48,14 @@ if(HAS_ASI_CAMERA)
 			COMMENT "Downloaded and Building ASI Camera Library"
 		)
 	endif()
+	add_library(LIBASI_CAMERA src/camera/air-asi/asi_ccd.cpp)
+	target_link_libraries(airserver PUBLIC LIBASI_CAMERA)
+	target_link_libraries(airserver PUBLIC libASICamera2.so)		#ASI相机
+	target_link_libraries(airserver PUBLIC libusb-1.0.so)
 else()
 	message("-- Not built ASI camera library")
 endif()
+
 option(HAS_ASI_FOCUSER "Using ASI Focuser Library" ON)
 if(HAS_ASI_FOCUSER)
 	find_path(PATH_ASI_FOCUSER EAF_focuser.h /usr/include/libasi)
@@ -63,9 +64,6 @@ if(HAS_ASI_FOCUSER)
 	find_library(PATH_ASI_FOCUSER_LIB libEAFFocuser.so /usr/local/lib)
 	if(PATH_ASI_FOCUSER AND PATH_ASI_FOCUSER_LIB)
 		message("-- Found ASI focuser header file in ${PATH_ASI_FOCUSER} and library in ${PATH_ASI_FOCUSER_LIB}")
-		add_library(LIBASI_FOCUSER src/focus/air-eaf/air_eaf.cpp)
-		target_link_libraries(airserver PUBLIC LIBASI_FOCUSER)
-		target_link_libraries(airserver PUBLIC libEAFFocuser.so)		#ASI电动调焦座
 	else()
 		message("-- Could not found ASI focuser library.Please build it before intall!")
 		add_custom_command(
@@ -75,6 +73,9 @@ if(HAS_ASI_FOCUSER)
 			COMMENT "Downloaded and Building ASI Focuser Library"
 		)
 	endif()
+	add_library(LIBASI_FOCUSER src/focus/air-eaf/air_eaf.cpp)
+	target_link_libraries(airserver PUBLIC LIBASI_FOCUSER)
+	target_link_libraries(airserver PUBLIC libEAFFocuser.so)		#ASI电动调焦座
 else()
 	message("-- Not built ASI focuser library")
 endif()
@@ -86,9 +87,6 @@ if(HAS_ASI_FILTER)
 	find_library(PATH_ASI_FILTER_LIB libEFWFilter.so /usr/local/lib)
 	if(PATH_ASI_FILTER AND PATH_ASI_FILTER_LIB)
 		message("-- Found ASI filter header file in ${PATH_ASI_FILTER} and library in ${PATH_ASI_FILTER_LIB}")
-		add_library(LIBASI_FILTER src/filter/air-efw/air_efw.cpp)
-		target_link_libraries(airserver PUBLIC LIBASI_FILTER)
-		target_link_libraries(airserver PUBLIC libEFWFilter.so)		#ASI滤镜轮
 	else()
 		message("-- Could not found ASI filter library.Please build it before intall!")
 		add_custom_command(
@@ -98,6 +96,9 @@ if(HAS_ASI_FILTER)
 			COMMENT "Downloaded and Building ASI Filter Library"
 		)
 	endif()
+	add_library(LIBASI_FILTER src/filter/air-efw/air_efw.cpp)
+	target_link_libraries(airserver PUBLIC LIBASI_FILTER)
+	target_link_libraries(airserver PUBLIC libEFWFilter.so)		#ASI滤镜轮
 else()
 	message("-- Not built ASI filter library")
 endif()
