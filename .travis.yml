@@ -55,6 +55,7 @@ addons:
       - libboost-dev
       - libusb-1.0-0-dev
       - libgsl-dev
+      - libcurl4-gnutls-dev
 
   hosts:
     - ci.astroair.cn
