@@ -139,10 +139,10 @@ namespace AstroAir::ImageTools
         {
             for(int y = 0;y< iMat.cols;y++)
             {
-                if(iMat.at<float>(x,y) < mean)
-                    iMat.at<float>(x,y) = 0;
-                else
-                    iMat.at<float>(x,y) = iMat.at<float>(x,y) - mean;
+                //if(iMat.at<float>(x,y) < mean)
+                //    iMat.at<float>(x,y) = 0;
+                //else
+                //    iMat.at<float>(x,y) = iMat.at<float>(x,y) - mean;
                 if((pow(x - centerX, 2.0) + pow(y - centerY, 2.0) <= pow(out, 2.0)))
                 {
                     sum += iMat.at<float>(x,y);
@@ -153,6 +153,25 @@ namespace AstroAir::ImageTools
         IMGINFO->HFD = ((float)((int)(((sum ? 2.0 * sumDist / sum : sqrt(2.0) * out)+0.005)*100)))/100;
 
         /*计算星点数量*/
+        std::vector<cv::Vec3f> circles;
+        double dp = 2;
+        double minDist = 10;  //两个圆心之间的最小距离
+        double param1 = 100;  //Canny边缘检测的较大阈值
+        double param2 = 100;  //累加器阈值
+        int min_radius = 5;  //圆形半径的最小值
+        int max_radius = 100; //圆形半径的最大值
+
+        if(iMat.channels() == 3)        //彩色图像需转为灰度图像
+        {
+            cv::Mat gray;
+            cvtColor(iMat, gray, cv::COLOR_BGR2GRAY);
+            HoughCircles(gray, circles, cv::HOUGH_GRADIENT, dp, minDist, param1, param2, min_radius, max_radius);
+        }
+        else
+        {
+            HoughCircles(iMat, circles, cv::HOUGH_GRADIENT, dp, minDist, param1, param2, min_radius, max_radius);
+        }
+        IMGINFO->StarIndex = circles.size();
     }
 
     /*
