@@ -49,9 +49,24 @@ namespace AstroAir
             void RunSequenceError(std::string error);
             void GetListAvalaibleDragScript();
             void RemoteDragScript(std::string DragScript);
+        protected:
+            void DS_Shot(std::string type,int loop,int exp,int bin,int Gain,int Offset);
+            void DS_Goto(std::string RA,std::string DEC);
+            void DS_Move(int TargetPosition);
+            void DS_FilterMoveTo(int TargetPosition);
+            void DS_Solve(int downsample);
+            void DS_Guide();
         private:
             std::string SequenceImageName;
             std::atomic_bool InSequenceRun;
+            struct ScriptSetting
+            {
+                std::atomic_bool sudo_r;
+                std::atomic_bool shell_r;
+                std::string SequenceImageName;
+                std::atomic_bool Enable;
+            }Scripts;
+            
     };
     extern AIRSCRIPT *SCRIPT;
 }

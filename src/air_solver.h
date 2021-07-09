@@ -47,7 +47,7 @@ namespace AstroAir
             explicit AIRSOLVER();
             ~AIRSOLVER();
             /*解析：离线*/
-            void SolveActualPosition(bool IsBlind,bool IsSync);     //开始解析
+            void SolveActualPosition(bool IsBlind,bool IsSync,int downsample);     //开始解析
             void SolveActualPositionSuccess();  //解析成功
             void SolveActualPositionError();    //解析失败
             /*解析：在线*/

@@ -84,7 +84,7 @@ namespace AstroAir
      * @param Target_DEC:天体DEC轴坐标
 	 * describe: slew
 	 * 描述：赤道仪Goto,处理来自客户端的信息
-	 * calls: IDLog()
+	 * calls: IDLog() 
      * calls: WebLog()
      * calls: Goto()
 	 */

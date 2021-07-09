@@ -328,7 +328,7 @@ namespace AstroAir
             case "RemoteSolveActualPosition"_hash:{
                 if(root["params"]["IsBlind"].asBool())
                 {
-                    std::thread SolveThread(&AIRSOLVER::SolveActualPosition,SOLVER,root["params"]["IsBlind"].asBool(),root["params"]["IsSync"].asBool());
+                    std::thread SolveThread(&AIRSOLVER::SolveActualPosition,SOLVER,root["params"]["IsBlind"].asBool(),root["params"]["IsSync"].asBool(),2);
                     SolveThread.detach();
                 }  
                 else

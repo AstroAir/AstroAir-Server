@@ -44,6 +44,10 @@ Description:Script port
 #include <thread>
 #include <stdlib.h>
 
+#include <yaml-cpp/yaml.h>
+
+#define ScriptsVersion 1.0
+
 namespace AstroAir
 {
     Json::Value root;
@@ -278,7 +282,7 @@ namespace AstroAir
 				continue;
             /*判断文件后缀是否为.air*/
             int size = strlen(ptr->d_name);
-            if(strcmp( ( ptr->d_name + (size - 4) ) , ".air") != 0)
+            if(strcmp( ( ptr->d_name + (size - 4) ) , ".yml") != 0)
                 continue;
             files.push_back(ptr->d_name);
 		}  
@@ -306,6 +310,14 @@ namespace AstroAir
         ws.send(Root.toStyledString());
     }
 
+    constexpr std::uint32_t hash_str_to_uint32(const char* data)
+    {
+        std::uint32_t h(0);
+        for (int i = 0; data && ('\0' != data[i]); i++)
+            h = (h << 6) ^ (h >> 26) ^ data[i];
+        return h;
+    }
+
     /*
 	 * name: RemoteDragScript(std::string DragScript)
      * @param DragScript:脚本文件
@@ -320,29 +332,168 @@ namespace AstroAir
 	 */
     void AIRSCRIPT::RemoteDragScript(std::string DragScript)
     {
-        /*
-          Max： 这里我们还没设置指定的脚本格式
-          这需要细致的考虑，现在是执行shell
-          不过在未来的版本中我们会及时加入这个功能
-          如果你有任何的想法也可以联系我
-        */
-        std::string a = "DS/" + DragScript,b;
-        if(access(a.c_str(), F_OK ) == -1)
+        if(access(("DS/" + DragScript).c_str(), F_OK ) == -1)
         {
             RunSequenceError(_("Could not found file"));
             return;
         }
-        b = "sh " + a;
-        int ret = system(b.c_str());
-        if(ret != -1 && ret != 127)
+        YAML::Node script = YAML::LoadFile("DS/" + DragScript);
+        if(script["Version"].as<double>() == ScriptsVersion)
         {
-            IDLog(_("Run script successfully\n"));
-            WebLog(_("Run script successfully"),2);
+            Scripts.sudo_r = script["Sudo"].as<bool>();
+            Scripts.shell_r = script["Shell"].as<bool>();
+            /*提前打开所需要的软件，使用非阻塞线程*/
+            for(YAML::const_iterator it= script["jobs"]["apps"].begin(); it != script["jobs"]["apps"].end();++it)
+            {
+                switch (hash_str_to_uint32(it->first.as<std::string>().c_str()))
+                {
+                    case hash_str_to_uint32("PHD2"):
+                        system("sudo phd2.bin &");
+                        break;
+                    case hash_str_to_uint32("Kstars"):
+                        system("sudo kstars &");
+                        break;
+                    case hash_str_to_uint32("INDIWebManager"):
+                        system("sudo indi-web -v &");
+                        break;
+                    default:
+                        IDLog(_("No app needs to load\n"));
+                        break;
+                }
+            }
+            for(YAML::const_iterator it= script["jobs"]["steps"].begin(); it != script["jobs"]["steps"].end();++it)
+            {
+                /*执行脚本*/
+                switch (hash_str_to_uint32(it->first.as<std::string>().c_str()))
+                {
+                    /*相机拍摄*/
+                    case hash_str_to_uint32("shot"):{
+                        std::string s = it->second.as<std::string>();
+                        Scripts.Enable = true;
+                        DS_Shot(script[s]["Type"].as<std::string>(),script[s]["Loop"].as<int>(),script["Exposure"].as<int>(),script["Bin"].as<int>(),script["Gain"].as<int>(),script["Offset"].as<int>());
+                        break;
+                    }
+                    /*赤道仪Goto*/
+                    case hash_str_to_uint32("goto"):{
+                        std::string s = it->second.as<std::string>();
+                        Scripts.Enable = true;
+                        DS_Goto(script[s]["RA"].as<std::string>(),script[s]["DEC"].as<std::string>());
+                        break;
+                    }
+                    /*电动调焦座对焦*/
+                    case hash_str_to_uint32("focuser"):{
+                        std::string s = it->second.as<std::string>();
+                        Scripts.Enable = true;
+                        DS_Move(script[s]["Position"].as<int>());
+                        break;
+                    }
+                    /*滤镜轮转到指定位置*/
+                    case hash_str_to_uint32("filter"):{
+                        std::string s = it->second.as<std::string>();
+                        Scripts.Enable = true;
+                        DS_FilterMoveTo(script[s]["Position"].as<int>());
+                        break;
+                    }
+                    /*解析器解析*/
+                    case hash_str_to_uint32("solver"):{
+                        std::string s = it->second.as<std::string>();
+                        Scripts.Enable = true;
+                        DS_Solve(script[s]["Downsample"].as<int>());
+                        break;
+                    }
+                    /*开始导星*/
+                    case hash_str_to_uint32("guide"):{
+                        std::string s = it->second.as<std::string>();
+                        Scripts.Enable = true;
+                        DS_Guide();
+                        break;
+                    }
+                    /*运行命令（阻塞）*/
+                    case hash_str_to_uint32("command"):{
+                        if(Scripts.shell_r)
+                        {
+                            std::string s = it->second.as<std::string>();
+                            if(Scripts.sudo_r)
+                                s = "sudo " + s;
+                            IDLog(_("Run command: %s"),s.c_str());
+                            WebLog(_(s.c_str()),2);
+                            system(s.c_str());
+                        }
+                        else
+                        {
+                            IDLog_Error(_("Unable to execute system command: not allowed\n"));
+                            WebLog(_("Unable to execute system command: not allowed"),3);
+                        }
+                        break;
+                    }
+                    /*等待*/
+                    case hash_str_to_uint32("sleep"):{
+                        sleep(it->second.as<int>());
+                        break;
+                    }
+                    /*重启系统*/
+                    case hash_str_to_uint32("reboot"):{
+                        WebLog(_("System is rebooting ..."),2);
+                        system("sudo reboot");
+                        break;
+                    }
+                    /*关机*/
+                    case hash_str_to_uint32("shutdown"):{
+                        WebLog(_("The system is shutting down ..."),2);
+                        system("sudo shutdown");
+                        break;
+                    }
+                    /*无任务被发现*/
+                    default:{
+                        IDLog_Error(_("No tasks were found\n"));
+                        WebLog(_("No tasks were found"),3);
+                        break;
+                    }
+                }
+            }
         }
         else
         {
-            IDLog_Error(_("Failed to run script\n"));
-            WebLog(_("Failed to run script"),3);
+            IDLog_Error(_("Scripts version mismatch\n"));
+            WebLog(_("Scripts version mismatch"),3);
         }
+    }
+
+    void AIRSCRIPT::DS_Shot(std::string type,int loop,int exp,int bin,int Gain,int Offset)
+    {
+        for(int i = 0 ;i<loop;i++)
+        {
+            if(Scripts.Enable)
+                CCD->StartExposure(exp,bin,true,Scripts.SequenceImageName,Gain,Offset);
+        }
+    }
+
+    void AIRSCRIPT::DS_Goto(std::string RA,std::string DEC)
+    {
+        if(Scripts.Enable)
+            MOUNT->Goto(RA,DEC);
+    }
+
+    void AIRSCRIPT::DS_Move(int TargetPosition)
+    {
+        if(Scripts.Enable)
+            FOCUS->MoveTo(TargetPosition);
+    }
+
+    void AIRSCRIPT::DS_FilterMoveTo(int TargetPosition)
+    {
+        if(Scripts.Enable)
+            FILTER->FilterMoveTo(TargetPosition);
+    }
+
+    void AIRSCRIPT::DS_Solve(int downsample)
+    {
+        if(Scripts.Enable)
+            SOLVER->SolveActualPosition(true,true,downsample);
+    }
+
+    void AIRSCRIPT::DS_Guide()
+    {
+        
     }
 }

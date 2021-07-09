@@ -45,11 +45,11 @@ configure_file(config.h.in ${PROJECT_SOURCE_DIR}/src/config.h)
 
 add_executable(airserver src/main.cpp)
 
-IF(CMAKE_CL_64)
-    set(PLATFORM x64)
-ELSE(CMAKE_CL_64)
-    set(PLATFORM x86)
-ENDIF(CMAKE_CL_64)
+#IF(CMAKE_CL_64)
+#    set(PLATFORM x64)
+#ELSE(CMAKE_CL_64)
+#    set(PLATFORM x86)
+#ENDIF(CMAKE_CL_64)
 
 set(PLATFORM x64)
 set(MODE DEBUG)
@@ -97,7 +97,7 @@ add_library(LIBAUTOUPDATE src/tools/AutoUpdate.cpp)				#自动检查更新
 target_link_libraries(airserver PUBLIC LIBAUTOUPDATE)
 add_library(LIBTCP src/tools/TcpSocket.cpp)				#自动检查更新
 target_link_libraries(airserver PUBLIC LIBTCP)
-
+target_link_libraries(airserver PRIVATE libyaml-cpp.so)
 #依赖库
 include(FindIMGTOOLS)
 include(FindJSONCPP)
@@ -107,7 +107,7 @@ set(LINK_DIR /usr/lib)
 link_directories(${LINK_DIR})
 set(LINK_DIR /usr/local/lib)
 link_directories(${LINK_DIR})
-set(LINK_DIR /usr/local/lib/x86_64-linux-gnu)
+set(LINK_DIR /usr/lib/x86_64-linux-gnu)
 link_directories(${LINK_DIR})
 
 #头文件
