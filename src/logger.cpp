@@ -39,6 +39,8 @@ Description:Log system of astroair server
 
 #include "logger.h"
 
+AstroAir::GUI::AppLog Log;
+
 namespace AstroAir
 {
 	/*
@@ -133,6 +135,11 @@ namespace AstroAir
 		{
 			IDLog("Unable to open cmdline log\n");
 		}
+	}
+
+	void GUIMessage(const char *fmt, ...)
+	{
+		Log.AddLog("%s",fmt);
 	}
 	
 	/*

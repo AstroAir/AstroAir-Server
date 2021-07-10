@@ -30,10 +30,12 @@ else()
 endif()
 
 set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(IMGUI_IMPL_OPENGL_LOADER_GL3W)
 
 option(USE_CLANG "Using Clang to compain" ON)
 if(USE_CLANG)		#默认使用clang++-11,G++ 9.3.0亦可
 	set(CMAKE_CXX_COMPILER /usr/bin/clang++-11)
+	set(CMAKE_C_COMPILER /usr/bin/clang++-11)
 	message("-- Using Clang++ to build")
 else()
 	set(CMAKE_CXX_COMPILER /usr/bin/g++)
@@ -113,6 +115,7 @@ link_directories(${LINK_DIR})
 #头文件
 target_include_directories(airserver PUBLIC
                            "${PROJECT_BINARY_DIR}/src"
+						   "${PROJECT_BINARY_DIR}/src/gui/GL"
                            )
 
 #安装到系统

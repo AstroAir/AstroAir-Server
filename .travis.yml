@@ -57,6 +57,8 @@ addons:
       - libgsl-dev
       - libcurl4-gnutls-dev
       - libyaml-cpp-dev
+      - libglfw3-dev
+      - libgles-dev
 
   hosts:
     - ci.astroair.cn

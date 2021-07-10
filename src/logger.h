@@ -54,6 +54,7 @@ Description:Log system of astroair server
 
 #define PACKAGE "airserver"
 
+#include "air_gui.hpp"
 
 typedef std::uint64_t hash_t;
 typedef std::vector<std::string>  StringList;
@@ -70,6 +71,8 @@ typedef struct {
 	int second;
 } TIME;
 
+extern AstroAir::GUI::AppLog Log;
+
 namespace AstroAir
 {
 	/*在终端输出*/
@@ -82,6 +85,8 @@ namespace AstroAir
 	void IDLog_Error(const char *fmt, ...);
 	/*输出客户端命令日志*/
 	void IDLog_CMDL(std::string message);
+
+	void GUIMessage(const char *fmt, ...);
 	/*功能性函数*/
 	const char *timestamp();		//获取时间戳
 	const char *timestampW();		//获取时间戳

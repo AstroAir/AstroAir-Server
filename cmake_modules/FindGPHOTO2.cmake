@@ -39,10 +39,6 @@ if(HAS_GPhoto2)
 	find_library(PATH_GPhoto2_LIB libgphoto2.so /usr/local/lib)
 	if(PATH_GPhoto2 AND PATH_GPhoto2_LIB)
 		message("-- Found GPhoto2 camera header file in ${PATH_GPhoto2} and library in ${PATH_GPhoto2_LIB}")
-		add_library(LIBGPhoto2 src/camera/air-gphoto2/gphoto2_ccd.cpp)
-		target_link_libraries(airserver PUBLIC LIBGPhoto2)
-		target_link_libraries(airserver PUBLIC libgphoto2.so)		#GPhoto2相机
-		target_link_libraries(airserver PUBLIC libgphoto2_port.so)
 	else()
 		message("-- Could not found GPhoto2 camera library.Please build it before intall!")
 		add_custom_command(
@@ -52,6 +48,10 @@ if(HAS_GPhoto2)
 			COMMENT "Downloaded and Building GPhoto2 Library"
 		)
 	endif()
+	add_library(GPhoto2 src/camera/air-gphoto2/gphoto2_ccd.cpp)
+	target_link_libraries(airserver PUBLIC GPhoto2)
+	target_link_libraries(airserver PUBLIC libgphoto2.so)		#GPhoto2相机
+	target_link_libraries(airserver PUBLIC libgphoto2_port.so)
 else()
 	message("-- Not built GPhoto2 camera library")
 endif()

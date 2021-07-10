@@ -39,11 +39,7 @@ if(HAS_QHY)
 	find_library(PATH_QHY_LIB libqhyccd.so /usr/local/lib)
 	if(PATH_QHY AND PATH_QHY_LIB)
 		message("-- Found QHY header file in ${PATH_QHY} and library in ${PATH_QHY_LIB}")
-		add_library(LIBQHY_CAMERA src/camera/air-qhy/qhy_ccd.cpp)		#QHY相机
-		target_link_libraries(airserver PUBLIC LIBQHY_CAMERA)
-		add_library(LIBQHY_FILTER src/filter/air-cfw/qhy_cfw.cpp)		#QHY滤镜轮
-		target_link_libraries(airserver PUBLIC LIBQHY_FILTER)
-		target_link_libraries(airserver PUBLIC libqhyccd.so)
+		
 	else()
 		message("-- Could not found QHY library.Please build it before intall!")
 		add_custom_command(
@@ -53,6 +49,11 @@ if(HAS_QHY)
 			COMMENT "Downloaded and Building QHY Library"
 		)
 	endif()
+	add_library(QHY_CAMERA src/camera/air-qhy/qhy_ccd.cpp)		#QHY相机
+	target_link_libraries(airserver PUBLIC QHY_CAMERA)
+	add_library(QHY_FILTER src/filter/air-cfw/qhy_cfw.cpp)		#QHY滤镜轮
+	target_link_libraries(airserver PUBLIC QHY_FILTER)
+	target_link_libraries(airserver PUBLIC libqhyccd.so)
 else()
 	message("-- Not built QHY camera library")
 endif()

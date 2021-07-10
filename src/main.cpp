@@ -31,46 +31,38 @@ Description:Main program of astroair server
  
 **************************************************/
 
-#include <stdio.h>
-#include <unistd.h>
-#include <getopt.h>
 #include <thread>
+#include <stdlib.h>
 
-#include "wsserver.h"
-#include "tools/AutoUpdate.h"
 #include "logger.h"
+#include "wsserver.h"
+#include "air_gui.hpp"
 
-using namespace AstroAir;
-int PORT = 5950;
-/*
- * name: usage()
- * describe: Output help information
- * 描述：输出帮助信息
- * note: If you execute this function, the program will exit automatically
- */
-void usage(char *me)
+void ShowAboutWindow(bool* p_open)
 {
-    fprintf(stderr, _("Usage: %s [options]\n"), me);
-    fprintf(stderr, _("Purpose: Start or stop the server\n"));
-    fprintf(stderr, _("Options:\n"));
-    fprintf(stderr, _(" -v       : start server\n"));
-    fprintf(stderr, _(" -p p     : alternate IP port, default %d\n"), PORT);
-	fprintf(stderr, _(" -c       : write a configure file for server\n"));
-    exit(2);
+	if (!ImGui::Begin(_("About AstroAir"), p_open, ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        ImGui::End();
+        return;
+    }
+    ImGui::Text("AstroAir %s", "1.0.0");
+    ImGui::Separator();
+    ImGui::Text(_("By Max Qian and members in QQ group."));
+    ImGui::Text(_("Dear ImGui is licensed under the GPL3 License, see LICENSE for more information."));
+	ImGui::End();
 }
 
-/*
- * name: PrintLogo()
- * describe: Output Logo
- * 描述：显示Logo
- */
-void PrintLogo()
+void ShowAppLog(bool* p_open)
 {
-	std::cout << "    _        _               _    _          ____" << std::endl;
-	std::cout << "   / \\   ___| |_ _ __ ___   / \\  (_)_ __    / ___|  ___ _ ____   _____ _ __" << std::endl;
-	std::cout << "  / _ \\ / __| __| '__/ _ \\ / _ \\ | | '__|___\\___ \\ / _ \\ '__\\ \\ / / _ \\ '__|" << std::endl;
-    std::cout << " / ___ \\__ \\ |_| | | (_) / ___ \\| | | |_____|__) |  __/ |   \\ V /  __/ |" << std::endl;
-    std::cout << "/_/   \\_\\___/\\__|_|  \\___/_/   \\_\\_|_|      |____/ \\___|_|    \\_/ \\___|_|" << std::endl;
+	ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
+    ImGui::Begin(_("Log"), p_open);
+	ImGui::End();
+	Log.Draw("Log", p_open);
+}
+
+void WebServer(int port)
+{
+	AstroAir::ws.run(port);
 }
 
 /*
@@ -83,33 +75,117 @@ void PrintLogo()
  */
 int main(int argc, char *argv[])
 {
+	/*多语言支持*/
 	setlocale(LC_ALL,"");
   	bindtextdomain(PACKAGE, "locale");
   	textdomain(PACKAGE);
-	/*输出Logo*/
-	PrintLogo();
-	//AutoCheckVersion();
-	char *optarg;
-    int optind, opterr, optopt;
-    int verbose = 0;
-    int opt = -1;
-    while ((opt = getopt(argc, argv, "vp:")) != -1) 
-    {    
-		switch (opt) 
-		{    
-			case 'v':{
-				sleep(1);
-				break;
-			}
-			case 'p':
-				PORT = atoi(optarg);
-				break;
-			default:
-				usage(argv[0]);
-				break;
+
+	static bool show_app_help = false;
+	static bool show_app_quit = false;
+	static bool show_app_log = false;
+
+	glfwSetErrorCallback(AstroAir::GUI::glfw_error_callback);
+	if (!glfwInit())
+        return 1;
+		// GL 3.0 + GLSL 130
+    const char* glsl_version = "#version 130";
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+
+	GLFWwindow* window = glfwCreateWindow(1280, 720, _("AstroAir-Client"), NULL, NULL);
+	if (window == NULL)
+        return 1;
+    glfwMakeContextCurrent(window);
+    glfwSwapInterval(1); // Enable vsync
+
+	//界面设置
+	IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+	ImGui::StyleColorsDark();
+	ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL2_Init();
+	io.Fonts->AddFontFromFileTTF("misc/fonts/Roboto-Medium.ttf", 16.0f);
+
+	//主窗口循环
+	while (!glfwWindowShouldClose(window))
+    {
+		glfwPollEvents();
+		ImGui_ImplOpenGL2_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+		//const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
+    	//ImGui::SetNextWindowPos(ImVec2(main_viewport->WorkPos.x + 650, main_viewport->WorkPos.y + 20), ImGuiCond_FirstUseEver);
+    	//ImGui::SetNextWindowSize(ImVec2(350, 250), ImGuiCond_FirstUseEver);
+
+		if(!ImGui::Begin(_("Main Page")))                          // Create a window called "Hello, world!" and append into it.
+		{
+			ImGui::End();
+			break;
 		}
-    }
-	ws.run(PORT);
+		//主菜单
+		if (ImGui::BeginMenuBar())
+    	{
+			if (ImGui::BeginMenu("Menu"))
+			{
+				ImGui::MenuItem(_("Qiut"), NULL, &show_app_quit);
+				ImGui::EndMenu();
+			}
+			if (ImGui::BeginMenu(_("Setting")))
+			{
+				ImGui::MenuItem(_("Help"), NULL, &show_app_help);
+				ImGui::EndMenu();
+			}
+			ImGui::EndMenuBar();
+		}
+
+		if(show_app_quit)		//关程序
+		{
+			ImGui::End();
+			break;
+		}
+		if(show_app_help)		//显示帮助信息
+		{
+			ShowAboutWindow(&show_app_help);
+		}
+
+		static char port[64] = ""; ImGui::InputText(_("Port"), port, 64, ImGuiInputTextFlags_CharsDecimal);
+		ImGui::SameLine();
+		if (ImGui::Button("Start"))
+		{
+			std::thread MainThread(WebServer,atoi(port));
+			MainThread.detach();
+		}
+
+		ImGui::Checkbox("Log", &show_app_log);
+
+		if(show_app_log)
+		{
+			ShowAppLog(&show_app_log);
+		}
+
+        //ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
+
+        ImGui::End();
+
+		ImGui::Render();
+        int display_w, display_h;
+        glfwGetFramebufferSize(window, &display_w, &display_h);
+        glViewport(0, 0, display_w, display_h);
+        //glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
+        glClear(GL_COLOR_BUFFER_BIT);
+        ImGui_ImplOpenGL2_RenderDrawData(ImGui::GetDrawData());
+
+        glfwSwapBuffers(window);
+	}
+
+	ImGui_ImplOpenGL2_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+
+    glfwDestroyWindow(window);
+    glfwTerminate();
+
     return 0;
 }
 

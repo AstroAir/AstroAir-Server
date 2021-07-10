@@ -48,8 +48,8 @@ if(HAS_ASI_CAMERA)
 			COMMENT "Downloaded and Building ASI Camera Library"
 		)
 	endif()
-	add_library(LIBASI_CAMERA src/camera/air-asi/asi_ccd.cpp)
-	target_link_libraries(airserver PUBLIC LIBASI_CAMERA)
+	add_library(ASI_CAMERA src/camera/air-asi/asi_ccd.cpp)
+	target_link_libraries(airserver PUBLIC ASI_CAMERA)
 	target_link_libraries(airserver PUBLIC libASICamera2.so)		#ASI相机
 	target_link_libraries(airserver PUBLIC libusb-1.0.so)
 else()
@@ -73,8 +73,8 @@ if(HAS_ASI_FOCUSER)
 			COMMENT "Downloaded and Building ASI Focuser Library"
 		)
 	endif()
-	add_library(LIBASI_FOCUSER src/focus/air-eaf/air_eaf.cpp)
-	target_link_libraries(airserver PUBLIC LIBASI_FOCUSER)
+	add_library(ASI_FOCUSER src/focus/air-eaf/air_eaf.cpp)
+	target_link_libraries(airserver PUBLIC ASI_FOCUSER)
 	target_link_libraries(airserver PUBLIC libEAFFocuser.so)		#ASI电动调焦座
 else()
 	message("-- Not built ASI focuser library")
@@ -96,8 +96,8 @@ if(HAS_ASI_FILTER)
 			COMMENT "Downloaded and Building ASI Filter Library"
 		)
 	endif()
-	add_library(LIBASI_FILTER src/filter/air-efw/air_efw.cpp)
-	target_link_libraries(airserver PUBLIC LIBASI_FILTER)
+	add_library(ASI_FILTER src/filter/air-efw/air_efw.cpp)
+	target_link_libraries(airserver PUBLIC ASI_FILTER)
 	target_link_libraries(airserver PUBLIC libEFWFilter.so)		#ASI滤镜轮
 else()
 	message("-- Not built ASI filter library")

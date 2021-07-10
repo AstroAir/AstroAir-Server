@@ -67,3 +67,9 @@ v1.0.0
 	修复Gphoto2编译错误
 	移除Cimg，所有图像处理改为使用OpenCV
 	优化代码结构，改正错别字
+
+21w05a
+	Date:2021/710
+	Author:Max Qian
+	增加GUI界面，修复部分Bug
+	修复Cmake编译错误
