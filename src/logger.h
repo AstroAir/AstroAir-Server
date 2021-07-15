@@ -42,6 +42,7 @@ Description:Log system of astroair server
 #include <sys/time.h>
 #include <vector>
 #include <string>
+#include <atomic>
 
 #include <libintl.h>
 #include <locale.h>
@@ -72,6 +73,7 @@ typedef struct {
 } TIME;
 
 extern AstroAir::GUI::AppLog Log;
+extern std::atomic_bool IsGUI;
 
 namespace AstroAir
 {

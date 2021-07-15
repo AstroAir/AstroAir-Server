@@ -533,6 +533,29 @@ namespace AstroAir
 		out.close();
 		return true;
     }
+
+	void ASICCD::CameraGUI(bool* p_open)
+	{
+		IM_ASSERT(ImGui::GetCurrentContext() != NULL && "Missing dear imgui context. Refer to examples app!");
+		const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
+		ImGui::SetNextWindowPos(ImVec2(main_viewport->WorkPos.x + 650, main_viewport->WorkPos.y + 20), ImGuiCond_FirstUseEver);
+		ImGui::SetNextWindowSize(ImVec2(550, 680), ImGuiCond_FirstUseEver);
+		ImGuiWindowFlags window_flags = 0;
+		if (!ImGui::Begin("ASI Camera", p_open, window_flags))
+		{
+			ImGui::End();
+			return;
+		}
+		ImGui::PushItemWidth(ImGui::GetFontSize() * -12);
+		if (ImGui::BeginMenuBar())
+		{
+			if (ImGui::BeginMenu("Menu"))
+			{
+				ImGui::EndMenu();
+			}
+			ImGui::EndMenuBar();
+    	}
+	}
 }
 
 

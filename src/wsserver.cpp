@@ -734,6 +734,8 @@ namespace AstroAir
                         if(CCD->Connect(Camera_name))
                         {
                             AIRCAMINFO->isCameraConnected = true;
+                            if(IsGUI)
+                                CCD->CameraGUI((bool *)&IsGUI);
                             DeviceBuf[DeviceNum] = CCD->ReturnDeviceName();
                             WebLog(_("Connect to ")+DeviceBuf[DeviceNum]+_(" successfully"),2);
                             DeviceNum++;

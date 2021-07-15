@@ -40,6 +40,7 @@ Description:Log system of astroair server
 #include "logger.h"
 
 AstroAir::GUI::AppLog Log;
+std::atomic_bool IsGUI;
 
 namespace AstroAir
 {

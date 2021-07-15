@@ -420,4 +420,9 @@ namespace AstroAir
         std::chrono::duration<double> diff = end - start;
         IDLog(_("Progress image took %g seconds\n"), diff.count());
     }
+
+    void AIRCAMERA::CameraGUI(bool* p_open)
+    {
+        
+    }
 }

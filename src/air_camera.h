@@ -65,6 +65,8 @@ namespace AstroAir
             virtual void AbortExposureError();
             virtual void ShotRunningSend(int ElapsedPerc,int id);
             virtual void newJPGReadySend();
+
+            virtual void CameraGUI(bool* p_open);
         private:
 			std::atomic_bool InSequenceRun;
     };

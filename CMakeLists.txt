@@ -75,30 +75,19 @@ include(FindIMGUI)
 
 ########################################AstroAir-Server官方API文件########################################
 
-add_library(LIBCAMERA src/air_camera.cpp)		#相机
-target_link_libraries(airserver PUBLIC LIBCAMERA)
-add_library(LIBMOUNT src/air_mount.cpp)			#赤道仪
-target_link_libraries(airserver PUBLIC LIBMOUNT)
-add_library(LIBSCRIPT src/air_script.cpp)			#脚本&序列
-target_link_libraries(airserver PUBLIC LIBSCRIPT)
-add_library(LIBLOGGER src/logger.cpp)
-target_link_libraries(airserver PUBLIC LIBLOGGER)
-add_library(LIBFOCUS src/air_focus.cpp)			#对焦
-target_link_libraries(airserver PUBLIC LIBFOCUS)
-add_library(LIBFILTER src/air_filter.cpp)			#滤镜轮
-target_link_libraries(airserver PUBLIC LIBFILTER)
-add_library(LIBSOLVER src/air_solver.cpp)		#解析
-target_link_libraries(airserver PUBLIC LIBSOLVER)
-add_library(LIBGUIDER src/air_guider.cpp)		#导星
-target_link_libraries(airserver PUBLIC LIBGUIDER)
-add_library(LIBSEARCH src/air_search.cpp)		#搜索
-target_link_libraries(airserver PUBLIC LIBSEARCH)
-add_library(LIBCOM src/telescope/air_com.cpp)		#COM
-target_link_libraries(airserver PUBLIC LIBCOM)
-add_library(LIBAUTOUPDATE src/tools/AutoUpdate.cpp)				#自动检查更新
-target_link_libraries(airserver PUBLIC LIBAUTOUPDATE)
-add_library(LIBTCP src/tools/TcpSocket.cpp)				#自动检查更新
-target_link_libraries(airserver PUBLIC LIBTCP)
+add_library(AIRMAIN src/air_camera.cpp 
+					src/air_mount.cpp 
+					src/air_script.cpp
+					src/logger.cpp
+					src/air_focus.cpp
+					src/air_filter.cpp
+					src/air_solver.cpp
+					src/air_guider.cpp
+					src/air_search.cpp
+					src/telescope/air_com.cpp
+					src/tools/AutoUpdate.cpp
+					src/tools/TcpSocket.cpp)
+target_link_libraries(airserver PUBLIC AIRMAIN)
 target_link_libraries(airserver PRIVATE libyaml-cpp.so)
 #依赖库
 include(FindIMGTOOLS)
