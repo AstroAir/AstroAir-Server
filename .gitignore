@@ -3,7 +3,7 @@
 *.air
 .vs
 main
-server
+airserver
 build
 .vscode
 cmdline.txt

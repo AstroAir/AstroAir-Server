@@ -97,6 +97,7 @@ namespace AstroAir
         int Count;
         int ID;
         char *Name[MAXDEVICE];
+        std::string Brand;
         /*相机类型*/
         bool isCoolCamera;
         bool isColorCamera;

@@ -29,16 +29,18 @@ else()
 	message("-- Using c++ 11 as building style")
 endif()
 
+set(CMAKE_C_STANDARD 99)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(IMGUI_IMPL_OPENGL_LOADER_GL3W)
 
 option(USE_CLANG "Using Clang to compain" ON)
 if(USE_CLANG)		#默认使用clang++-11,G++ 9.3.0亦可
-	set(CMAKE_CXX_COMPILER /usr/bin/clang++-11)
-	set(CMAKE_C_COMPILER /usr/bin/clang++-11)
+	set(CMAKE_CXX_COMPILER clang++-11)
+	set(CMAKE_C_COMPILER clang-11)
 	message("-- Using Clang++ to build")
 else()
-	set(CMAKE_CXX_COMPILER /usr/bin/g++)
+	set(CMAKE_CXX_COMPILER g++)
+	set(CMAKE_C_COMPILER gcc)
 	message("-- Using g++ to build")
 endif()
 
@@ -86,7 +88,8 @@ add_library(AIRMAIN src/air_camera.cpp
 					src/air_search.cpp
 					src/telescope/air_com.cpp
 					src/tools/AutoUpdate.cpp
-					src/tools/TcpSocket.cpp)
+					src/tools/TcpSocket.cpp
+					src/tools/ConvertTools.cpp)
 target_link_libraries(airserver PUBLIC AIRMAIN)
 target_link_libraries(airserver PRIVATE libyaml-cpp.so)
 #依赖库

@@ -69,7 +69,7 @@ Using:JsonCpp<https://github.com/open-source-parsers/jsoncpp>
 #endif
 
 #ifdef HAS_IOPTRON
-    #include "telescope/ieqpro/air_ieqpro.h"
+    #include "telescope/iOptron/air_ieqpro.h"
 #endif
 
 #ifdef HAS_PHD2
@@ -114,13 +114,13 @@ namespace AstroAir
         /*重置设备参数*/
         isConnected = false;            //客户端连接状态
         AIRCAMINFO->isCameraConnected = false;      //相机连接状态
-        isMountConnected = false;       //赤道仪连接状态
+        AIRMOUNTINFO->isMountConnected = false;       //赤道仪连接状态
         isFocusConnected = false;       //电动调焦座连接状态
         isFilterConnected = false;      //滤镜轮连接状态
         isGuideConnected = false;       //导星软件连接状态
         AIRCAMINFO->isCameraCoolingOn = false;      //相机制冷状态
         isSolverConnected = false;      //解析器连接状态
-        isMountSlewing = false;         //赤道仪运动状态
+        //isMountSlewing = false;         //赤道仪运动状态
     }
     
     /*
@@ -753,7 +753,7 @@ namespace AstroAir
         }
         error_c:{}
         /*连接指定品牌的指定型号赤道仪*/
-        if(!isMountConnected)
+        if(!AIRMOUNTINFO->isMountConnected)
         {
             Mount_name = root["mount"]["name"].asString();
             if(!root["mount"]["brand"].asString().empty() && !Mount_name.empty())
@@ -763,7 +763,7 @@ namespace AstroAir
 					/*初始化iOptron赤道仪，并赋值MOUNT*/
 					#ifdef HAS_IOPTRON
 					case "iOptron"_hash:{
-						IEQPRO *iOptronMount = new IEQPRO();
+						IEQPRO *iOptronMount = new IEQPRO(AIRMOUNTINFO);
 						MOUNT = iOptronMount;
 						iOptronMount = nullptr;
 						break;
@@ -807,7 +807,7 @@ namespace AstroAir
                     {
                         if(MOUNT->Connect(Mount_name))
                         {
-                            isMountConnected = true;
+                            AIRMOUNTINFO->isMountConnected = true;
                             DeviceBuf[DeviceNum] = MOUNT->ReturnDeviceName();
                             WebLog("Connect to "+DeviceBuf[DeviceNum]+" successfully",2);
                             DeviceNum++;
@@ -1072,13 +1072,13 @@ namespace AstroAir
             AIRCAMINFO->isCameraConnected = false;
             CCD = nullptr;
         }
-        if(isMountConnected)
+        if(AIRMOUNTINFO->isMountConnected)
         {
             if((disconnect_ok = MOUNT->Disconnect()))
                 WebLog(_("Disconnect from ")+Mount_name,2);
             else
                 WebLog(_("Could not Disconnect from ")+Mount_name,3);
-            isMountConnected = false;
+            AIRMOUNTINFO->isMountConnected = false;
             MOUNT = nullptr;
         }
         if(isFocusConnected)
@@ -1183,16 +1183,16 @@ namespace AstroAir
                 Root["PSCONN"] = Json::Value(1);
             else
                 Root["PSCONN"] = Json::Value(0);
-            if(isMountTracking)
+            if(AIRMOUNTINFO->Status == MOUNT_TRACKING)
                 Root["MNTTRACK"] = Json::Value(1);
             else
                 Root["MNTTRACK"] = Json::Value(0);
-            if(isMountParked)
+            if(AIRMOUNTINFO->Status == MOUNT_PARKED)
                 Root["MNTPARK"] = Json::Value(1);
             else
                 Root["MNTPARK"] = Json::Value(0);
             Root["MNTTFLIP"] = Json::Value(1);
-            if(isMountSlewing)
+            if(AIRMOUNTINFO->Status == MOUNT_SLEWING)
                 Root["MNTSLEW"] = Json::Value(1);
             else
                 Root["MNTSLEW"] = Json::Value(0);
@@ -1205,7 +1205,7 @@ namespace AstroAir
                 Root["AIRSTAT"] = Json::Value(0);
             Root["RUNSEQ"] = Json::Value("");
             Root["RUNDS"] = Json::Value("");
-            if(isMountConnected)
+            if(AIRMOUNTINFO->isMountConnected)
                 Root["MNTCONN"] = Json::Value(1);
             else
                 Root["MNTCONN"] = Json::Value(0);

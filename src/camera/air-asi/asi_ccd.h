@@ -66,8 +66,6 @@ namespace AstroAir
 			virtual bool SaveImage(std::string FitsName);
 			/*制冷*/
 			virtual bool Cooling(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF,int CamTemp) override;
-			/**/
-			virtual void CameraGUI(bool* p_open)override;
 		protected:
 			/*打开或停止制冷*/
 			virtual bool ActiveCool(bool enable);

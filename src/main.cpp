@@ -36,7 +36,21 @@ Description:Main program of astroair server
 
 #include "logger.h"
 #include "wsserver.h"
-#include "air_gui.hpp"
+
+#include "air_search.h"
+#include "air_camera.h"
+#include "air_mount.h"
+#include "air_solver.h"
+#include "air_script.h"
+#include "air_focus.h"
+#include "air_filter.h"
+#include "air_guider.h"
+
+#include "gui/imgui.h"
+#include "gui/imgui_impl_glfw.h"
+#include "gui/imgui_impl_opengl3.h"
+
+#include <GLFW/glfw3.h>
 
 /*
  * name: usage()
@@ -48,6 +62,8 @@ void Usage(char *me)
 {
     fprintf(stderr, _("Usage: %s [options]\n"), me);
     fprintf(stderr, _("Purpose: Server commands\n"));
+	fprintf(stderr, _("AIILib Version:1.0.0 bate\n"));
+	fprintf(stderr, _("Code: 1.0.0_unstable\n"));
     fprintf(stderr, _("Options:\n"));
 	fprintf(stderr, _(" -g       : open gui\n"));
     fprintf(stderr, _(" -p p     : alternate IP port, default 5950\n"));
@@ -73,12 +89,51 @@ void ShowAppLog(bool* p_open)
 	ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
     ImGui::Begin(_("Log"), p_open);
 	ImGui::End();
-	Log.Draw("Log", p_open);
+	//Log.Draw("Log", p_open);
 }
 
-void WebServer(int port)
+void AppSaveSetting(int MaxThread,int MaxClient,int Timeout)
+{
+	if(MaxThread <= 0 || MaxThread > 10)
+	{
+
+	}
+	AstroAir::SS->MaxThreadNumber = MaxThread;
+	AstroAir::SS->MaxClientNumber = MaxClient;
+	AstroAir::SS->MaxUsedTime = Timeout;
+}
+
+void CameraGUI(bool* p_open)
+{
+	IM_ASSERT(ImGui::GetCurrentContext() != NULL && "Missing dear imgui context. Refer to examples app!");
+	const ImGuiViewport *main_viewport = ImGui::GetMainViewport();
+	ImGui::SetNextWindowPos(ImVec2(main_viewport->WorkPos.x + 650, main_viewport->WorkPos.y + 20), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(550, 680), ImGuiCond_FirstUseEver);
+	ImGuiWindowFlags window_flags = 0;
+	if (!ImGui::Begin(AstroAir::AIRCAMINFO->Brand.c_str(), p_open, window_flags))
+	{
+		ImGui::End();
+		return;
+	}
+	ImGui::PushItemWidth(ImGui::GetFontSize() * -12);
+	if (ImGui::BeginMenuBar())
+	{
+		if (ImGui::BeginMenu(_("Menu")))
+		{
+			ImGui::EndMenu();
+		}
+		ImGui::EndMenuBar();
+	}
+}
+
+void WebServer(int port,bool IsSSL)
 {
 	AstroAir::ws.run(port);
+}
+
+void glfw_error_callback(int error, const char* description)
+{
+    fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
 
 /*
@@ -118,20 +173,42 @@ int main(int argc, char *argv[])
 		}
     }
 
-	if(IsGUI)
+	if(IsGUI)		//目前有未知段错误，无法进行测试
 	{
 		static bool show_app_help = false;
 		static bool show_app_quit = false;
 		static bool show_app_log = false;
-		static char port[64] = "";
+		static bool show_app_ssl = false;
+		static bool app_save_configure = false;
 
-		glfwSetErrorCallback(AstroAir::GUI::glfw_error_callback);
+		static char port[64] = "";
+		static char timeout[64] = "";
+		static char maxclient[64] = "";
+		static char maxthread[64] = "";
+
+		glfwSetErrorCallback(glfw_error_callback);
 		if (!glfwInit())
 			return 1;
+
+		#if defined(IMGUI_IMPL_OPENGL_ES2)
+			// GL ES 2.0 + GLSL 100
+			const char* glsl_version = "#version 100";
+			glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
+			glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+			glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
+		#elif defined(__APPLE__)
+			// GL 3.2 + GLSL 150
+			const char* glsl_version = "#version 150";
+			glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+			glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+			glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
+			glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // Required on Mac
+		#else
 			// GL 3.0 + GLSL 130
-		const char* glsl_version = "#version 130";
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+			const char* glsl_version = "#version 130";
+			glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+			glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+		#endif
 
 		GLFWwindow* window = glfwCreateWindow(1280, 720, _("AstroAir-Client"), NULL, NULL);
 		if (window == NULL)
@@ -145,19 +222,18 @@ int main(int argc, char *argv[])
 		ImGuiIO& io = ImGui::GetIO(); (void)io;
 		ImGui::StyleColorsDark();
 		ImGui_ImplGlfw_InitForOpenGL(window, true);
-		ImGui_ImplOpenGL2_Init();
+		ImGui_ImplOpenGL3_Init();
 		io.Fonts->AddFontFromFileTTF("misc/fonts/Roboto-Medium.ttf", 16.0f);
 
 		//主窗口循环
 		while (!glfwWindowShouldClose(window))
 		{
 			glfwPollEvents();
-			ImGui_ImplOpenGL2_NewFrame();
+			ImGui_ImplOpenGL3_NewFrame();
 			ImGui_ImplGlfw_NewFrame();
 			ImGui::NewFrame();
 			//const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
 			//ImGui::SetNextWindowPos(ImVec2(main_viewport->WorkPos.x + 650, main_viewport->WorkPos.y + 20), ImGuiCond_FirstUseEver);
-			
 			//ImGui::SetNextWindowSize(ImVec2(350, 250), ImGuiCond_FirstUseEver);
 
 			if(!ImGui::Begin(_("Main Page")))                          // Create a window called "Hello, world!" and append into it.
@@ -190,16 +266,32 @@ int main(int argc, char *argv[])
 			{
 				ShowAboutWindow(&show_app_help);
 			}
-
+			//启动服务器
 			ImGui::InputText(_("Port"), port, 64, ImGuiInputTextFlags_CharsDecimal);
 			ImGui::SameLine();
-			if (ImGui::Button("Start"))
+			ImGui::Checkbox("SSL", &show_app_ssl);
+			if (ImGui::Button(_("Start")))
 			{
-				std::thread MainThread(WebServer,atoi(port));
+				std::thread MainThread(WebServer, atoi(port), show_app_ssl);
 				MainThread.detach();
 			}
 
-			ImGui::Checkbox("Log", &show_app_log);
+			if (ImGui::TreeNode(_("ServerSetting")))
+        	{
+				ImGui::InputText(_("MaxThread"), maxthread, 64, ImGuiInputTextFlags_CharsDecimal);
+				ImGui::SameLine();
+				ImGui::InputText(_("MaxClient"), maxclient, 64, ImGuiInputTextFlags_CharsDecimal);
+				ImGui::InputText(_("Timeout"), timeout, 64, ImGuiInputTextFlags_CharsDecimal);
+				ImGui::Checkbox(_("Save"), &app_save_configure);
+				if (ImGui::Button(_("Save Setting")))
+				{
+					AppSaveSetting(atoi(maxthread),atoi(maxclient),atoi(timeout));
+				}
+				ImGui::TreePop();
+            	ImGui::Separator();
+			}
+
+			ImGui::Checkbox(_("Log"), &show_app_log);
 
 			if(show_app_log)
 			{
@@ -214,12 +306,12 @@ int main(int argc, char *argv[])
 			glViewport(0, 0, display_w, display_h);
 			//glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
 			glClear(GL_COLOR_BUFFER_BIT);
-			ImGui_ImplOpenGL2_RenderDrawData(ImGui::GetDrawData());
+			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 			glfwSwapBuffers(window);
 		}
 
-		ImGui_ImplOpenGL2_Shutdown();
+		ImGui_ImplOpenGL3_Shutdown();
 		ImGui_ImplGlfw_Shutdown();
 		ImGui::DestroyContext();
 

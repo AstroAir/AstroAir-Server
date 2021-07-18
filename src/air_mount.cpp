@@ -40,10 +40,8 @@ static const uint8_t DRIVER_LEN { 64 };
 namespace AstroAir
 {
     AIRMOUNT *MOUNT = nullptr;
-    std::atomic_bool isMountConnected;
-    std::atomic_bool isMountSlewing;
-    std::atomic_bool isMountTracking;
-    std::atomic_bool isMountParked;
+    MountInfo NEW_M;
+    MountInfo *AIRMOUNTINFO = &NEW_M;
 
     /*
      * name: Connect()
@@ -90,17 +88,17 @@ namespace AstroAir
 	 */
     bool AIRMOUNT::GotoServer(std::string Target_RA,std::string Target_DEC)
     {
-        isMountSlewing = true;
-        if(MOUNT->Goto(Target_RA,Target_DEC) != true)
+        AIRMOUNTINFO->Status = MOUNT_SLEWING;
+        if(!MOUNT->Goto(Target_RA,Target_DEC))
         {
-            isMountSlewing = false;
+            AIRMOUNTINFO->Status = MOUNT_ERROR;
             IDLog_Error(_("The equator doesn't work properly\n"));
             WebLog(_("The equator doesn't work properly"),3);
             return false;
         }
-        isMountSlewing = false;
+        AIRMOUNTINFO->Status = MOUNT_IDLE;
         IDLog("The equator moves to the designated position\n");
-        WebLog("赤道仪转动到指定位置",3);
+        WebLog("赤道仪转动到指定位置",2);
         return true;
     }
 
@@ -122,55 +120,47 @@ namespace AstroAir
 	 * 描述：赤道仪Park,处理来自客户端的信息
 	 * calls: IDLog()
      * calls: WebLog()
-     * calls: Goto()
+     * calls: IsMountPark()
 	 */
     bool AIRMOUNT::ParkServer(bool status)
     {
-        if(status)      //需要归位
+        if(AIRMOUNTINFO->Status == MOUNT_PARKED || AIRMOUNTINFO->Status == MOUNT_SLEWING)
         {
-            if(MOUNT->Park() != true)
+            IDLog_Error(_("Scopo is busy,please try again later\n"));
+            WebLog(_("赤道仪繁忙中，请稍后重新尝试"),3);
+            return false;
+        }
+        else
+        {
+            if (!MOUNT->IsMountPark(status))
             {
                 IDLog_Error(_("The equator doesn't work properly\n"));
-                WebLog(_("赤道仪无法正常工作"),3);
+                WebLog(_("赤道仪无法正常工作"), 3);
+                AIRMOUNTINFO->Status = MOUNT_ERROR;
                 return false;
             }
-            isMountParked = true;
-            IDLog(_("The equator moves to the designated position\n"));
-            WebLog(_("赤道仪归位"),3);
-            return true;
-        }
-        else        //解除归位
-        {
-            if(MOUNT->Unpark() != true)
+            if (status)
             {
-                IDLog_Error(_("The equator doesn't work properly\n"));
-                WebLog(_("赤道仪无法解除归位"),3);
-                return false;
+                AIRMOUNTINFO->Status = MOUNT_PARKED;
+                IDLog(_("The equator moves to the designated position\n"));
+                WebLog(_("赤道仪归位"), 2);
             }
-            isMountParked = false;
-            IDLog(_("The equator moves to the designated position\n"));
-            WebLog(_("赤道仪解除归位状态"),3);
-            return true;
+            else
+            {
+                AIRMOUNTINFO->Status = MOUNT_IDLE;
+                IDLog(_("The equator moves to the designated position\n"));
+                WebLog(_("赤道仪解除归位状态"),2);
+            }
         }
-        return false;
+        return true;
     }
 
     /*
-	 * name: Park()
+	 * name: IsMountPark()
 	 * describe: park
 	 * 描述：赤道仪Park(这只是一个模板，并没有任何实际用处)
 	 */
-    bool AIRMOUNT::Park()
-    { 
-        return false;
-    }
-
-    /*
-	 * name: Unpark()
-	 * describe: Unpark
-	 * 描述：赤道仪Unpark(这只是一个模板，并没有任何实际用处)
-	 */
-    bool AIRMOUNT::Unpark()
+    bool AIRMOUNT::IsMountPark(bool status)
     { 
         return false;
     }
@@ -185,23 +175,33 @@ namespace AstroAir
 	 */
     bool AIRMOUNT::TrackServer(bool status)
     {
-        if(MOUNT->Track(status) != true)
+        if(AIRMOUNTINFO->Status == MOUNT_PARKED || AIRMOUNTINFO->Status == MOUNT_SLEWING)
         {
-            IDLog_Error(_("The equator doesn't work properly\n"));
-            WebLog(_("赤道仪无法正常工作"),3);
+            IDLog_Error(_("Scopo is busy,please try again later\n"));
+            WebLog(_("赤道仪繁忙中，请稍后重新尝试"),3);
             return false;
-        }
-        if(status == true)
-        {
-            IDLog(_("The equator started tracking\n"));
-            WebLog(_("赤道仪开始跟踪"),3);
-            isMountTracking = true;
         }
         else
         {
-            IDLog(_("The equator stopped tracking\n"));
-            WebLog(_("赤道仪停止跟踪"),3);
-            isMountTracking = false;
+            if(!MOUNT->IsMountTrack(status))
+            {
+                IDLog_Error(_("The equator doesn't work properly\n"));
+                WebLog(_("赤道仪无法正常工作"),3);
+                AIRMOUNTINFO->Status = MOUNT_ERROR;
+                return false;
+            }
+            if(status)
+            {
+                IDLog(_("The equator started tracking\n"));
+                WebLog(_("赤道仪开始跟踪"),2);
+                AIRMOUNTINFO->Status = MOUNT_TRACKING;
+            }
+            else
+            {
+                IDLog(_("The equator stopped tracking\n"));
+                WebLog(_("赤道仪停止跟踪"),2);
+                AIRMOUNTINFO->Status = MOUNT_IDLE;
+            }
         }
         return true;
     }
@@ -211,7 +211,7 @@ namespace AstroAir
 	 * describe: Track
 	 * 描述：赤道仪Track(这只是一个模板，并没有任何实际用处)
 	 */
-    bool AIRMOUNT::Track(bool status)
+    bool AIRMOUNT::IsMountTrack(bool status)
     { 
         return false;
     }
@@ -227,95 +227,77 @@ namespace AstroAir
 	 */
     bool AIRMOUNT::AbortServer(int status)
     {
-        if(MOUNT->Abort(status) != true)
+        if(AIRMOUNTINFO->Status == MOUNT_PARKED)
         {
-            IDLog_Error(_("The equator doesn't work properly\n"));
-            WebLog(_("赤道仪无法停止"),3);
+            IDLog_Error(_("Scope had already parked,don't do this!\n"));
+            WebLog(_("赤道仪已归位，不需要停止"),3);
             return false;
-        }
-        if(status == 1)
-        {
-            IDLog(_("The equator stopped tracking\n"));
-            WebLog(_("赤道仪停止跟踪"),3);
         }
         else
         {
-            IDLog(_("The equator stopped\n"));
-            WebLog(_("赤道仪停止"),3);
+            if(!MOUNT->IsMountAbort(status))
+            {
+                IDLog_Error(_("The equator doesn't work properly\n"));
+                WebLog(_("赤道仪无法停止"),3);
+                AIRMOUNTINFO->Status = MOUNT_ERROR;
+                return false;
+            }
+            if(status == 1)
+            {
+                IDLog(_("The equator stopped tracking\n"));
+                WebLog(_("赤道仪停止跟踪"),2);
+            }
+            else
+            {
+                IDLog(_("The equator stopped\n"));
+                WebLog(_("赤道仪停止"),2);
+            }
+            AIRMOUNTINFO->Status = MOUNT_IDLE;
         }
         return true;
     }
 
     /*
-	 * name: Abort(int status)
+	 * name: IsMountAbort(int status)
 	 * describe: Abort
 	 * 描述：赤道仪停止(这只是一个模板，并没有任何实际用处)
 	 */
-    bool AIRMOUNT::Abort(int status)
+    bool AIRMOUNT::IsMountAbort(int status)
     { 
         return false;
     }
 
-    double AIRMOUNT::DecodeString(const char * data, size_t size, double factor)
+    bool AIRMOUNT::IsMountHomeServer(bool status)
     {
-        return DecodeString(data, size) / factor;
+        if(AIRMOUNTINFO->Status == MOUNT_PARKED)
+        {
+            IDLog_Error(_("Scope had already parked,don't do this!\n"));
+            WebLog(_("赤道仪已归位，不需要停止"),3);
+            return false;
+        }
+        else
+        {
+            if (!MOUNT->IsMountHome(status))
+            {
+                IDLog_Error(_("The equator doesn't work properly\n"));
+                WebLog(_("赤道仪无法正常工作"), 3);
+                AIRMOUNTINFO->Status = MOUNT_ERROR;
+                return false;
+            }
+            AIRMOUNTINFO->Status = MOUNT_IDLE;
+            IDLog(_("The equator moves to the home position\n"));
+            WebLog(_("赤道仪已回到家位置"), 2);
+        }
+        return true;
     }
 
-    int AIRMOUNT::DecodeString(const char *data, size_t size)
+    /*
+	 * name: IsMountHome(int status)
+	 * describe: Home
+	 * 描述：赤道仪回位(这只是一个模板，并没有任何实际用处)
+	 */
+    bool AIRMOUNT::IsMountHome(bool status)
     {
-        char str[DRIVER_LEN / 2] = {0};
-        strncpy(str, data, size);
-        int iVal = atoi(str);
-        return iVal;
-    }
-
-    void RAConvert(std::string Target_RA,int *h,int *m,int *s)
-    {
-        int p_h_ra = Target_RA.find("h");
-        int p_m_ra = Target_RA.find("m");
-        int p_s_ra = Target_RA.find("s");
-        for(int i=0;i < p_h_ra;i++)
-        {
-            std::string temp;
-            temp += Target_RA[i];
-            h = reinterpret_cast<int*>(atoi(temp.c_str()));
-        }
-        for(int i=p_h_ra+1;i < p_m_ra;i++)
-        {
-            std::string temp;
-            temp += Target_RA[i];
-            m = reinterpret_cast<int*>(atoi(temp.c_str()));
-        }
-        for(int i=p_m_ra+1;i < p_s_ra;i++)
-        {
-            std::string temp;
-            temp += Target_RA[i];
-            s = reinterpret_cast<int*>(atoi(temp.c_str()));
-        }
-    }
-
-    void DECConvert(std::string Target_DEC,int *h,int *m,int *s)
-    {
-        int p_h_dec = Target_DEC.find("h");
-        int p_m_dec = Target_DEC.find("m");
-        int p_s_dec = Target_DEC.find("s");
-        for(int i=0;i < p_h_dec;i++)
-        {
-            std::string temp;
-            temp += Target_DEC[i];
-            h = reinterpret_cast<int*>(atoi(temp.c_str()));
-        }
-        for(int i=p_h_dec+1;i < p_m_dec;i++)
-        {
-            std::string temp;
-            temp += Target_DEC[i];
-            m = reinterpret_cast<int*>(atoi(temp.c_str()));
-        }
-        for(int i=p_m_dec+1;i < p_s_dec;i++)
-        {
-            std::string temp;
-            temp += Target_DEC[i];
-            s = reinterpret_cast<int*>(atoi(temp.c_str()));
-        }
+        return false;
     }
 }

@@ -39,118 +39,71 @@ Description:Mount Offical Port
 
 namespace AstroAir
 {
-    /*这里的大部分函数都是没有任何实际用途的
-      只能作为一个模板参考
-      不过基本的控制逻辑就是这个样子
-      所有的_Server函数都是有用的
-      在派生类中不用重新写*/
     class AIRMOUNT
     {
         public:
+            /*连接设备*/
             virtual bool Connect(std::string Device_name);
+            /*与设备断开连接*/
 			virtual bool Disconnect();
+            /*返回设备名称*/
 			virtual std::string ReturnDeviceName();
+            /*Goto（服务器）*/
             virtual bool GotoServer(std::string Target_RA,std::string Target_DEC);
+            /*Goto（本地）*/
             virtual bool Goto(std::string Target_RA,std::string Target_DEC);
+            /*Park（服务器）*/
             virtual bool ParkServer(bool status);
-            virtual bool Park();
-            virtual bool Unpark();
+            /*Park（本地）*/
+            virtual bool IsMountPark(bool status);
             virtual bool TrackServer(bool status);
-            virtual bool Track(bool status);
+            virtual bool IsMountTrack(bool status);
             virtual bool AbortServer(int status);
-            virtual bool Abort(int status);
-            virtual double DecodeString(const char * data, size_t size, double factor);
-            virtual int DecodeString(const char *data, size_t size);
+            virtual bool IsMountAbort(int status);
+            virtual bool IsMountHomeServer(bool status);
+            virtual bool IsMountHome(bool status);
         private:
 
     };
     extern AIRMOUNT *MOUNT;
-    extern std::atomic_bool isMountConnected;
-    extern std::atomic_bool isMountSlewing;
-    extern std::atomic_bool isMountTracking;
-    extern std::atomic_bool isMountParked;
-    
-    void RAConvert(std::string Target_RA,int *h,int *m,int *s);
-    void DECConvert(std::string Target_DEC,int *h,int *m,int *s);
 
-    enum
-        {
-            TELESCOPE_CAN_GOTO                    = 1 << 0,  /** Can the telescope go to to specific coordinates? */
-            TELESCOPE_CAN_SYNC                    = 1 << 1,  /** Can the telescope sync to specific coordinates? */
-            TELESCOPE_CAN_PARK                    = 1 << 2,  /** Can the telescope park? */
-            TELESCOPE_CAN_ABORT                   = 1 << 3,  /** Can the telescope abort motion? */
-            TELESCOPE_HAS_TIME                    = 1 << 4,  /** Does the telescope have configurable date and time settings? */
-            TELESCOPE_HAS_LOCATION                = 1 << 5,  /** Does the telescope have configuration location settings? */
-            TELESCOPE_HAS_PIER_SIDE               = 1 << 6,  /** Does the telescope have pier side property? */
-            TELESCOPE_HAS_PEC                     = 1 << 7,  /** Does the telescope have PEC playback? */
-            TELESCOPE_HAS_TRACK_MODE              = 1 << 8,  /** Does the telescope have track modes (sidereal, lunar, solar..etc)? */
-            TELESCOPE_CAN_CONTROL_TRACK           = 1 << 9,  /** Can the telescope engage and disengage tracking? */
-            TELESCOPE_HAS_TRACK_RATE              = 1 << 10, /** Does the telescope have custom track rates? */
-            TELESCOPE_HAS_PIER_SIDE_SIMULATION    = 1 << 11, /** Does the telescope simulate the pier side property? */
-            TELESCOPE_CAN_TRACK_SATELLITE         = 1 << 12, /** Can the telescope track satellites? */
-        } TelescopeCapability;
-
+    typedef enum { GPS_OFF, GPS_ON, GPS_DATA_OK } GPSStatus;        //GPS状态
+    typedef enum { TR_SIDEREAL, TR_LUNAR, TR_SOLAR, TR_KING, TR_CUSTOM } TrackRate;
     enum TelescopeStatus
     {
-        SCOPE_IDLE,
-        SCOPE_SLEWING,
-        SCOPE_TRACKING,
-        SCOPE_PARKING,
-        SCOPE_PARKED
-    };
-    enum TelescopeMotionCommand
-    {
-        MOTION_START = 0,
-        MOTION_STOP
-    };
-    enum TelescopeSlewRate
-    {
-        SLEW_GUIDE,
-        SLEW_CENTERING,
-        SLEW_FIND,
-        SLEW_MAX
-    };
-    enum TelescopeTrackMode
-    {
-        TRACK_SIDEREAL,
-        TRACK_SOLAR,
-        TRACK_LUNAR,
-        TRACK_CUSTOM
-    };
-    enum TelescopeTrackState
-    {
-        TRACK_ON,
-        TRACK_OFF,
-        TRACK_UNKNOWN
-    };
-    enum TelescopeParkData
-    {
-        PARK_NONE,
-        PARK_RA_DEC,
-        PARK_HA_DEC,
-        PARK_AZ_ALT,
-        PARK_RA_DEC_ENCODER,
-        PARK_AZ_ALT_ENCODER
-    };
-    enum TelescopeLocation
-    {
-        LOCATION_LATITUDE,
-        LOCATION_LONGITUDE,
-        LOCATION_ELEVATION
-    };
-    enum TelescopePierSide
-    {
-        PIER_UNKNOWN = -1,
-        PIER_WEST = 0,
-        PIER_EAST = 1
+        MOUNT_IDLE,
+        MOUNT_SLEWING,
+        MOUNT_TRACKING,
+        MOUNT_PARKING,
+        MOUNT_PARKED,
+        MOUNT_ERROR
     };
 
-    enum TelescopePECState
+    struct MountInfo
     {
-        PEC_UNKNOWN = -1,
-        PEC_OFF = 0,
-        PEC_ON = 1
-    };
+        bool isMountConnected;
+
+        TelescopeStatus Status;
+        GPSStatus gpsStatus;
+        TrackRate trackRate;
+
+        std::string Name;
+        std::string MountRa;
+        std::string MountDEC;
+        std::string MountTime;
+
+        double latitude;
+        double longitude;
+        std::string UTCtime;
+
+        bool canParkNatively = false;       //是否支持归位
+        bool canFindHome = false;           //是否支持寻找归位位置
+        bool canGuideRate = false;          //是否支持导星
+        bool slewDirty = false;             //转向
+    };extern MountInfo *AIRMOUNTINFO;
+
+    void RAConvert(std::string Target_RA,int *h,int *m,int *s);
+    void DECConvert(std::string Target_DEC,int *h,int *m,int *s);
 }
 
 #endif

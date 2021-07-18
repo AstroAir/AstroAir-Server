@@ -52,10 +52,7 @@ Description:Log system of astroair server
 #endif
 
 #define _(str)  gettext(str)
-
 #define PACKAGE "airserver"
-
-#include "air_gui.hpp"
 
 typedef std::uint64_t hash_t;
 typedef std::vector<std::string>  StringList;
@@ -72,7 +69,6 @@ typedef struct {
 	int second;
 } TIME;
 
-extern AstroAir::GUI::AppLog Log;
 extern std::atomic_bool IsGUI;
 
 namespace AstroAir

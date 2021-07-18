@@ -159,7 +159,7 @@ namespace AstroAir
         /*赤道仪运动到指定位置*/
         if(!Root["Mount"]["MountName"].asString().empty() && Root["Mount"]["MountName"] == MOUNT->ReturnDeviceName())
         {
-            if(isMountConnected)
+            if(AIRMOUNTINFO->isMountConnected)
             {
                 TargetRA = Root["Mount"]["TargetRA"].asString();
                 TargetDEC = Root["Mount"]["TargetDEC"].asString();
