@@ -68,12 +68,12 @@ include(FindWEBSOCKETPP)
 include(FindASI)
 include(FindQHY)
 include(FindGPHOTO2)
+include(FindINDI)
 #赤道仪
 include(SetTelescope)
 #导星
 include(FindPHD2)
-#GUI
-include(FindIMGUI)
+
 
 ########################################AstroAir-Server官方API文件########################################
 
@@ -85,6 +85,7 @@ add_library(AIRMAIN src/air_camera.cpp
 					src/air_filter.cpp
 					src/air_solver.cpp
 					src/air_guider.cpp
+					src/air_gui.cpp
 					src/air_search.cpp
 					src/telescope/air_com.cpp
 					src/tools/AutoUpdate.cpp
@@ -96,6 +97,7 @@ target_link_libraries(airserver PRIVATE libyaml-cpp.so)
 include(FindIMGTOOLS)
 include(FindJSONCPP)
 include(FindNOVA)
+include(FindIMGUI)
 
 set(LINK_DIR /usr/lib)
 link_directories(${LINK_DIR})

@@ -56,6 +56,7 @@ namespace AstroAir
             virtual bool StartExposureServer(int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset);
             virtual bool StartExposureSeq(int loop,int exp,int bin,bool IsSave,std::string FitsName,int Gain,int Offset);
             virtual void ImagineThread();
+            virtual bool AbortExposureServer();
             virtual bool AbortExposure();
             virtual bool Cooling(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF,int CamTemp);
             virtual bool CoolingServer(bool SetPoint,bool CoolDown,bool ASync,bool Warmup,bool CoolerOFF,int CamTemp);
@@ -92,6 +93,10 @@ namespace AstroAir
         int Image_Width;
         int ImageMaxHeight;
         int ImageMaxWidth;
+        double PixSize;
+        double PixSizeX;
+        double PixSizeY;
+        double BitsPerPixel;
         std::string LastImageName;
         /*连接相机*/
         int Count;
@@ -102,6 +107,12 @@ namespace AstroAir
         bool isCoolCamera;
         bool isColorCamera;
         bool isGuidingCamera;
+        /*INDI*/
+        int port;
+        std::string host;
+        int type;
+        std::string BlobName;
+        std::string CCDCmd;
     };extern CameraInfo *AIRCAMINFO;
 
     

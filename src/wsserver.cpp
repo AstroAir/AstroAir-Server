@@ -68,6 +68,11 @@ Using:JsonCpp<https://github.com/open-source-parsers/jsoncpp>
     #include "filter/air-efw/air_efw.h"
 #endif
 
+#ifdef HAS_INDI
+    #include "indi/indiccd.h"
+    #include "indi/inditelescope.h"
+#endif
+
 #ifdef HAS_IOPTRON
     #include "telescope/iOptron/air_ieqpro.h"
 #endif
@@ -276,7 +281,7 @@ namespace AstroAir
             }
             /*相机停止拍摄*/
             case "RemoteActionAbort"_hash:
-				CCD->AbortExposure();
+				CCD->AbortExposureServer();
 				break;
             /*相机制冷*/
             case "RemoteCooling"_hash:{
@@ -673,7 +678,6 @@ namespace AstroAir
                             ASICamera = nullptr;
                             break;
                         }
-                        break;
                     }
                     #endif
                     #ifdef HAS_QHY
@@ -693,7 +697,7 @@ namespace AstroAir
                         case "INDI"_hash:
                         {
                             /*初始化INDI相机，并赋值CCD*/
-                            INDICCD *INDIDevice = new INDICCD();
+                            INDICCD *INDIDevice = new INDICCD(AIRCAMINFO);
                             CCD = INDIDevice;
                             INDIDevice = nullptr;
                             break;
@@ -781,8 +785,9 @@ namespace AstroAir
 					#ifdef HAS_INDI
 					case "INDIMount"_hash:{
 						/*初始化INDI赤道仪，并赋值MOUNT*/
-						INDICCD *INDIDevice = new INDICCD();
-						MOUNT = INDIDevice;
+						INDISCOPE *INDIScope = new INDISCOPE(AIRMOUNTINFO);
+						MOUNT = INDIScope;
+                        INDIScope = nullptr;
 						break;
 					}
 					#endif
@@ -828,9 +833,9 @@ namespace AstroAir
         if(!isFocusConnected)
         {
             Focus_name = root["focus"]["name"].asString();
-            if(!root["focus"]["brand"].asString().empty() && !Focus_name.empty())
+            if(!Focus_name.empty())
             {
-                switch(hash_(root["focus"]["brand"].asString().c_str()))
+                switch(hash_(Focus_name.c_str()))
 				{
 					#ifdef HAS_ASIEAF
 					case "ASIEAF"_hash:{
@@ -853,8 +858,8 @@ namespace AstroAir
 					#ifdef HAS_INDI
 					case "INDIFocus"_hash:{
 						/*初始化INDI电动调焦座，并赋FOCUS*/
-						INDICCD *INDIDevice = new INDICCD();
-						FOCUS = INDIDevice;
+						//INDICCD *INDIDevice = new INDICCD();
+						//FOCUS = INDIDevice;
 						break;
 					}
 					#endif
@@ -900,9 +905,9 @@ namespace AstroAir
         if(!isFilterConnected)
         {
             Filter_name = root["filter"]["name"].asString();
-            if(!root["filter"]["brand"].asString().empty() && !Filter_name.empty())
+            if(!Filter_name.empty())
             {
-                switch(hash_(root["filter"]["brand"].asString().c_str()))
+                switch(hash_(Filter_name.c_str()))
 				{
 					#ifdef HAS_ASIEFW
 					case "ASIEFW"_hash:{
@@ -925,8 +930,8 @@ namespace AstroAir
 					#ifdef HAS_INDI
 					case "INDIFilter"_hash:{
 						/*初始化INDI滤镜轮，并赋FILTER*/
-						INDICCD *INDIDevice = new INDICCD();
-						FILTER = INDIDevice;
+						//INDICCD *INDIDevice = new INDICCD();
+						//FILTER = INDIDevice;
 						break; 
 					}
 					#endif

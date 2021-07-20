@@ -8,14 +8,16 @@
 #define HAS_OPENCV @HAS_OPENCV@
 #define HAS_FITSIO @HAS_FITSIO@
 #define HAS_NOVA @HAS_NOVA@
+#define OpenGL3 @OpenGL3@
 
 #define HAS_QHY @HAS_QHY@
-#define HAS_QHYCFW @HAS_QHYCFW@
 
-#define HAS_ASI @HAS_ASI@
-#define HAS_ASIEAF @HAS_ASIEAF@
-#define HAS_ASIEFW @HAS_ASIEFW@
-//#define HAS_INDI @HAS_INDI@
+#define HAS_ASI @HAS_ASI_CAMERA@
+#define HAS_ASIEAF @HAS_ASI_FOCUSER@
+#define HAS_ASIEFW @HAS_ASI_FILTER@
+
+#define HAS_INDI @HAS_INDI@
+
 #define HAS_GPhoto2 @HAS_GPhoto2@
 
 #define HAS_IOPTRON @HAS_IOPTRON@

@@ -202,13 +202,13 @@ namespace AstroAir
     }
 
     /*
-     * name: AbortExposure()
-     * describe: Abort exposure
+     * name: AbortExposureServer()
+     * describe: Abort exposure(Server)
      * 描述：停止曝光
      * calls: IDLog(const char *fmt, ...)
      * calls: IDLog_DEBUG(const char *fmt, ...)
      */
-    bool AIRCAMERA::AbortExposure()
+    bool AIRCAMERA::AbortExposureServer()
     {
 		if(AIRCAMINFO->isCameraConnected)
 		{
@@ -232,6 +232,17 @@ namespace AstroAir
 			return false;
         }
         return true;
+    }
+
+    /*
+     * name: AbortExposure()
+     * describe: Abort exposure
+     * 描述：停止曝光
+	 * note:This function should not be executed normally
+     */
+    bool AIRCAMERA::AbortExposure()
+    {
+        return false;
     }
     
     /*
